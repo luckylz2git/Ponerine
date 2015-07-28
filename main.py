@@ -6,6 +6,7 @@ from kivy.uix.screenmanager import Screen, ScreenManager
 from camera import Camera
 # import base64, functools, hashlib, json, os, platform, re, select, socket, subprocess, sys, tempfile, threading, time, tkFileDialog, tkMessageBox, urllib2, webbrowser, zlib
 import json, os, threading, time
+from os.path import basename
 
 __version__='0.0.2'
 
@@ -86,6 +87,16 @@ class Ponerine(ScreenManager):
         i = i % 3 + 1
         time.sleep(0.5)
         self.current_screen.ids.btnConnect.text = "Connecting %s" %("." * i)
+    #save camera ip to camera.cfg
+    i = 0
+    cfg = {}
+    ip = []
+    for cam in self.cam:
+      i += 1
+      ip.append(json.loads('{"camera":%d,"ip":"%s"}'%(i,cam.ip)))
+    cfg["config"] = ip
+    self.savecfg(cfg)
+
     #self.current_screen.ids.btnConnect.state = "normal"
     #self.current_screen.ids.btnConnect.text = "Connecting"
     self.current = "control"
@@ -203,11 +214,24 @@ class Ponerine(ScreenManager):
       cam.settings = ""
       debugtxt += "\nCAM %d Settings :\n" %i + settings
     self.get_screen("setting").ids.txtDebug.text = debugtxt
+
+  def savecfg(data):
+    cfgfile = __file__.replace(basename(__file__), "data/camera.cfg")
+    try:
+      with open(cfgfile,'w') as file:
+        file.write(json.dumps(data, indent=2))
+    except IOError:
+      pass
     
 class PonerineApp(App):
+
   def build(self):
     ponerine = Ponerine()
-    ponerine.add_widget(ConnectScreen(name='connect'))
+    conn = ConnectScreen(name='connect')
+    cfg = self.readcfg()
+    conn.ids.txtCam1.text = cfg[0]
+    conn.ids.txtCam2.text = cfg[1]
+    ponerine.add_widget(conn)
     ponerine.add_widget(ControlScreen(name='control'))
     ponerine.add_widget(SettingScreen(name='setting'))
     ponerine.current = 'connect'
@@ -215,6 +239,25 @@ class PonerineApp(App):
     
   def on_pause(self):
     return True
+
+  def readcfg(self):
+    cfgfile = __file__.replace(basename(__file__), "data/camera.cfg")
+    r = []
+    try:
+      with open(cfgfile) as file:
+        cfg = json.loads(file.read())
+        #print "readcfg",cfg
+      if cfg.has_key("config"):
+        for item in cfg["config"]:
+          r.append(item["ip"])
+        #print "r", r
+        if len(r) < 2:
+          r.append("")
+      else:
+        r = ["192.168.42.1",""]
+    except StandardError:
+      r = ["192.168.42.1",""]
+    return r
 
 if __name__ == '__main__':
   print Window.size
