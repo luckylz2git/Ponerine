@@ -1,83 +1,165 @@
 #:kivy 1.0
-
 #:import kivy kivy
+#:import Factory kivy.factory.Factory
 
-<Ponerine>:
-  orientation: 'vertical'
-  Button:
-    id: btnDebug
-    text: "Debug"
-    color: 0, 0, 0, 1
-    background_color: 0, 0, 0, 1
-    size_hint: 1, 1
-    on_press: root.Debug()
-  TextInput:
-    id: txtDebug
-    text: ""
-    readonly: True
-    #20
-    font_size: int(root.Width/60)
-    text: ""
-    foreground_color: 0, 0, 0, 1
-    background_color: 0, 0, 0, 1
-    size_hint: 1, 4
-  # IP ADDRESS
-  GridLayout:
-    cols: 3
-    size_hint: 1, 0.7
-    pos_hint: {'top': 1}
-    Label:
+<ImageButton@Button>
+  source: None
+  Image:
+    source: root.source
+    pos: root.pos
+    size: root.size
+    
+<ConnectScreen>:
+  BoxLayout:
+    orientation: 'vertical'
+    canvas:
+      Color: 
+        rgba: 0.5, 0.5, 0.5, 1
+      Rectangle:
+        size: self.size
+        pos: self.pos
+    GridLayout:
+      size_hint: 1, 0.2
+      spacing: [0, int(root.width/50)]
+      padding: [0, 0, int(root.width/20), 0]
+      cols: 2
+      Label:
+        size_hint: 1, 1
+        padding: 5, 5
+        text: ""
+      Label:
+        size_hint: 2, 1
+        text: ""
+      Label:
+        size_hint: 1, 1
+        padding: 5, 5
+        #halign: 'right'
+        #valign: 'middle'
+        text: "Camera 1"
+        #text_size: self.size
+        font_size: int(root.width/20)
+      TextInput:
+        size_hint: 1.8, 1
+        id: txtCam1
+        text: "192.168.42.1" #%int(root.width/20)
+        font_size: int(root.width/20)
+        padding: [root.width/50, (self.height - self.line_height)/2]
+      Label:
+        size_hint: 1, 1
+        padding: 5, 5
+        #halign: 'right'
+        #valign: 'middle'
+        text: "Camera 2"
+        #text_size: self.size
+        font_size: int(root.width/20)
+      TextInput:
+        size_hint: 1.8, 1
+        id: txtCam2
+        text: ""
+        font_size: int(root.width/20)
+        padding: [root.width/50, (self.height - self.line_height)/2]
+    GridLayout:
       size_hint: 1, 0.8
-      font_size: int(root.Width/25)
-      color: 1, 1, 1, .8
-      text: 'IP Address'
+      cols: 3
+      Label:
+      Label:
+      Label:
+      Label:
+        size_hint: 1, 0.5
+      Button:
+        id: btnConnect
+        #source: 'image/presplash.png'
+        #background_normal: 'image/onnormal.png'
+        #background_down: 'image/onpress.png'
+        size_hint: 2.5, 0.5
+        #pos: root.width/2, root.width/2
+        text: 'Connect'
+        font_size: int(root.width/20)
+        on_release: root.manager.Connect()
+      Label:
+        size_hint: 1, 0.5
+      Label:
+      Label:
+      Label:
+
+<ControlScreen>:
+  BoxLayout:
+    orientation: 'vertical'
     TextInput:
-      size_hint: 2, 0.8
-      id: txtCamAddress
-      font_size: int(root.Width/20)
-      padding: [root.Width/50, (self.height - self.line_height)/2]
-      text: '192.168.42.1'
+      id: txtDebug
+      size_hint: 1, 0.5
+      text: "Control Screen Debug Log :\n"
+      font_size: int(root.width/50)
+      foreground_color: [1,1,0,1]
+      background_color: [0,0,0,1]
+      readonly: True
+    GridLayout:
+      cols: 2
+      size_hint: 1, 0.5
+      Label:
+        id: lblCam1
+        size_hint: 1, 0.5
+        padding: [0, int(root.width/60)]
+        text: "CAM 1 [ --:--:-- ]"
+        color: 1,0,0,0.8
+        font_size: int(root.width/30)
+      Label:
+        size_hint: 1, 0.5
+        id: lblCam2
+        padding: [0, int(root.width/60)]
+        text: "CAM 2 [ --:--:-- ]"
+        color: 1,0,0,0.8
+        font_size: int(root.width/30)
+      Button:
+        size_hint: 1, 2
+        id: btnPhoto
+        text: 'Take Photo'
+        font_size: int(root.width/20)
+        on_release: root.manager.Photo()
+      Button:
+        size_hint: 1, 2
+        id: btnRecord
+        text: 'Start Record'
+        font_size: int(root.width/20)
+        on_release: root.manager.Record()
+      Button:
+        size_hint: 1, 2
+        text: 'Settings'
+        font_size: int(root.width/20)
+        on_release: root.manager.Setting()
+      Button:
+        size_hint: 1, 2
+        text: 'Disconnect'
+        font_size: int(root.width/20)
+        on_release: root.manager.Disconnect()
+
+<SettingScreen>:
+  BoxLayout:
+    orientation: 'vertical'
     Label:
-      size_hint: 1, 0.8
-      id: lblRecordTime
-      color: 1, 0, 0, 0.8
-      font_size: int(root.Width/25)
-      #text: '00:00:00'
-  GridLayout:
-    cols: 2
-    padding: 10
-    spacing: 10
-    size_hint: 1, 4
-    pos_hint: {'top': 1}
-    ToggleButton:
-      id: btnConnect
-      color: (1, 1, 1, 1)
-      font_size: int(root.Width/25)
-      text: 'Connect'
-      size_hint: .5, 1
-      on_press: root.CamConnect()
-    Button:
-      id: btnFindCam
-      color: (1, 1, 1, 1)
-      font_size: int(root.Width/25)
-      text: 'Find Camera'
-      size_hint: 0.5, 1
-      disabled: True
-      on_press: root.FindCam()
-    ToggleButton:
-      id: btnTakePhoto
-      color: (1, 1, 1, 1)
-      font_size: int(root.Width/25)
-      text: 'Take Photo'
-      size_hint: 0.5, 1
-      disabled: True
-      on_press: root.TakePhoto()
-    ToggleButton:
-      id: btnRecordVideo
-      color: (1, 1, 1, 1)
-      font_size: int(root.Width/25)
-      text: 'Start Record'
-      size_hint: 0.5, 1
-      disabled: True
-      on_press: root.RecordVideo()
-      
+      size_hint: 1, 1
+      font_size: int(root.width/20)
+      text: 'Under Construction ...'
+    TextInput:
+      id: txtDebug
+      size_hint: 1, 7
+      text: "Setting Screen Debug Log:\n"
+      font_size: int(root.width/50)
+      foreground_color: [1,1,0,1]
+      background_color: [0,0,0,1]
+      readonly: True
+    GridLayout:
+      cols: 3
+      size_hint: 1, 2
+      Button:
+        text: 'Cameras'
+        font_size: int(root.width/20)
+        on_release: root.manager.Control()
+      Button:
+        text: 'Settings'
+        font_size: int(root.width/20)
+        on_release: root.manager.ReadSetting()
+      Button:
+        text: 'Disconnect'
+        font_size: int(root.width/20)
+        on_release: root.manager.Disconnect()
