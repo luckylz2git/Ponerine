@@ -14,7 +14,7 @@ package.domain = chn.luckylz
 source.dir = .
 
 # (list) Source files to include (let empty to include all the files)
-source.include_exts = py,png,jpg,kv,atlas
+source.include_exts = py,png,jpg,kv,atlas,cfg
 
 # (list) Source files to exclude (let empty to not exclude anything)
 #source.exclude_exts = spec
@@ -30,7 +30,7 @@ source.include_exts = py,png,jpg,kv,atlas
 # version.filename = %(source.dir)s/main.py
 
 # (str) Application versioning (method 2)
-version = 0.0.2
+version = 0.0.3
 
 # (list) Application requirements
 # comma seperated e.g. requirements = sqlite3,kivy
@@ -56,20 +56,19 @@ fullscreen = 0
 #
 
 # (list) Permissions
-android.permissions = INTERNET
-#WRITE_EXTERNAL_STORAGE
+android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE
 
 # (int) Android API to use
-#android.api = 14
+android.api = 14
 
 # (int) Minimum API required (8 = Android 2.2 devices)
-#android.minapi = 8
+android.minapi = 8
 
 # (int) Android SDK version to use
-#android.sdk = 21
+android.sdk = 21
 
 # (str) Android NDK version to use
-#android.ndk = 9c
+android.ndk = 9c
 
 # (bool) Use --private data storage (True) or --dir public storage (False)
 #android.private_storage = True

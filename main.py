@@ -94,7 +94,8 @@ class Ponerine(ScreenManager):
     for cam in self.cam:
       i += 1
       ip.append(json.loads('{"camera":%d,"ip":"%s"}'%(i,cam.ip)))
-    cfg["config"] = ip
+    cfg["camera_ip"] = ip
+    print cfg
     self.savecfg(cfg)
 
     #self.current_screen.ids.btnConnect.state = "normal"
@@ -215,12 +216,12 @@ class Ponerine(ScreenManager):
       debugtxt += "\nCAM %d Settings :\n" %i + settings
     self.get_screen("setting").ids.txtDebug.text = debugtxt
 
-  def savecfg(data):
+  def savecfg(self, data):
     cfgfile = __file__.replace(basename(__file__), "data/camera.cfg")
     try:
       with open(cfgfile,'w') as file:
         file.write(json.dumps(data, indent=2))
-    except IOError:
+    except StandardError:
       pass
     
 class PonerineApp(App):
@@ -247,8 +248,8 @@ class PonerineApp(App):
       with open(cfgfile) as file:
         cfg = json.loads(file.read())
         #print "readcfg",cfg
-      if cfg.has_key("config"):
-        for item in cfg["config"]:
+      if cfg.has_key("camera_ip"):
+        for item in cfg["camera_ip"]:
           r.append(item["ip"])
         #print "r", r
         if len(r) < 2:
