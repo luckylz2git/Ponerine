@@ -76,6 +76,7 @@ class Camera():
         self.Connect()
       if self.socketopen <> 0:
         print "socket time out"
+        return
     #print "wait for token from camera"
     while not self.link:
       pass

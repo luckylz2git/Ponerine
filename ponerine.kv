@@ -14,22 +14,19 @@
     orientation: 'vertical'
     canvas:
       Color: 
-        rgba: 0.5, 0.5, 0.5, 1
+        rgba: 1,1,1,1
       Rectangle:
+        source: 'image/background.png'
         size: self.size
         pos: self.pos
+    BoxLayout:
+      size_hint: None, None
+      size: root.width, root.width/20
     GridLayout:
       size_hint: 1, 0.2
       spacing: [0, int(root.width/50)]
       padding: [0, 0, int(root.width/20), 0]
       cols: 2
-      Label:
-        size_hint: 1, 1
-        padding: 5, 5
-        text: ""
-      Label:
-        size_hint: 2, 1
-        text: ""
       Label:
         size_hint: 1, 1
         padding: 5, 5
@@ -58,29 +55,20 @@
         text: "192.168.42.2"
         font_size: int(root.width/20)
         padding: [root.width/50, (self.height - self.line_height)/2]
-    GridLayout:
+    AnchorLayout:
+      anchor_x: 'center'
+      anchor_y: 'center'
       size_hint: 1, 0.8
-      cols: 3
-      Label:
-      Label:
-      Label:
-      Label:
-        size_hint: 1, 0.5
       Button:
         id: btnConnect
-        #source: 'image/presplash.png'
-        #background_normal: 'image/onnormal.png'
-        #background_down: 'image/onpress.png'
-        size_hint: 2.5, 0.5
-        #pos: root.width/2, root.width/2
-        text: 'Connect'
+        background_normal: 'image/connect_normal.png'
+        background_down: 'image/connect_down.png'
+        size_hint: None, None
+        size: root.width/2, root.width/2
+        text: ''
+        color: 1,0,0,1
         font_size: int(root.width/20)
         on_release: root.manager.Connect()
-      Label:
-        size_hint: 1, 0.5
-      Label:
-      Label:
-      Label:
 
 <ControlScreen>:
   BoxLayout:

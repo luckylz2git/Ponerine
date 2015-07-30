@@ -8,7 +8,7 @@ from camera import Camera
 import json, os, threading, time
 from os.path import basename
 
-__version__='0.0.2'
+__version__='0.0.4'
 
 class ConnectScreen(Screen):
   #config in ponerine.kv
@@ -80,13 +80,14 @@ class Ponerine(ScreenManager):
     i = 0
     print "DoConnect", len(self.cam)
     #self.current_screen.ids.btnConnect.state = "down"
-    self.current_screen.ids.btnConnect.text = "Connecting"
+    #self.current_screen.ids.btnConnect.text = "Connecting"
     for cam in self.cam:
       cam.LinkCamera()
       while cam.token == 0:
         i = i % 3 + 1
         time.sleep(0.5)
-        self.current_screen.ids.btnConnect.text = "Connecting %s" %("." * i)
+        #self.current_screen.ids.btnConnect.text = "Connecting %s" %("." * i)
+        self.current_screen.ids.btnConnect.text = "%s-%s" %("(" * i,")" * i)
     #save camera ip to camera.cfg
     i = 0
     cfg = {}
@@ -97,7 +98,9 @@ class Ponerine(ScreenManager):
     cfg["camera_ip"] = ip
     print cfg
     self.savecfg(cfg)
-
+    
+    self.current_screen.ids.btnConnect.text = ""
+    
     #self.current_screen.ids.btnConnect.state = "normal"
     #self.current_screen.ids.btnConnect.text = "Connecting"
     self.current = "control"
