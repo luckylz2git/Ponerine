@@ -27,15 +27,16 @@ class Ponerine(ScreenManager):
     Window.size = (560,800)
   
   def Connect(self):
-    self.cam = []
-    if self.current_screen.ids.txtCam1.text <> "":
-      self.cam.append(Camera(self.current_screen.ids.txtCam1.text))
-    if self.current_screen.ids.txtCam2.text <> "":
-      self.cam.append(Camera(self.current_screen.ids.txtCam2.text))
-    print "Connect", len(self.cam)
-    self.tconn= threading.Thread(target=self.DoConnect)
-    self.tconn.setName('DoConnect')
-    self.tconn.start()
+    if self.current_screen.ids.btnConnect.text == "" or self.current_screen.ids.btnConnect.text == "Error":
+      self.cam = []
+      if self.current_screen.ids.txtCam1.text <> "":
+        self.cam.append(Camera(self.current_screen.ids.txtCam1.text))
+      if self.current_screen.ids.txtCam2.text <> "":
+        self.cam.append(Camera(self.current_screen.ids.txtCam2.text))
+      print "Connect", len(self.cam)
+      self.tconn= threading.Thread(target=self.DoConnect)
+      self.tconn.setName('DoConnect')
+      self.tconn.start()
     
   def Disconnect(self):
     self.tconn= threading.Thread(target=self.DoDisconnect)
@@ -78,33 +79,42 @@ class Ponerine(ScreenManager):
 
   def DoConnect(self):
     i = 0
+    stop = False
     print "DoConnect", len(self.cam)
-    #self.current_screen.ids.btnConnect.state = "down"
-    #self.current_screen.ids.btnConnect.text = "Connecting"
+    self.current_screen.ids.btnConnect.state = "down"
+    self.current_screen.ids.btnConnect.text = ""
     for cam in self.cam:
+      quit = cam.quit
       cam.LinkCamera()
       while cam.token == 0:
         i = i % 3 + 1
         time.sleep(0.5)
         #self.current_screen.ids.btnConnect.text = "Connecting %s" %("." * i)
         self.current_screen.ids.btnConnect.text = "%s-%s" %("(" * i,")" * i)
-    #save camera ip to camera.cfg
-    i = 0
-    cfg = {}
-    ip = []
-    for cam in self.cam:
-      i += 1
-      ip.append(json.loads('{"camera":%d,"ip":"%s"}'%(i,cam.ip)))
-    cfg["camera_ip"] = ip
-    print cfg
-    self.savecfg(cfg)
-    
-    self.current_screen.ids.btnConnect.text = ""
-    
-    #self.current_screen.ids.btnConnect.state = "normal"
-    #self.current_screen.ids.btnConnect.text = "Connecting"
-    self.current = "control"
-    #print "tctrl start"
+        if quit.isSet():
+          stop = True
+          break
+    if stop:
+      self.current_screen.ids.btnConnect.state = "normal"
+      self.current_screen.ids.btnConnect.text = "Error"
+    else:
+      #save camera ip to camera.cfg
+      i = 0
+      cfg = {}
+      ip = []
+      for cam in self.cam:
+        i += 1
+        ip.append(json.loads('{"camera":%d,"ip":"%s"}'%(i,cam.ip)))
+      cfg["camera_ip"] = ip
+      print cfg
+      self.savecfg(cfg)
+      
+      self.current_screen.ids.btnConnect.state = "normal"
+      self.current_screen.ids.btnConnect.text = ""
+      
+      #self.current_screen.ids.btnConnect.text = "Connecting"
+      self.current = "control"
+      #print "tctrl start"
   
   def DoDisconnect(self):
     try:
@@ -119,7 +129,7 @@ class Ponerine(ScreenManager):
     except:
       pass
     self.current = "connect"
-    self.current_screen.ids.btnConnect.text = "Connect"
+    self.current_screen.ids.btnConnect.text = ""
   
   def DoPhoto(self):
     i = 0
@@ -243,7 +253,11 @@ class PonerineApp(App):
     
   def on_pause(self):
     return True
-
+    
+  def on_stop(self):
+    print "app stop"
+    time.sleep(5)
+    
   def readcfg(self):
     cfgfile = __file__.replace(basename(__file__), "data/camera.cfg")
     r = []

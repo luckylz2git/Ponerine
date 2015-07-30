@@ -22,6 +22,7 @@ class Camera():
     self.recording = False
     self.rectime = "00:00:00"
     self.settings = ""
+    self.quit = threading.Event()
     
   def __str__(self):
     info = dict()
@@ -67,31 +68,37 @@ class Camera():
     self.qsend.put(msg)
 
   def ThreadSend(self):
+    i = 0
     #print "ThreadSend Starts\n"
     if self.socketopen <> 0:
-      i = 0
       while self.socketopen <> 0 and i < 5:
         i += 1
-        #print "try to connect socket %d" %i
+        print "try to connect socket %d" %i
         self.Connect()
       if self.socketopen <> 0:
+        self.quit.set()
         print "socket time out"
         return
-    #print "wait for token from camera"
-    while not self.link:
-      pass
-    #print "start sending loop"
-    while self.socketopen == 0:
-      if self.msgbusy == 0:
-        data = json.loads(self.qsend.get())
-        allowsendout = True
-        if data["msg_id"] == 515 and not self.recording:
-          allowsendout = False
-        if allowsendout:
-          data["token"] = self.token
-          print "sent out:", json.dumps(data, indent=2)
-          self.msgbusy = data["msg_id"]
-          self.srv.send(json.dumps(data))
+    print "socket connected"
+    if self.socketopen == 0:
+      #print "wait for token from camera"
+      while not self.link:
+        if self.quit.isSet():
+          break
+      #print "start sending loop"
+      while self.socketopen == 0:
+        if self.quit.isSet():
+          break
+        if self.msgbusy == 0:
+          data = json.loads(self.qsend.get())
+          allowsendout = True
+          if data["msg_id"] == 515 and not self.recording:
+            allowsendout = False
+          if allowsendout:
+            data["token"] = self.token
+            print "sent out:", json.dumps(data, indent=2)
+            self.msgbusy = data["msg_id"]
+            self.srv.send(json.dumps(data))
 
   def JsonHandle(self, data):
     print "received:", json.dumps(data, indent=2)
@@ -224,8 +231,12 @@ class Camera():
 
   def ThreadRecv(self):
     #print "ThreadRecv Starts\n"
-    while self.socketopen: pass
+    while self.socketopen: 
+      if self.quit.isSet():
+        break
     while self.socketopen == 0:
+      if self.quit.isSet():
+        break
       self.RecvMsg()
 
   def Connect(self):
@@ -249,6 +260,9 @@ class Camera():
         self.srv.close()
       except:
         pass
+      finally:
+        self.quit.set()
+
   def RecordTime(self, seconds):
     rectime = "00:00:00"
     ihour = 0
