@@ -43,8 +43,8 @@ class Ponerine(ScreenManager):
 
   if os.name == "nt":
     Window.size = (560,800)
-  else:
-    Window.size = (520,700)
+  #else:
+  #  Window.size = (520,700)
   
   def DetectCam(self):
     print "Start DetectCam", len(self.iplists), self.iplists
