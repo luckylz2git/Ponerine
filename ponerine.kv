@@ -2,63 +2,60 @@
 #:import kivy kivy
 #:import Factory kivy.factory.Factory
 
-<ImageButton@Button>
-  source: None
-  Image:
-    source: root.source
-    pos: root.pos
-    size: root.size
-    
 <ConnectScreen>:
-  BoxLayout:
-    orientation: 'vertical'
+  #set back ground color
+  AnchorLayout:
+    anchor_x: 'left'
+    anchor_y: 'top'
     canvas:
       Color: 
-        rgba: 1,1,1,1
+        rgba: 0.9,0.9,0.9,1
       Rectangle:
-        source: 'image/background.png'
         size: self.size
         pos: self.pos
-    BoxLayout:
-      size_hint: None, None
-      size: root.width, root.width/20
+        #source: 'image/background.png'
+    #title & logo
     GridLayout:
-      size_hint: 1, 0.2
-      spacing: [0, int(root.width/50)]
-      padding: [0, 0, int(root.width/20), 0]
+      size_hint: None, None
+      size: root.width, root.width/15 + root.width/40
+      padding: root.width/40, root.width/40, 0, 0
+      spacing: root.width/40
       cols: 2
+      Button:
+        size_hint: None, None
+        size: root.width/15, root.width/15
+        background_disabled_normal: 'image/ponerine.png'
+        state: 'normal'
+        disabled: True
       Label:
-        size_hint: 1, 1
-        padding: 5, 5
-        #halign: 'right'
-        #valign: 'middle'
-        text: "Camera 1"
-        #text_size: self.size
-        font_size: int(root.width/20)
-      TextInput:
-        size_hint: 1.8, 1
-        id: txtCam1
-        text: "192.168.42.1" #%int(root.width/20)
-        font_size: int(root.width/20)
-        padding: [root.width/50, (self.height - self.line_height)/2]
-      Label:
-        size_hint: 1, 1
-        padding: 5, 5
-        #halign: 'right'
-        #valign: 'middle'
-        text: "Camera 2"
-        #text_size: self.size
-        font_size: int(root.width/20)
-      TextInput:
-        size_hint: 1.8, 1
-        id: txtCam2
-        text: "192.168.42.2"
-        font_size: int(root.width/20)
-        padding: [root.width/50, (self.height - self.line_height)/2]
+        text_size: self.size
+        halign: 'left'
+        valign: 'middle'
+        color: 0,0,0,1
+        #font_size: root.width/40
+        text: 'Ponerine %s for XiaoYi Sports Camera' %app.version
+    # camera icon
+    GridLayout:
+      size_hint: None, None
+      size: root.width, root.width/2 + root.width/30
+      spacing: root.width/40, 0
+      padding: root.width/30,root.width/15,root.width/30,root.width/30
+      cols: 2
+      Button:
+        id: btnCam1
+        background_normal: 'image/camera_set_normal.png'
+        background_down: 'image/camera_set_down.png'
+      Button:
+        id: btnCam2
+        background_normal: 'image/camera_add_normal.png'
+        background_down: 'image/camera_add_down.png'
+    # connect icon
     AnchorLayout:
       anchor_x: 'center'
-      anchor_y: 'center'
-      size_hint: 1, 0.8
+      anchor_y: 'bottom'
+      size_hint: None, None
+      size: root.width, root.height * 0.8
+      #padding: 0,0,0,root.width/10
       Button:
         id: btnConnect
         background_normal: 'image/connect_normal.png'
@@ -66,10 +63,10 @@
         background_disabled_normal: 'image/connect_down.png'
         background_disabled_down: 'image/connect_down.png'
         size_hint: None, None
-        size: root.width/2, root.width/2
+        size: root.width/4, root.width/4
         text: ''
         color: 1,0,0,1
-        font_size: int(root.width/20)
+        font_size: int(root.width/40)
         on_release: root.manager.Connect()
 
 <ControlScreen>:

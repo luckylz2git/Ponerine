@@ -10,7 +10,6 @@ class Camera():
     self.token = 0
     self.recv = ""
     self.link = False
-    self.wifi = True
     self.jsonon = False
     self.jsonoff = 0
     self.msgbusy = 0
@@ -23,6 +22,7 @@ class Camera():
     self.rectime = "00:00:00"
     self.settings = ""
     self.quit = threading.Event()
+    self.wifi = threading.Event()
     
   def __str__(self):
     info = dict()
@@ -37,7 +37,8 @@ class Camera():
     self.token = 0
     self.recv = ""
     self.link = False
-    self.wifi = True
+    #self.wifi = True
+    self.wifi.clear()
     self.jsonon = False
     self.jsonoff = 0
     self.msgbusy = 0
@@ -144,7 +145,7 @@ class Camera():
         self.cambusy = False
         self.lastjpg = "piv_complete"
       elif data["type"] == "wifi_will_shutdown":
-        self.wifi = False
+        self.wifi.set()
         self.link = False
         self.UnlinkCamera()
 
@@ -246,7 +247,7 @@ class Camera():
     self.srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     self.srv.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
     self.socketopen = self.srv.connect_ex((self.ip, self.port))
-    #print "socket status: %d" %self.socketopen
+    print "socket status: %d" %self.socketopen
     if self.socketopen == 0:
       #print 'sent out: {"msg_id":257,"token":0}'
       self.msgbusy = 257

@@ -5,10 +5,10 @@ from kivy.uix.screenmanager import Screen, ScreenManager
 # Camera Object[camera.py]
 from camera import Camera
 # import base64, functools, hashlib, json, os, platform, re, select, socket, subprocess, sys, tempfile, threading, time, tkFileDialog, tkMessageBox, urllib2, webbrowser, zlib
-import json, os, threading, time
+import json, os, threading, time, socket
 from os.path import basename
 
-__version__='0.0.4'
+__version__='0.0.5'
 
 class ConnectScreen(Screen):
   #config in ponerine.kv
@@ -23,20 +23,38 @@ class SettingScreen(Screen):
   pass
 
 class Ponerine(ScreenManager):
+  def __init__(self, exit):  
+      super(Ponerine, self).__init__()  
+      self.exit = exit
+  
   if os.name == "nt":
     Window.size = (560,800)
   
+  def DetectCam(self):
+    print "Start DetectCam", len(self.iplists), self.iplists
+    self.first = threading.Event()
+    if len(self.iplists) > 1:
+      for i in range(0, len(self.iplists) - 1):
+        print i
+        threading.Thread(target=self.DoDetectCam, args = (i,), name="DoDetectCam" + str(i)).start()
+    else:
+      threading.Thread(target=self.DoDetectCam, args = (0,), name="DoDetectCam0").start()
+    
   def Connect(self):
+    self.first.set()
     if self.current_screen.ids.btnConnect.text == "" or self.current_screen.ids.btnConnect.text == "Error":
       self.cam = []
-      if self.current_screen.ids.txtCam1.text <> "":
-        self.cam.append(Camera(self.current_screen.ids.txtCam1.text))
-      if self.current_screen.ids.txtCam2.text <> "":
-        self.cam.append(Camera(self.current_screen.ids.txtCam2.text))
-      print "Connect", len(self.cam)
-      self.tconn= threading.Thread(target=self.DoConnect)
-      self.tconn.setName('DoConnect')
-      self.tconn.start()
+      print "ip list" ,len(self.iplists), self.iplists
+      if len(self.iplists) > 0:
+        for ip in self.iplists:
+          print "ip list %s" %ip
+          self.cam.append(Camera(ip))
+        print "Connect", len(self.cam)
+        self.tconn= threading.Thread(target=self.DoConnect)
+        self.tconn.setName('DoConnect')
+        self.tconn.start()
+      else:
+        self.current_screen.ids.btnConnect.text = "Error"
     
   def Disconnect(self):
     self.tconn= threading.Thread(target=self.DoDisconnect)
@@ -76,7 +94,35 @@ class Ponerine(ScreenManager):
     self.tread= threading.Thread(target=self.DoSetting)
     self.tread.setName('DoSetting')
     self.tread.start()
-
+    
+  def DoDetectCam(self, index):
+    time.sleep(5)
+    print "start DoDetectCam %d" %index
+    socket.setdefaulttimeout(3)
+    while not self.first.isSet() and not self.exit.isSet():
+      retry = 0
+      if len(self.iplists) > index:
+        retry += 1
+        index = index % 2
+        srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        srv.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        open = srv.connect_ex((self.iplists[index], 7878))
+        print "DoDetectCam Cam %d %d %d" %(index,open,retry)
+        if open == 0:
+          if index == 0:
+            self.current_screen.ids.btnCam1.background_normal = 'image/camera_green.png'
+          else:
+            self.current_screen.ids.btnCam2.background_normal = 'image/camera_green.png'
+          srv.close()
+          break
+        elif retry >= 1:
+          if index == 0:
+            self.current_screen.ids.btnCam1.background_normal = 'image/camera_red.png'
+          else:
+            self.current_screen.ids.btnCam2.background_normal = 'image/camera_red.png'
+        srv.close()
+      
   def DoConnect(self):
     i = 0
     stop = False
@@ -238,43 +284,48 @@ class Ponerine(ScreenManager):
       pass
     
 class PonerineApp(App):
-
+  version = __version__
   def build(self):
-    ponerine = Ponerine()
+    self.exit = threading.Event()
+    ponerine = Ponerine(self.exit)
     conn = ConnectScreen(name='connect')
-    cfg = self.readcfg()
-    conn.ids.txtCam1.text = cfg[0]
-    conn.ids.txtCam2.text = cfg[1]
+    ponerine.iplists = self.readcfg()
+    #conn.ids.txtCam1.text = cfg[0]
+    #conn.ids.txtCam2.text = cfg[1]
     ponerine.add_widget(conn)
     ponerine.add_widget(ControlScreen(name='control'))
     ponerine.add_widget(SettingScreen(name='setting'))
     ponerine.current = 'connect'
+    ponerine.DetectCam()
     return ponerine
     
   def on_pause(self):
     return True
     
   def on_stop(self):
+    self.exit.set()
     print "app stop"
-    time.sleep(5)
+    #time.sleep(1)
     
-  def readcfg(self):
+  def readcfg(self, key = "camera_ip", subkey = "ip"):
+    print "readcfg"
     cfgfile = __file__.replace(basename(__file__), "data/camera.cfg")
     r = []
     try:
       with open(cfgfile) as file:
         cfg = json.loads(file.read())
         #print "readcfg",cfg
-      if cfg.has_key("camera_ip"):
-        for item in cfg["camera_ip"]:
-          r.append(item["ip"])
+      if cfg.has_key(key):
+        for item in cfg[key]:
+          r.append(item[subkey])
         #print "r", r
-        if len(r) < 2:
-          r.append("")
+        #if len(r) < 2:
+          #r.append("")
       else:
-        r = ["192.168.42.1",""]
+        r = ["192.168.42.1"]
     except StandardError:
-      r = ["192.168.42.1",""]
+      r = ["192.168.42.1"]
+    print r
     return r
 
 if __name__ == '__main__':
