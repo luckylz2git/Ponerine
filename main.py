@@ -3,9 +3,9 @@ from kivy.app import App
 from kivy.core.window import Window
 from kivy.uix.screenmanager import Screen, ScreenManager
 from kivy.clock import Clock
-from kivy.lang import Builder
+#from kivy.lang import Builder
 from kivy.uix.popup import Popup
-from kivy.properties import StringProperty
+from kivy.properties import StringProperty, NumericProperty, BooleanProperty
 # Camera Object[camera.py]
 from camera import Camera
 # import base64, functools, hashlib, json, os, platform, re, select, socket, subprocess, sys, tempfile, threading, time, tkFileDialog, tkMessageBox, urllib2, webbrowser, zlib
@@ -32,6 +32,8 @@ class SettingScreen(Screen):
 
 class CamConfigPopup(Popup):
   ip = StringProperty()
+  index = NumericProperty()
+  apply = BooleanProperty()
 
 class Ponerine(ScreenManager):
   def __init__(self, exit):  
@@ -99,7 +101,7 @@ class Ponerine(ScreenManager):
     print "CamConfig index %d" %index, self.iplists
     self.first.set()
     #camconfigkv = Builder.load_string(open("data/camconfig.kv").read())
-    self.camconfigpop = CamConfigPopup(size_hint=(0.8, 0.8), size=self.size, ip=str(self.iplists[index]))
+    self.camconfigpop = CamConfigPopup(size_hint=(0.8, 0.8), size=self.size, ip=str(self.iplists[index]), index=index)
     self.camconfigpop.bind(on_dismiss=self.CamConfigApply)
     self.camconfigpop.apply = False
     self.camconfigpop.index = int(index)
