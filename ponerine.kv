@@ -169,7 +169,7 @@
       spacing: root.width/40
       cols: 2
       Label:
-        text: 'Camera %d IP : ' %(root.index + 1) 
+        text: 'Camera %d IP : ' %(root.index + 1)
         size_hint: None, None
         size: root.width * 0.3, root.width/10
         text_size: self.size
@@ -178,6 +178,7 @@
         valign: 'middle'
       TextInput:
         id: CamAddr
+        multiline: False
         text: root.ip
         size_hint: None, None
         size: root.width * 0.5, root.width/10
@@ -199,6 +200,7 @@
         valign: 'middle'
       TextInput:
         id: CamPort
+        multiline: False
         text: '7878'
         size_hint: None, None
         size: root.width * 0.2, root.width/10
