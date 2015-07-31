@@ -163,62 +163,70 @@
     Widget:
     BoxLayout:
       orientation: 'horizontal'
-      size_hint: 1, None
-      height: 30
+      size_hint: None, None
+      size: root.width, root.width/10 + root.width/20
+      padding: root.width/40, 0, root.width/40, 0
+      spacing: root.width/40
+      cols: 2
       Label:
-        text: 'Camera IP:' #%(root.index + 1)
-        size_hint: None, 1
-        width: 160
+        text: 'Camera %d IP : ' %(root.index + 1) 
+        size_hint: None, None
+        size: root.width * 0.3, root.width/10
         text_size: self.size
+        font_size: root.width/25
         halign: 'right'
         valign: 'middle'
-        padding_x: 10
       TextInput:
         id: CamAddr
         text: root.ip
-        size_hint: None, 1
-        width: 150
+        size_hint: None, None
+        size: root.width * 0.5, root.width/10
+        font_size: root.width/20
   
     BoxLayout:
       orientation: 'horizontal'
-      size_hint: 1, None
-      height: 30
-      padding_y: 10
+      size_hint: None, None
+      size: root.width, root.width/10 + root.width/20
+      padding: root.width/40, root.width/40, root.width/40, 0
+      spacing: root.width/40
       Label:
-        text: 'Camera JSON port:'
-        size_hint: None, 1
-        width: 160
+        text: 'Json Port : '
+        size_hint: None, None
+        size: root.width * 0.3, root.width/10
         text_size: self.size
+        font_size: root.width/25
         halign: 'right'
         valign: 'middle'
-        padding_x: 10
       TextInput:
         id: CamPort
         text: '7878'
-        size_hint: None, 1
-        width: 50
+        size_hint: None, None
+        size: root.width * 0.2, root.width/10
+        font_size: root.width/20
     Widget
-    BoxLayout:
+    AnchorLayout:
+      anchor_x: 'center'
+      anchor_y: 'bottom'
       orientation: 'horizontal'
-      size_hint: 1, None
-      height: 30
-
-      Button:
-        text: 'Apply'
+      size_hint: 1, 1
+      GridLayout:
+        cols: 2
         size_hint: None, None
-        size: 100, 30
-        on_release:
-          root.apply = True
-          root.ip = CamAddr.text
-          root.port = CamPort.text
-          root.dismiss()
-          #root.parent.parent.parent.parent.manager.CamConfigApply(0, CamAddr.text, CamPort.text)
-      Button:
-        text: 'Cancel'
-        size_hint: None, None
-        size: 100, 30
-        on_release:
-          root.apply = False
-          root.dismiss()
-          #root.parent.parent.parent.parent.manager.CamConfigCancel()
+        size: root.width*0.8, root.width*0.15
+        padding: 0,0,0,0
+        spacing: root.width/20
+        Button:
+          text: 'Apply'
+          size_hint: 1, 1
+          on_release:
+            root.apply = True
+            root.ip = CamAddr.text
+            root.port = CamPort.text
+            root.dismiss()
+        Button:
+          text: 'Cancel'
+          size_hint: 1, 1
+          on_release:
+            root.apply = False
+            root.dismiss()
     Widget:
