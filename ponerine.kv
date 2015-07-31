@@ -43,12 +43,14 @@
       cols: 2
       Button:
         id: btnCam1
-        background_normal: 'image/camera_set_normal.png'
-        background_down: 'image/camera_set_down.png'
+        background_normal: 'image/camera_add_normal.png'
+        background_down: 'image/camera_add_down.png'
+        on_release: root.manager.CamConfig(0)
       Button:
         id: btnCam2
         background_normal: 'image/camera_add_normal.png'
         background_down: 'image/camera_add_down.png'
+        on_release: root.manager.CamConfig(1)
     # connect icon
     AnchorLayout:
       anchor_x: 'center'
@@ -150,3 +152,73 @@
         text: 'Disconnect'
         font_size: int(root.width/20)
         on_release: root.manager.Disconnect()
+
+<CamConfigPopup>:
+  auto_dismiss: False
+  title: 'Camera_Connection_Config'
+  BoxLayout:
+    orientation: 'vertical'
+    spacing: 5
+    
+    #Widget:
+    BoxLayout:
+      orientation: 'horizontal'
+      size_hint: 1, None
+      height: 30
+      Label:
+        text: 'Camera IP:' #%(root.index + 1)
+        size_hint: None, 1
+        width: 160
+        text_size: self.size
+        halign: 'right'
+        valign: 'middle'
+        padding_x: 10
+      TextInput:
+        id: CamAddr
+        text: root.ip
+        size_hint: None, 1
+        width: 150
+  
+    BoxLayout:
+      orientation: 'horizontal'
+      size_hint: 1, None
+      height: 30
+      padding_y: 10
+      Label:
+        text: 'Camera JSON port:'
+        size_hint: None, 1
+        width: 160
+        text_size: self.size
+        halign: 'right'
+        valign: 'middle'
+        padding_x: 10
+      TextInput:
+        id: CamPort
+        text: '7878'
+        size_hint: None, 1
+        width: 50
+    #Widget
+    BoxLayout:
+      orientation: 'horizontal'
+      size_hint: 1, None
+      height: 30
+
+      Button:
+        text: 'Apply'
+        size_hint: None, None
+        size: 100, 30
+        on_release:
+          root.apply = True
+          root.ip = CamAddr.text
+          root.port = CamPort.text
+          root.dismiss()
+          #root.parent.parent.parent.parent.manager.CamConfigApply(0, CamAddr.text, CamPort.text)
+      Button:
+        text: 'Cancel'
+        size_hint: None, None
+        size: 100, 30
+        on_release:
+          root.apply = False
+          root.dismiss()
+          #root.parent.parent.parent.parent.manager.CamConfigCancel()
+    #Widget:
