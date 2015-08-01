@@ -22,7 +22,7 @@ class Camera():
     self.rectime = "00:00:00"
     self.settings = ""
     self.quit = threading.Event()
-    self.wifi = threading.Event()
+    self.wifioff = threading.Event()
     
   def __str__(self):
     info = dict()
@@ -38,7 +38,7 @@ class Camera():
     self.recv = ""
     self.link = False
     #self.wifi = True
-    self.wifi.clear()
+    self.wifioff.clear()
     self.jsonon = False
     self.jsonoff = 0
     self.msgbusy = 0
@@ -72,7 +72,7 @@ class Camera():
     i = 0
     #print "ThreadSend Starts\n"
     if self.socketopen <> 0:
-      while self.socketopen <> 0 and i < 5:
+      while self.socketopen <> 0 and i < 4:
         i += 1
         print "try to connect socket %d" %i
         self.Connect()
@@ -145,7 +145,7 @@ class Camera():
         self.cambusy = False
         self.lastjpg = "piv_complete"
       elif data["type"] == "wifi_will_shutdown":
-        self.wifi.set()
+        self.wifioff.set()
         self.link = False
         self.UnlinkCamera()
 
@@ -241,7 +241,7 @@ class Camera():
       self.RecvMsg()
 
   def Connect(self):
-    socket.setdefaulttimeout(6)
+    socket.setdefaulttimeout(5)
     #create socket
     self.srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     self.srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
