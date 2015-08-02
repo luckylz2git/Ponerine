@@ -5,7 +5,7 @@ from kivy.uix.screenmanager import Screen, ScreenManager, SlideTransition
 from kivy.clock import Clock
 #from kivy.lang import Builder
 from kivy.uix.popup import Popup
-from kivy.properties import StringProperty, NumericProperty, BooleanProperty
+from kivy.properties import StringProperty, NumericProperty, BooleanProperty, ObjectProperty
 # Camera Object[camera.py]
 from camera import Camera
 # import base64, functools, hashlib, json, os, platform, re, select, socket, subprocess, sys, tempfile, threading, time, tkFileDialog, tkMessageBox, urllib2, webbrowser, zlib
@@ -31,15 +31,14 @@ class SettingScreen(Screen):
   pass
 
 class CamConfigPopup(Popup):
-  ip = StringProperty()
-  index = NumericProperty()
+  cfg = ObjectProperty()
   apply = BooleanProperty()
 
 class Ponerine(ScreenManager):
   def __init__(self, appexit):  
     super(Ponerine, self).__init__()  
     self.appexit = appexit
-    self.iplists = self.ReadConfig()
+    self.cfglist = self.ReadConfig()
     self.stopdetect = threading.Event()
     
     sysname = platform.system()
@@ -48,13 +47,13 @@ class Ponerine(ScreenManager):
     elif sysname == "Darwin":
       Window.size = (520,700)
   
-  def DetectCam(self):
-    print "Start DetectCam", len(self.iplists), self.iplists
+  def DetectCam(self, timewait = 1):
+    print "Start DetectCam", len(self.cfglist), self.cfglist
     i = 0
-    for ip in self.iplists:
-      if ip <> "":
+    for cfg in self.cfglist:
+      if cfg["ip"] <> "":
         print "create detect thread %d" %i
-        threading.Thread(target=self.DoDetectCam, args=(i,ip), name="DoDetectCam"+str(i)).start()
+        threading.Thread(target=self.DoDetectCam, args=(i,cfg["ip"],timewait,), name="DoDetectCam"+str(i)).start()
         if i == 0:
           self.current_screen.ids.btnCam1.background_normal = 'image/camera_set_down.png'
           self.current_screen.ids.btnCam1.background_down = 'image/camera_set_normal.png'
@@ -75,11 +74,11 @@ class Ponerine(ScreenManager):
     self.stopdetect.set()
     if self.current_screen.ids.btnConnect.text == "" or self.current_screen.ids.btnConnect.text == "Error":
       self.cam = []
-      print "ip list" ,len(self.iplists), self.iplists
-      for ip in self.iplists:
-        print "ip list %s" %ip
-        if ip <> "":
-          self.cam.append(Camera(ip))
+      print "ip list" ,len(self.cfglist), self.cfglist
+      for cfg in self.cfglist:
+        print "ip list %s" %cfg["ip"]
+        if cfg["ip"] <> "":
+          self.cam.append(Camera(cfg["ip"]))
       if len(self.cam) > 0:
         self.tconn= threading.Thread(target=self.DoConnect)
         self.tconn.setName('DoConnect')
@@ -103,47 +102,33 @@ class Ponerine(ScreenManager):
   
   def CamConfig(self, index):
     print type(self.parent)
-    print "CamConfig index %d" %index, self.iplists
+    print "CamConfig index %d" %index, self.cfglist
     self.stopdetect.set()
-    #camconfigkv = Builder.load_string(open("data/camconfig.kv").read())
-    self.camconfigpop = CamConfigPopup(size_hint=(0.8, 0.8), size=self.size, ip=str(self.iplists[index]), index=index)
+    self.camconfigpop = CamConfigPopup(title='Connection Config - Camera %d' %(index+1), size_hint=(0.8, 0.8), size=self.size, cfg=self.cfglist[index], index=index)
     self.camconfigpop.bind(on_dismiss=self.CamConfigApply)
     self.camconfigpop.apply = False
     self.camconfigpop.index = int(index)
-    #self.camconfigpop.ip = str(self.iplists[index])
-    print self.camconfigpop.apply, self.camconfigpop.index, self.camconfigpop.ip
+    print self.camconfigpop.apply, self.camconfigpop.index, self.camconfigpop.cfg
     self.camconfigpop.open()
-    #Clock.schedule_once(lambda dt: self.camconfigpop.open())
-    #Clock.schedule_once(self.camconfigpop.open())
   
   def CamConfigApply(self, popup):
     if popup.apply:
-      print "index %d ip %s" %(popup.index,popup.ip)
-      self.iplists[popup.index] = popup.ip
-      print self.iplists
+      print "index %d ip %s" %(popup.index,popup.cfg)
+      self.cfglist[popup.index] = popup.cfg
       self.WriteConfig()
-      #self.iplists = self.ReadConfig()
-      #print self.iplists
       self.stopdetect.clear()
       self.DetectCam()
-      #Clock.schedule_once(lambda dt: self.camconfigpop.dismiss())
   
   def Photo(self):
     self.tphoto= threading.Thread(target=self.DoPhoto)
     self.tphoto.setName('DoPhoto')
     self.tphoto.start()
-    self.tctrl= threading.Thread(target=self.DoControl)
-    self.tctrl.setName('DoControl')
-    self.tctrl.start()
     
   def Record(self):
     if self.current_screen.ids.btnRecord.text == "Start Record":
       self.tstart= threading.Thread(target=self.DoStartRecord)
       self.tstart.setName('DoStartRecord')
       self.tstart.start()
-      self.tctrl= threading.Thread(target=self.DoControl)
-      self.tctrl.setName('DoControl')
-      self.tctrl.start()
     elif self.current_screen.ids.btnRecord.text == "Stop Record":
       self.tstop= threading.Thread(target=self.DoStopRecord)
       self.tstop.setName('DoStopRecord')
@@ -156,16 +141,17 @@ class Ponerine(ScreenManager):
     self.tread.setName('DoSetting')
     self.tread.start()
     
-  def DoDetectCam(self, index, ip):
-    timewait = 0
+  def DoDetectCam(self, index, ip, timewait = 1):
     if ip == "":
       return
-    self.appexit.wait(1)
+    self.appexit.wait(timewait)
+    timewait = 0
     print "start DoDetectCam %d" %index
     socket.setdefaulttimeout(5)
     retry = 0
     while not self.appexit.isSet():
-      if timewait > 0:
+      print timewait
+      if timewait > 0:    
         self.stopdetect.wait(timewait)
       if self.stopdetect.isSet():
         break 
@@ -206,33 +192,26 @@ class Ponerine(ScreenManager):
       cam.LinkCamera()
       while cam.token == 0:
         i = i % 3 + 1
-        time.sleep(0.5)
-        #self.current_screen.ids.btnConnect.text = "Connecting %s" %("." * i)
-        self.current_screen.ids.btnConnect.text = "%s-%s" %("(" * i,")" * i)
+        quit.wait(0.5)
         if quit.isSet():
           stop = True
           break
+        self.current_screen.ids.btnConnect.text = "%s-%s" %("(" * i,")" * i)
+        
     if stop:
       self.current_screen.ids.btnConnect.state = "normal"
       self.current_screen.ids.btnConnect.text = "Error"
     else:
       self.current_screen.ids.btnConnect.state = "normal"
       self.current_screen.ids.btnConnect.text = ""
-      
-      #self.current_screen.ids.btnConnect.text = "Connecting"
       self.current = "control"
       i = 0
       for cam in self.cam:
-        i +=1
         threading.Thread(target=self.DoWifi, args=(cam.wifioff,), name="DoWifi"+str(i)).start()
+        threading.Thread(target=self.DoFileTaken, args=(i,), name="DoFileTaken"+str(i)).start()
+        i +=1
   
   def DoDisconnect(self):
-#     try:
-#       if self.tctrl.isAlive():
-#         print "stop tctrl"
-#         self.tctrl._Thread__stop()
-#     except:
-#       pass
     try:
       for cam in self.cam:
         cam.UnlinkCamera()
@@ -246,14 +225,6 @@ class Ponerine(ScreenManager):
     self.DetectCam()
     self.transition = SlideTransition(direction="left")
     self.current_screen.ids.btnConnect.text = ""
-
-#     cam1 = self.current_screen.ids.btnCam1.background_normal
-#     if cam1 == "image/camera_green.png" or cam1 == "image/camera_green.png":
-#       self.current_screen.ids.btnCam1.background_normal = "image/camera_set_normal.png"
-#
-#     cam2 = self.current_screen.ids.btnCam2.background_normal
-#     if cam2 == "image/camera_green.png" or cam2 == "image/camera_green.png":
-#       self.current_screen.ids.btnCam2.background_normal = "image/camera_set_normal.png"
   
   def DoPhoto(self):
     i = 0
@@ -315,29 +286,25 @@ class Ponerine(ScreenManager):
     self.current_screen.ids.btnRecord.text = "Start Record"
   
   def DoWifi(self, wifioff):
-    print "wifi wait start"
+    print "DoWifi wait start"
     wifioff.wait()
     self.current = 'connect'
     self.current_screen.ids.btnConnect.text = ""
+    wifioff.clear()
+    self.stopdetect.clear()
+    self.DetectCam(45)
+    print "DoWifi wait stop"
   
-  def DoControl(self):
-    file = ""
-    i = 0
-    for cam in self.cam:
-      i += 1
-      while cam.lastjpg == "" and cam.lastmp4 == "":
-        if cam.quit.isSet():
-          return
+  def DoFileTaken(self, index):
+    print "DoFileTaken start %d" %index
+    while not self.cam[index].quit.isSet():
+      self.cam[index].taken.wait()
       debugtxt = self.get_screen("control").ids.txtDebug.text
-      file = cam.lastjpg
-      cam.lastjpg = ""
-      if file <> "":
-        debugtxt += "\nCAM %d : " %i + file
-      file = cam.lastmp4
-      cam.lastmp4 = ""
-      if file <> "":
-        debugtxt += "\nCAM %d : " %i + file
-    self.get_screen("control").ids.txtDebug.text = debugtxt
+      if self.cam[index].filetaken <> "":
+        debugtxt += "\nCAM %d : " %(index+1) + self.cam[index].filetaken
+        self.get_screen("control").ids.txtDebug.text = debugtxt
+      self.cam[index].taken.clear()
+    print "DoFileTaken stop %d" %index
 
   def DoSetting(self):
     debugtxt = self.get_screen("setting").ids.txtDebug.text
@@ -352,36 +319,62 @@ class Ponerine(ScreenManager):
       debugtxt += "\nCAM %d Settings :\n" %i + settings
     self.get_screen("setting").ids.txtDebug.text = debugtxt
 
-  def ReadConfig(self, key = "camera_ip", subkey = "ip"):
+  def ReadConfig(self):
     print "readcfg"
     cfgfile = __file__.replace(basename(__file__), "data/camera.cfg")
+    initstr = '''
+    {
+      "ip": "", 
+      "camera": 0,
+      "wifimode": 0,
+      "defaultip": "",
+      "stationip": "",
+      "gateway": "",
+      "ssid": "",
+      "password": ""
+    }
+    '''
     r = []
     try:
       with open(cfgfile) as file:
-        cfg = json.loads(file.read())
+        readstr = file.read()
+        print "readstr", readstr
+        cfg = json.loads(readstr)
         print "readcfg",cfg
-      if cfg.has_key(key):
-        for item in cfg[key]:
-          r.append(item[subkey])
+      if cfg.has_key("config"):
+        for item in cfg["config"]:
+          cfginit = json.loads(initstr)
+          cfginit.update(item)
+          r.append(cfginit)
         print "r", r
         if len(r) < 2:
-          r.append("")
+          cfginit = json.loads(initstr)
+          cfginit["camera"] = 2
+          r.append(cfginit)
       else:
-        r = ["192.168.42.1",""]
+        cfginit = json.loads(initstr)
+        cfginit["camera"] = 1
+        cfginit["ip"] = "192.168.42.1"
+        cfginit["defaultip"] = "192.168.42.1"
+        self.cfglist.append(cfginit)
+        cfginit = json.loads(initstr)
+        cfginit["camera"] = 2
+        r.append(cfginit)
     except StandardError:
-      r = ["192.168.42.1",""]
+      cfginit = json.loads(initstr)
+      cfginit["camera"] = 1
+      cfginit["ip"] = "192.168.42.1"
+      cfginit["defaultip"] = "192.168.42.1"
+      self.cfglist.append(cfginit)
+      cfginit = json.loads(initstr)
+      cfginit["camera"] = 2
+      r.append(cfginit)
     print r
     return r
 
   def WriteConfig(self):
-    i = 0
     cfg = {}
-    camip = []
-    for ip in self.iplists:
-      if ip <> "":
-        i += 1
-        camip.append(json.loads('{"camera":%d,"ip":"%s"}'%(i, ip)))
-    cfg["camera_ip"] = camip
+    cfg["config"] = self.cfglist
     print cfg
     cfgfile = __file__.replace(basename(__file__), "data/camera.cfg")
     print __file__
@@ -399,7 +392,7 @@ class PonerineApp(App):
     self.appexit = threading.Event()
     ponerine = Ponerine(self.appexit)
     conn = ConnectScreen(name='connect')
-    #self.ponerine.iplists = self.readcfg()
+    #self.ponerine.iplist = self.readcfg()
     #conn.ids.txtCam1.text = cfg[0]
     #conn.ids.txtCam2.text = cfg[1]
     ponerine.add_widget(conn)
