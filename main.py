@@ -417,4 +417,4 @@ class PonerineApp(App):
 
 if __name__ == '__main__':
   print Window.size
-  PonerineApp().run()
+  PonerineApp().run() 
