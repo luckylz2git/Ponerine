@@ -16,11 +16,11 @@ class Camera():
     self.cambusy = False
     self.showtime = True
     self.status = {}
-    self.lastjpg = ""
-    self.lastmp4 = ""
+    self.filetaken = ""
     self.recording = False
     self.rectime = "00:00:00"
     self.settings = ""
+    self.taken = threading.Event()
     self.quit = threading.Event()
     self.wifioff = threading.Event()
     
@@ -38,6 +38,7 @@ class Camera():
     self.recv = ""
     self.link = False
     #self.wifi = True
+    self.taken.clear()
     self.wifioff.clear()
     self.jsonon = False
     self.jsonoff = 0
@@ -45,8 +46,7 @@ class Camera():
     self.cambusy = False
     self.showtime = True
     self.status = {}
-    self.lastjpg = ""
-    self.lastmp4 = ""
+    self.filetaken = ""
     self.recording = False
     self.rectime = "00:00:00"
     self.settings = ""
@@ -78,6 +78,7 @@ class Camera():
         self.Connect()
       if self.socketopen <> 0:
         self.quit.set()
+        self.taken.set()
         print "socket time out"
         return
     print "socket connected"
@@ -126,13 +127,15 @@ class Camera():
       elif data["type"] == "photo_taken":
         self.cambusy = False
         self.status[data["type"]] = data["param"]
-        self.lastjpg = data["param"].replace("/tmp/fuse_d/DCIM","")
-        print self.lastjpg
+        self.filetaken = data["param"].replace("/tmp/fuse_d/DCIM","")
+        print self.filetaken
+        self.taken.set()
       elif data["type"] == "video_record_complete":
         self.cambusy = False
         self.status[data["type"]] = data["param"]
-        self.lastmp4 = data["param"].replace("/tmp/fuse_d/DCIM","")
-        print self.lastmp4
+        self.filetaken = data["param"].replace("/tmp/fuse_d/DCIM","")
+        print self.filetaken
+        self.taken.set()
       else:
         self.status[data["type"]] = data["param"]
     else:
@@ -143,7 +146,8 @@ class Camera():
           self.SendMsg('{"msg_id":515}')
       elif data["type"] == "piv_complete":
         self.cambusy = False
-        self.lastjpg = "piv_complete"
+        self.filetaken = "piv_complete"
+        self.taken.set()
       elif data["type"] == "wifi_will_shutdown":
         self.wifioff.set()
         self.link = False
@@ -263,6 +267,7 @@ class Camera():
         pass
       finally:
         self.quit.set()
+        self.taken.set()
 
   def RecordTime(self, seconds):
     rectime = "00:00:00"
