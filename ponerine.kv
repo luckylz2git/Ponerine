@@ -155,59 +155,165 @@
 
 <CamConfigPopup>:
   auto_dismiss: False
-  title: 'Camera Connection Config'
+  #title: 'Camera Connection Config'
   BoxLayout:
     orientation: 'vertical'
     spacing: 5
     
     Widget:
-    BoxLayout:
-      orientation: 'horizontal'
-      size_hint: None, None
-      size: root.width, root.width/10 + root.width/20
-      padding: root.width/40, 0, root.width/40, 0
-      spacing: root.width/40
-      cols: 2
+      size_hint: 1, None
+      size: root.width, root.width/20
+    
+    #Default IP Address
+    GridLayout:
+      size_hint: 1, None
+      height: root.width/10+root.width/40
+      padding: 0,0,0,root.width/40
+      spacing: root.width/35
+      cols: 3
       Label:
-        text: 'Camera %d IP : ' %(root.index + 1)
-        size_hint: None, None
-        size: root.width * 0.3, root.width/10
+        text: 'Default Mode IP : '
+        size_hint: 0.4, 1
         text_size: self.size
         font_size: root.width/25
         halign: 'right'
         valign: 'middle'
       TextInput:
-        id: CamAddr
+        id: txtDefaultIP
         multiline: False
-        text: root.ip
-        size_hint: None, None
-        size: root.width * 0.5, root.width/10
+        text: root.cfg["defaultip"]
+        size_hint: 0.4, 1
         font_size: root.width/20
         padding: root.width/60, root.width/50, 0, 0
-  
-    BoxLayout:
-      orientation: 'horizontal'
-      size_hint: None, None
-      size: root.width, root.width/10 + root.width/20
-      padding: root.width/40, root.width/40, root.width/40, 0
-      spacing: root.width/40
       Label:
-        text: 'Json Port : '
-        size_hint: None, None
-        size: root.width * 0.3, root.width/10
+        size_hint: 0.2, 1
+    
+    # AP / Station Mode
+    GridLayout:
+      size_hint: 1, None
+      height: root.width/10 + root.width/40
+      padding: 0,0,0,root.width/40
+      spacing: root.width/35
+      cols: 3
+      Label:
+        text: 'Station Mode : '
+        size_hint: 0.4, 1
+        text_size: self.size
+        font_size: root.width/25
+        halign: 'right'
+        valign: 'middle'
+      Switch:
+        id: optWifiMode
+        active: root.cfg["wifimode"] == 1
+        size_hint: 0.25, 1
+        text_size: self.size
+        font_size: root.width/25
+      Label:
+        size_hint: 0.35, 1
+        
+    #Station IP Address
+    GridLayout:
+      disabled: not optWifiMode.active
+      size_hint: 1, None
+      height: root.width/10+root.width/40
+      padding: 0,0,0,root.width/40
+      spacing: root.width/35
+      cols: 3
+      Label:
+        text: 'Station IP : ' 
+        size_hint: 0.4, 1
         text_size: self.size
         font_size: root.width/25
         halign: 'right'
         valign: 'middle'
       TextInput:
-        id: CamPort
+        id: txtStationIP
         multiline: False
-        text: '7878'
-        size_hint: None, None
-        size: root.width * 0.2, root.width/10
+        text: root.cfg["stationip"]
+        size_hint: 0.4, 1
         font_size: root.width/20
         padding: root.width/60, root.width/50, 0, 0
-    Widget
+      Label:
+        size_hint: 0.2, 1
+    
+    #Gateway IP Address
+    GridLayout:
+      disabled: not optWifiMode.active
+      size_hint: 1, None
+      height: root.width/10+root.width/40
+      padding: 0,0,0,root.width/40
+      spacing: root.width/35
+      cols: 3
+      Label:
+        text: 'Gateway : ' 
+        size_hint: 0.4, 1
+        text_size: self.size
+        font_size: root.width/25
+        halign: 'right'
+        valign: 'middle'
+      TextInput:
+        id: txtGateway
+        multiline: False
+        text: root.cfg["gateway"]
+        size_hint: 0.4, 1
+        font_size: root.width/20
+        padding: root.width/60, root.width/50, 0, 0
+      Label:
+        size_hint: 0.2, 1
+    
+    #SSID Name
+    GridLayout:
+      disabled: not optWifiMode.active
+      size_hint: 1, None
+      height: root.width/10+root.width/40
+      padding: 0,0,0,root.width/40
+      spacing: root.width/35
+      cols: 3
+      Label:
+        text: 'SSID Name : ' 
+        size_hint: 0.4, 1
+        text_size: self.size
+        font_size: root.width/25
+        halign: 'right'
+        valign: 'middle'
+      TextInput:
+        id: txtSSID
+        multiline: False
+        text: root.cfg["ssid"]
+        size_hint: 0.4, 1
+        font_size: root.width/20
+        padding: root.width/60, root.width/50, 0, 0
+      Label:
+        size_hint: 0.2, 1
+    
+    #Password
+    GridLayout:
+      disabled: not optWifiMode.active
+      size_hint: 1, None
+      height: root.width/10+root.width/40
+      padding: 0,0,0,root.width/40
+      spacing: root.width/35
+      cols: 3
+      Label:
+        text: 'SSID Password : ' 
+        size_hint: 0.4, 1
+        text_size: self.size
+        font_size: root.width/25
+        halign: 'right'
+        valign: 'middle'
+      TextInput:
+        id: txtPassword
+        password: chkShowPass.active
+        multiline: False
+        text: root.cfg["password"]
+        size_hint: 0.4, 1
+        font_size: root.width/20
+        padding: root.width/60, root.width/50, 0, 0
+      CheckBox:
+        id: chkShowPass
+        active: True
+        size_hint: 0.2, 1
+    
     AnchorLayout:
       anchor_x: 'center'
       anchor_y: 'bottom'
@@ -216,21 +322,27 @@
       GridLayout:
         cols: 2
         size_hint: None, None
-        size: root.width*0.8, root.width*0.15
-        padding: 0,0,0,0
+        size: root.width*0.8, root.width*0.15+root.width/20
+        padding: 0,0,0,root.width/20
         spacing: root.width/20
+        # Apply Button
         Button:
           text: 'Apply'
           size_hint: 1, 1
           on_release:
             root.apply = True
-            root.ip = CamAddr.text
-            root.port = CamPort.text
+            root.cfg["ip"] = txtStationIP.text if optWifiMode.active else txtDefaultIP.text
+            root.cfg["defaultip"] = txtDefaultIP.text
+            root.cfg["wifimode"] = 1 if optWifiMode.active else 0
+            root.cfg["stationip"] = txtStationIP.text
+            root.cfg["gateway"] = txtGateway.text
+            root.cfg["ssid"] = txtSSID.text
+            root.cfg["password"] = txtPassword.text
             root.dismiss()
+        # Cancel Button
         Button:
           text: 'Cancel'
           size_hint: 1, 1
           on_release:
             root.apply = False
             root.dismiss()
-    Widget:
