@@ -164,8 +164,32 @@
       size_hint: 1, None
       size: root.width, root.width/20
     
+    # Camera Enabled
+    GridLayout:
+      size_hint: 1, None
+      height: root.width/10 + root.width/40
+      padding: 0,0,0,root.width/40
+      spacing: root.width/35
+      cols: 3
+      Label:
+        text: 'Camera Enabled : '
+        size_hint: 0.4, 1
+        text_size: self.size
+        font_size: root.width/25
+        halign: 'right'
+        valign: 'middle'
+      Switch:
+        id: optEnabled
+        active: root.cfg["ip"] <> ""
+        size_hint: 0.25, 1
+        text_size: self.size
+        font_size: root.width/25
+      Label:
+        size_hint: 0.35, 1
+    
     #Default IP Address
     GridLayout:
+      disabled: (True if optWifiMode.active else False) if optEnabled.active else True
       size_hint: 1, None
       height: root.width/10+root.width/40
       padding: 0,0,0,root.width/40
@@ -190,6 +214,7 @@
     
     # AP / Station Mode
     GridLayout:
+      disabled: False if optEnabled.active else True
       size_hint: 1, None
       height: root.width/10 + root.width/40
       padding: 0,0,0,root.width/40
@@ -213,7 +238,7 @@
         
     #Station IP Address
     GridLayout:
-      disabled: not optWifiMode.active
+      disabled: (False if optWifiMode.active else True) if optEnabled.active else True
       size_hint: 1, None
       height: root.width/10+root.width/40
       padding: 0,0,0,root.width/40
@@ -238,7 +263,7 @@
     
     #Gateway IP Address
     GridLayout:
-      disabled: not optWifiMode.active
+      disabled: (False if optWifiMode.active else True) if optEnabled.active else True
       size_hint: 1, None
       height: root.width/10+root.width/40
       padding: 0,0,0,root.width/40
@@ -263,7 +288,7 @@
     
     #SSID Name
     GridLayout:
-      disabled: not optWifiMode.active
+      disabled: (False if optWifiMode.active else True) if optEnabled.active else True
       size_hint: 1, None
       height: root.width/10+root.width/40
       padding: 0,0,0,root.width/40
@@ -288,7 +313,7 @@
     
     #Password
     GridLayout:
-      disabled: not optWifiMode.active
+      disabled: (False if optWifiMode.active else True) if optEnabled.active else True
       size_hint: 1, None
       height: root.width/10+root.width/40
       padding: 0,0,0,root.width/40
@@ -331,7 +356,8 @@
           size_hint: 1, 1
           on_release:
             root.apply = True
-            root.cfg["ip"] = txtStationIP.text if optWifiMode.active else txtDefaultIP.text
+            root.cfg["camera"] = root.index+1
+            root.cfg["ip"] = (txtStationIP.text if optWifiMode.active else txtDefaultIP.text) if optEnabled.active else ""
             root.cfg["defaultip"] = txtDefaultIP.text
             root.cfg["wifimode"] = 1 if optWifiMode.active else 0
             root.cfg["stationip"] = txtStationIP.text

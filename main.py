@@ -38,6 +38,7 @@ class Ponerine(ScreenManager):
   def __init__(self, appexit):  
     super(Ponerine, self).__init__()  
     self.appexit = appexit
+    self.cfglist = []
     self.cfglist = self.ReadConfig()
     self.stopdetect = threading.Event()
     
@@ -356,7 +357,7 @@ class Ponerine(ScreenManager):
         cfginit["camera"] = 1
         cfginit["ip"] = "192.168.42.1"
         cfginit["defaultip"] = "192.168.42.1"
-        self.cfglist.append(cfginit)
+        r.append(cfginit)
         cfginit = json.loads(initstr)
         cfginit["camera"] = 2
         r.append(cfginit)
@@ -365,7 +366,7 @@ class Ponerine(ScreenManager):
       cfginit["camera"] = 1
       cfginit["ip"] = "192.168.42.1"
       cfginit["defaultip"] = "192.168.42.1"
-      self.cfglist.append(cfginit)
+      r.append(cfginit)
       cfginit = json.loads(initstr)
       cfginit["camera"] = 2
       r.append(cfginit)
@@ -409,11 +410,11 @@ class PonerineApp(App):
     self.appexit.set()
     print "app stop"
     for thread in threading.enumerate():
-			if thread.isAlive():
-				try:
-					thread._Thread__stop()
-				except:
-					pass
+      if thread.isAlive():
+        try:
+          thread._Thread__stop()
+        except:
+          pass
 
 if __name__ == '__main__':
   print Window.size
