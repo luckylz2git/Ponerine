@@ -1,4 +1,4 @@
-#:kivy 1.0
+#:kivy 1.9.0
 #:import kivy kivy
 #:import Factory kivy.factory.Factory
 
@@ -29,6 +29,7 @@
       spacing: root.width/40
       cols: 2
       Button:
+        id: btnLogo
         size_hint: None, None
         size: root.width/15, root.width/15
         background_disabled_normal: 'image/ponerine.png'
@@ -50,7 +51,7 @@
       #padding: root.width/30,root.width/15,root.width/30,root.width/30
       cols: 2
       Button:
-        text: "" #"Button W: %d H: %d" %(self.width, self.height)
+        text: "" #"W: %d H: %d" %(btnLogo.width, btnLogo.height) #"Button W: %d H: %d" %(self.width, self.height)
         id: btnCam1
         background_normal: 'image/camera_add_normal.png'
         background_down: 'image/camera_add_down.png'
@@ -91,6 +92,7 @@
         size: self.size
         pos: self.pos
     GridLayout:
+      id: layTitle
       canvas:
         Color: 
           rgba: 0.8,0.8,0.8,1
@@ -107,12 +109,12 @@
         id: btnWifi
         background_normal: 'image/wifi-2.png'
         background_down: 'image/wifi-1.png'
-        on_release: 
-          root.manager.Disconnect()
+        on_release: root.manager.Disconnect()
       Button:
         id: btnPicture
         background_normal: 'image/picture-2.png'
         background_down: 'image/picture-1.png'
+        on_release: root.manager.FileManager()
       Button:
         id: btnCamera
         disabled: True
@@ -130,8 +132,8 @@
     TextInput:
       id: txtDebug
       size_hint: 1, 0.75
-      #text: "Camera Screen Debug Log :\nRoot W: %d H: %d\nButton W: %d H: %d\n%d" %(root.width, root.height, btnwifi.width, btnwifi.height, (root.width-root.width/10-root.width/15+root.width/50)/4)
-      text: "Camera Screen Debug Log :\n"
+      text: "Camera Screen Debug Log :\nButton btnWifi W: %d H: %d\nGridlayout W: %d H: %d" %(btnWifi.width, btnWifi.height, layTitle.width, layTitle.height)
+      #text: "Camera Screen Debug Log :\n"
       font_size: int(root.width/50)
       foreground_color: [1,1,0,1]
       background_color: [0,0,0,1]
@@ -166,6 +168,62 @@
         font_size: int(root.width/20)
         on_release: root.manager.Record()
 
+<FileManagerScreen>:
+  BoxLayout:
+    orientation: 'vertical'
+    canvas:
+      Color: 
+        rgba: 0,0,0,1
+      Rectangle:
+        size: self.size
+        pos: self.pos
+    GridLayout:
+      canvas:
+        Color: 
+          rgba: 0.8,0.8,0.8,1
+        Rectangle:
+          size: self.size
+          pos: self.pos
+      size_hint: None, None
+      size: root.width, root.width/15 + root.width/20 #root.width/5
+      padding: root.width/40, root.width/100, root.width/40, root.width/100
+      #spacing=((width-padding) - icon.width * 5)/4
+      spacing: ((root.width-root.width/20) - (root.width/15+root.width/20-root.width/50)*5)/4
+      cols: 5
+      Button:
+        id: btnWifi
+        background_normal: 'image/wifi-2.png'
+        background_down: 'image/wifi-1.png'
+        on_release: 
+          root.manager.Disconnect()
+      Button:
+        id: btnPicture
+        disabled: True
+        background_disabled_normal: 'image/picture-1.png'
+        #background_down: 'image/picture-1.png'
+      Button:
+        id: btnCamera
+        background_normal: 'image/camera-2.png'
+        background_down: 'image/camera-1.png'
+        on_release: root.manager.Camera()
+      Button:
+        id: btnSetting
+        background_normal: 'image/setting-2.png'
+        background_down: 'image/setting-1.png'
+        on_release: root.manager.Setting()
+      Button:
+        id: btnRadiation
+        background_normal: 'image/radiation-2.png'
+        background_down: 'image/radiation-1.png'
+    TextInput:
+      id: txtDebug
+      size_hint: 1, 1
+      text: "File List Debug Log :\n"
+      font_size: int(root.width/50)
+      foreground_color: [1,1,0,1]
+      background_color: [0,0,0,1]
+      readonly: True
+
 <SettingScreen>:
   BoxLayout:
     orientation: 'vertical'
@@ -192,6 +250,7 @@
         id: btnPicture
         background_normal: 'image/picture-2.png'
         background_down: 'image/picture-1.png'
+        on_release: root.manager.FileManager()
       Button:
         id: btnCamera
         background_normal: 'image/camera-2.png'
