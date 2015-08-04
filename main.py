@@ -1,4 +1,7 @@
 import kivy
+
+kivy.require('1.9.0')
+
 from kivy.app import App
 from kivy.core.window import Window
 from kivy.uix.screenmanager import Screen, ScreenManager , SlideTransition
@@ -23,6 +26,10 @@ class ConnectScreen(Screen):
   pass
 
 class CameraScreen(Screen):
+  #config in ponerine.kv
+  pass
+
+class FileManagerScreen(Screen):
   #config in ponerine.kv
   pass
 
@@ -95,10 +102,16 @@ class Ponerine(ScreenManager):
     # self.tconn= threading.Thread(target=self.DoDisconnect)
     # self.tconn.setName('DoDisconnect')
     # self.tconn.start()
+
+  def FileManager(self):
+    self.transition = SlideTransition(direction = "right")
+    self.current = "filemanager"
     
   def Camera(self):
     if self.current == "setting":
       self.transition = SlideTransition(direction = "right")
+    elif self.current == "filemanager":
+      self.transition = SlideTransition(direction = "left")
     self.current = "camera"
     
   def Setting(self):
@@ -393,12 +406,13 @@ class PonerineApp(App):
   def build(self):
     self.appexit = threading.Event()
     ponerine = Ponerine(self.appexit)
-    ponerine.duration = 0.5
+    ponerine.duration = 0.7
     conn = ConnectScreen(name='connect')
     #self.ponerine.iplist = self.readcfg()
     #conn.ids.txtCam1.text = cfg[0]
     #conn.ids.txtCam2.text = cfg[1]
     ponerine.add_widget(conn)
+    ponerine.add_widget(FileManagerScreen(name='filemanager'))
     ponerine.add_widget(CameraScreen(name='camera'))
     ponerine.add_widget(SettingScreen(name='setting'))
     ponerine.current = 'connect'
