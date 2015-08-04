@@ -16,9 +16,16 @@
         #source: 'image/background.png'
     #title & logo
     GridLayout:
+      canvas:
+        Color: 
+          rgba: 0.8,0.8,0.8,1
+        Rectangle:
+          size: self.size
+          pos: self.pos
       size_hint: None, None
-      size: root.width, root.width/15 + root.width/40
-      padding: root.width/40, root.width/40, 0, 0
+      size: root.width, root.width/15 + root.width/20
+      #padding: left,top,right,bottom
+      padding: root.width/40, root.width/40, 0, root.width/40
       spacing: root.width/40
       cols: 2
       Button:
@@ -38,19 +45,22 @@
     GridLayout:
       size_hint: None, None
       size: root.width, root.width/2 + root.width/30
-      spacing: root.width/40, 0
-      padding: root.width/30,root.width/15,root.width/30,root.width/30
+      spacing: root.width/25, 0
+      padding: root.width/25,root.width/15+root.width/40,root.width/25,0 #root.width/30
+      #padding: root.width/30,root.width/15,root.width/30,root.width/30
       cols: 2
       Button:
+        text: "" #"Button W: %d H: %d" %(self.width, self.height)
         id: btnCam1
         background_normal: 'image/camera_add_normal.png'
         background_down: 'image/camera_add_down.png'
-        on_release: root.manager.CamConfig(0)
+        on_release: root.manager.ConfigPopupOpen(0)
       Button:
+        text: "" #"Root W: %d H: %d" %(root.width, root.height)
         id: btnCam2
         background_normal: 'image/camera_add_normal.png'
         background_down: 'image/camera_add_down.png'
-        on_release: root.manager.CamConfig(1)
+        on_release: root.manager.ConfigPopupOpen(1)
     # connect icon
     AnchorLayout:
       anchor_x: 'center'
@@ -71,20 +81,64 @@
         font_size: int(root.width/40)
         on_release: root.manager.Connect()
 
-<ControlScreen>:
+<CameraScreen>:
   BoxLayout:
     orientation: 'vertical'
+    canvas:
+      Color: 
+        rgba: 0,0,0,1
+      Rectangle:
+        size: self.size
+        pos: self.pos
+    GridLayout:
+      canvas:
+        Color: 
+          rgba: 0.8,0.8,0.8,1
+        Rectangle:
+          size: self.size
+          pos: self.pos
+      size_hint: None, None
+      size: root.width, root.width/15 + root.width/20 #root.width/5
+      padding: root.width/40, root.width/100, root.width/40, root.width/100
+      #spacing=((width-padding) - icon.width * 5)/4
+      spacing: ((root.width-root.width/20) - (root.width/15+root.width/20-root.width/50)*5)/4
+      cols: 5
+      Button:
+        id: btnWifi
+        background_normal: 'image/wifi-2.png'
+        background_down: 'image/wifi-1.png'
+        on_release: 
+          root.manager.Disconnect()
+      Button:
+        id: btnPicture
+        background_normal: 'image/picture-2.png'
+        background_down: 'image/picture-1.png'
+      Button:
+        id: btnCamera
+        disabled: True
+        background_disabled_normal: 'image/camera-1.png'
+        #background_down: 'image/camera-1.png'
+      Button:
+        id: btnSetting
+        background_normal: 'image/setting-2.png'
+        background_down: 'image/setting-1.png'
+        on_release: root.manager.Setting()
+      Button:
+        id: btnRadiation
+        background_normal: 'image/radiation-2.png'
+        background_down: 'image/radiation-1.png'
     TextInput:
       id: txtDebug
-      size_hint: 1, 0.5
-      text: "Control Screen Debug Log :\n"
+      size_hint: 1, 0.75
+      #text: "Camera Screen Debug Log :\nRoot W: %d H: %d\nButton W: %d H: %d\n%d" %(root.width, root.height, btnwifi.width, btnwifi.height, (root.width-root.width/10-root.width/15+root.width/50)/4)
+      text: "Camera Screen Debug Log :\n"
       font_size: int(root.width/50)
       foreground_color: [1,1,0,1]
       background_color: [0,0,0,1]
       readonly: True
     GridLayout:
       cols: 2
-      size_hint: 1, 0.5
+      size_hint: 1, 0.25
       Label:
         id: lblCam1
         size_hint: 1, 0.5
@@ -111,49 +165,63 @@
         text: 'Start Record'
         font_size: int(root.width/20)
         on_release: root.manager.Record()
-      Button:
-        size_hint: 1, 2
-        text: 'Settings'
-        font_size: int(root.width/20)
-        on_release: root.manager.Setting()
-      Button:
-        size_hint: 1, 2
-        text: 'Disconnect'
-        font_size: int(root.width/20)
-        on_release: root.manager.Disconnect()
 
 <SettingScreen>:
   BoxLayout:
     orientation: 'vertical'
-    Label:
-      size_hint: 1, 1
-      font_size: int(root.width/20)
-      text: 'Under Construction ...'
+    GridLayout:
+      canvas:
+        Color: 
+          rgba: 0.8,0.8,0.8,1
+        Rectangle:
+          size: self.size
+          pos: self.pos
+      size_hint: None, None
+      size: root.width, root.width/15 + root.width/20 #root.width/5
+      padding: root.width/40, root.width/100, root.width/40, root.width/100
+      #spacing=((width-padding) - icon.width * 5)/4
+      spacing: ((root.width-root.width/20) - (root.width/15+root.width/20-root.width/50)*5)/4
+      cols: 5
+      Button:
+        id: btnWifi
+        background_normal: 'image/wifi-2.png'
+        background_down: 'image/wifi-1.png'
+        on_release: 
+          root.manager.Disconnect()
+      Button:
+        id: btnPicture
+        background_normal: 'image/picture-2.png'
+        background_down: 'image/picture-1.png'
+      Button:
+        id: btnCamera
+        background_normal: 'image/camera-2.png'
+        background_down: 'image/camera-1.png'
+        on_release: root.manager.Camera()
+      Button:
+        id: btnSetting
+        disabled: True
+        background_disabled_normal: 'image/setting-1.png'
+        #background_down: 'image/setting-1.png'
+        #on_release: root.manager.Setting()
+      Button:
+        id: btnRadiation
+        background_normal: 'image/radiation-2.png'
+        background_down: 'image/radiation-1.png'
     TextInput:
       id: txtDebug
-      size_hint: 1, 7
-      text: "Setting Screen Debug Log:\n"
+      size_hint: 1, 8
+      text: "Setting Screen is under construction ...\n\nDebug Log:\n"
       font_size: int(root.width/50)
       foreground_color: [1,1,0,1]
       background_color: [0,0,0,1]
       readonly: True
-    GridLayout:
-      cols: 3
-      size_hint: 1, 2
-      Button:
-        text: 'Cameras'
-        font_size: int(root.width/20)
-        on_release: root.manager.Control()
-      Button:
-        text: 'Settings'
-        font_size: int(root.width/20)
-        on_release: root.manager.ReadSetting()
-      Button:
-        text: 'Disconnect'
-        font_size: int(root.width/20)
-        on_release: root.manager.Disconnect()
+    Button:
+      size_hint: 1, 1
+      text: 'Read Settings'
+      font_size: int(root.width/20)
+      on_release: root.manager.ReadSetting()
 
-<CamConfigPopup>:
+<ConfigPopup>:
   auto_dismiss: False
   #title: 'Camera Connection Config'
   BoxLayout:

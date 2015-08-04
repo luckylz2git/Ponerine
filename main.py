@@ -1,7 +1,7 @@
 import kivy
 from kivy.app import App
 from kivy.core.window import Window
-from kivy.uix.screenmanager import Screen, ScreenManager, SlideTransition
+from kivy.uix.screenmanager import Screen, ScreenManager , SlideTransition
 from kivy.clock import Clock
 #from kivy.lang import Builder
 from kivy.uix.popup import Popup
@@ -16,13 +16,13 @@ platform.system()
 import json, os, threading, time, socket, platform
 from os.path import basename
 
-__version__='0.0.5'
+__version__='0.0.6'
 
 class ConnectScreen(Screen):
   #config in ponerine.kv
   pass
 
-class ControlScreen(Screen):
+class CameraScreen(Screen):
   #config in ponerine.kv
   pass
 
@@ -30,7 +30,7 @@ class SettingScreen(Screen):
   #config in ponerine.kv
   pass
 
-class CamConfigPopup(Popup):
+class ConfigPopup(Popup):
   cfg = ObjectProperty()
   apply = BooleanProperty()
 
@@ -85,34 +85,39 @@ class Ponerine(ScreenManager):
         self.tconn.setName('DoConnect')
         self.tconn.start()
       else:
-        self.CamConfig(0)
+        self.ConfigPopupOpen(0)
     
   def Disconnect(self):
-    self.tconn= threading.Thread(target=self.DoDisconnect)
-    self.tconn.setName('DoDisconnect')
-    self.tconn.start()
+    self.transition = SlideTransition(direction = "right")
+    self.current = "connect"
+    self.current_screen.ids.btnConnect.text = ""
+    threading.Thread(target=self.DoDisconnect, name="DoDisconnect").start()
+    # self.tconn= threading.Thread(target=self.DoDisconnect)
+    # self.tconn.setName('DoDisconnect')
+    # self.tconn.start()
     
-  def Control(self):
+  def Camera(self):
     if self.current == "setting":
-      self.transition = SlideTransition(direction="right")
-    self.current = "control"
-    self.transition = SlideTransition(direction="left")
+      self.transition = SlideTransition(direction = "right")
+    self.current = "camera"
     
   def Setting(self):
+    if self.current == "camera":
+      self.transition = SlideTransition(direction = "left")
     self.current = "setting"
   
-  def CamConfig(self, index):
+  def ConfigPopupOpen(self, index):
     print type(self.parent)
-    print "CamConfig index %d" %index, self.cfglist
+    print "Config Popup Open index %d" %index, self.cfglist
     self.stopdetect.set()
-    self.camconfigpop = CamConfigPopup(title='Connection Config - Camera %d' %(index+1), size_hint=(0.8, 0.8), size=self.size, cfg=self.cfglist[index], index=index)
-    self.camconfigpop.bind(on_dismiss=self.CamConfigApply)
-    self.camconfigpop.apply = False
-    self.camconfigpop.index = int(index)
-    print self.camconfigpop.apply, self.camconfigpop.index, self.camconfigpop.cfg
-    self.camconfigpop.open()
+    self.configpop = ConfigPopup(title='Connection Config - Camera %d' %(index+1), size_hint=(0.8, 0.8), size=self.size, cfg=self.cfglist[index], index=index)
+    self.configpop.bind(on_dismiss=self.ConfigPopupApply)
+    self.configpop.apply = False
+    self.configpop.index = int(index)
+    print self.configpop.apply, self.configpop.index, self.configpop.cfg
+    self.configpop.open()
   
-  def CamConfigApply(self, popup):
+  def ConfigPopupApply(self, popup):
     if popup.apply:
       print "index %d ip %s" %(popup.index,popup.cfg)
       self.cfglist[popup.index] = popup.cfg
@@ -205,7 +210,8 @@ class Ponerine(ScreenManager):
     else:
       self.current_screen.ids.btnConnect.state = "normal"
       self.current_screen.ids.btnConnect.text = ""
-      self.current = "control"
+      self.transition = SlideTransition(direction = "left")
+      self.current = "camera"
       i = 0
       for cam in self.cam:
         threading.Thread(target=self.DoWifi, args=(cam.wifioff,), name="DoWifi"+str(i)).start()
@@ -218,14 +224,8 @@ class Ponerine(ScreenManager):
         cam.UnlinkCamera()
     except:
       pass
-    if self.current == "control":
-      self.transition = SlideTransition(direction="right")
-      
-    self.current = "connect"
     self.stopdetect.clear()
     self.DetectCam()
-    self.transition = SlideTransition(direction="left")
-    self.current_screen.ids.btnConnect.text = ""
   
   def DoPhoto(self):
     i = 0
@@ -289,10 +289,11 @@ class Ponerine(ScreenManager):
   def DoWifi(self, wifioff):
     print "DoWifi wait start"
     wifioff.wait()
-    self.current = 'connect'
-    self.current_screen.ids.btnConnect.text = ""
+    self.transition = SlideTransition(direction = "right")
     wifioff.clear()
     self.stopdetect.clear()
+    self.current = "connect"
+    self.current_screen.ids.btnConnect.text = ""
     self.DetectCam(45)
     print "DoWifi wait stop"
   
@@ -300,10 +301,10 @@ class Ponerine(ScreenManager):
     print "DoFileTaken start %d" %index
     while not self.cam[index].quit.isSet():
       self.cam[index].taken.wait()
-      debugtxt = self.get_screen("control").ids.txtDebug.text
+      debugtxt = self.get_screen("camera").ids.txtDebug.text
       if self.cam[index].filetaken <> "":
         debugtxt += "\nCAM %d : " %(index+1) + self.cam[index].filetaken
-        self.get_screen("control").ids.txtDebug.text = debugtxt
+        self.get_screen("camera").ids.txtDebug.text = debugtxt
       self.cam[index].taken.clear()
     print "DoFileTaken stop %d" %index
 
@@ -392,12 +393,13 @@ class PonerineApp(App):
   def build(self):
     self.appexit = threading.Event()
     ponerine = Ponerine(self.appexit)
+    ponerine.duration = 0.5
     conn = ConnectScreen(name='connect')
     #self.ponerine.iplist = self.readcfg()
     #conn.ids.txtCam1.text = cfg[0]
     #conn.ids.txtCam2.text = cfg[1]
     ponerine.add_widget(conn)
-    ponerine.add_widget(ControlScreen(name='control'))
+    ponerine.add_widget(CameraScreen(name='camera'))
     ponerine.add_widget(SettingScreen(name='setting'))
     ponerine.current = 'connect'
     ponerine.DetectCam()

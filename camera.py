@@ -186,7 +186,7 @@ class Camera():
       self.UnlinkCamera()
     # all config information
     elif data["msg_id"] == 3:
-      self.settings = json.dumps(data["param"])
+      self.settings = json.dumps(data["param"], indent=0).replace("{\n","{").replace("\n}","}")
       #self.status["config"] = data["param"]
     # battery status
     elif data["msg_id"] == 13:
