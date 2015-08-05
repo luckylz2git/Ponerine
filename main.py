@@ -5,6 +5,9 @@ kivy.require('1.9.0')
 from kivy.app import App
 from kivy.core.window import Window
 from kivy.uix.screenmanager import Screen, ScreenManager , SlideTransition
+from kivy.uix.gridlayout import GridLayout
+from kivy.uix.scrollview import ScrollView
+from kivy.uix.togglebutton import ToggleButton
 from kivy.clock import Clock
 from kivy.lang import Builder
 from kivy.uix.popup import Popup
@@ -26,6 +29,26 @@ class ConfigPopup(Popup):
   apply = BooleanProperty()
 
 class Ponerine(ScreenManager):
+  
+  def RefreshFile(self, text):
+    self.current_screen.ids.boxFileList.clear_widgets()
+    if text <> "File Type":
+      layout = GridLayout(cols=3, padding=self.width/40, spacing=self.width/40, size_hint=(None, None), width = self.width)
+      layout.bind(minimum_height=layout.setter('height'))
+      for i in range(30):
+        btn = ToggleButton(text=text[0:3] + "-%02d" %(i+1), size=((self.width-self.width/10)/3, (self.width-self.width/10)/5), size_hint=(None, None))
+        layout.add_widget(btn)
+      sv = ScrollView(size_hint=(None, None), size=(self.current_screen.ids.boxFileList.width,
+                      self.current_screen.ids.boxFileList.height), pos_hint={'center_x': .5, 'center_y': .5}, do_scroll_x=False)
+      sv.add_widget(layout)
+      self.current_screen.ids.boxFileList.add_widget(sv)
+  
+  def SelectFile(self, instance):
+    print instance.text
+    if instance.text <> "Selection":
+      instance.text = "Selection"
+    
+    
   def __init__(self, appexit):  
     super(Ponerine, self).__init__()  
     self.appexit = appexit
@@ -90,6 +113,8 @@ class Ponerine(ScreenManager):
   def FileManager(self):
     self.transition = SlideTransition(direction = "right")
     self.current = "filemanager"
+    self.current_screen.ids.lstFileType.text = "File Type"
+    self.current_screen.ids.lstSelection.text = "Selection"
     
   def Camera(self):
     if self.current == "setting":
@@ -99,8 +124,8 @@ class Ponerine(ScreenManager):
     self.current = "camera"
     
   def Setting(self):
-    if self.current == "camera":
-      self.transition = SlideTransition(direction = "left")
+    #if self.current == "camera":
+    self.transition = SlideTransition(direction = "left")
     self.current = "setting"
   
   def ConfigPopupOpen(self, index):
@@ -121,7 +146,9 @@ class Ponerine(ScreenManager):
       self.WriteConfig()
       self.stopdetect.clear()
       self.DetectCam()
-  
+      
+
+    
   def Photo(self):
     self.tphoto= threading.Thread(target=self.DoPhoto)
     self.tphoto.setName('DoPhoto')
@@ -223,6 +250,9 @@ class Ponerine(ScreenManager):
       pass
     self.stopdetect.clear()
     self.DetectCam()
+  
+  def DoRefreshFile(self, text):
+    print text
   
   def DoPhoto(self):
     i = 0
