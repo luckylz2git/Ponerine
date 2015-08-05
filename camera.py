@@ -23,6 +23,7 @@ class Camera():
     self.taken = threading.Event()
     self.quit = threading.Event()
     self.wifioff = threading.Event()
+    self.lsdir = threading.Event()
     
   def __str__(self):
     info = dict()
@@ -40,6 +41,7 @@ class Camera():
     #self.wifi = True
     self.taken.clear()
     self.wifioff.clear()
+    self.lsdir.clear()
     self.jsonon = False
     self.jsonoff = 0
     self.msgbusy = 0
@@ -50,14 +52,16 @@ class Camera():
     self.recording = False
     self.rectime = "00:00:00"
     self.settings = ""
-    self.tsend= threading.Thread(target=self.ThreadSend)
-    self.tsend.setDaemon(True)
-    self.tsend.setName('ThreadSend')
-    self.tsend.start()
-    self.trecv= threading.Thread(target=self.ThreadRecv)
-    self.trecv.setDaemon(True)
-    self.trecv.setName('ThreadRecv')
-    self.trecv.start()
+    threading.Thread(target=self.ThreadSend, name="ThreadSend").start()
+#     self.tsend= threading.Thread(target=self.ThreadSend)
+#     self.tsend.setDaemon(True)
+#     self.tsend.setName('ThreadSend')
+#     self.tsend.start()
+    threading.Thread(target=self.ThreadRecv, name="ThreadRecv").start()
+#     self.trecv= threading.Thread(target=self.ThreadRecv)
+#     self.trecv.setDaemon(True)
+#     self.trecv.setName('ThreadRecv')
+#     self.trecv.start()
 
   def UnlinkCamera(self):
     if self.link:
@@ -174,6 +178,10 @@ class Camera():
       self.SendMsg('{"msg_id":%d}' %data["msg_id"])
     # error rval < 0, clear msg_id
     elif data["rval"] < 0:
+      if data["msg_id"] == 1283:
+        self.status["pwd"] = ""
+        self.status["listing"] = []
+        self.lsdir.set()
       data["msg_id"] = 0
     # get token
     if data["msg_id"] == 257:
@@ -212,6 +220,13 @@ class Camera():
       self.recordtime = self.RecordTime(data["param"])
       if self.showtime and self.recording:
         self.SendMsg('{"msg_id":515}')
+    # change dir
+    elif data["msg_id"] == 1283:
+      self.status["pwd"] = data["pwd"]
+    # get file listing
+    elif data["msg_id"] == 1282:
+      self.status["listing"] = self.CreateFileList(data["listing"])
+      self.lsdir.set()
 
   def RecvMsg(self):
     try:
@@ -293,6 +308,42 @@ class Camera():
   def StopRecord(self):
     self.SendMsg('{"msg_id":514}')
 
+  def RefreshFile(self, dir="/tmp/fuse_d/DCIM", ext="jpg", sort="date desc"):
+    self.lsdir.clear()
+    self.status["ext"] = ext
+    self.status["sort"] = sort
+    self.status["pwd"] = ""
+    self.status["listing"] = []
+    self.SendMsg('{"msg_id":1283,"param":"%s"}' %dir)
+    while True:
+      if self.quit.isSet():
+        return
+      if self.wifioff.isSet():
+        return
+      if self.lsdir.isSet():
+        return
+      if self.status["pwd"] <> "":
+        break
+    if self.status["pwd"] <> "":
+      self.SendMsg('{"msg_id":1282,"param":" -D -S"}')
+      while not self.lsdir.isSet():
+        if self.quit.isSet():
+          break
+        if self.wifioff.isSet():
+          break
+          
+  def CreateFileList(self, rvalfilelist):
+    #print "rvalfilelist", rvalfilelist
+    r = []
+    if len(rvalfilelist) > 0:
+      i = 0
+      for item in rvalfilelist:
+        i += 1
+        print i, item.keys()[0], item[item.keys()[0]]
+        r.append(item.keys()[0])
+    #print "create file list", r
+    return r
+    
   def FormatCard(self):
     self.SendMsg('{"msg_id":4}')
 
