@@ -16,6 +16,7 @@ Screen:
         size: self.size
         pos: self.pos
     GridLayout:
+      id: glHeader
       canvas:
         Color: 
           rgba: 0.8,0.8,0.8,1
@@ -53,27 +54,41 @@ Screen:
         id: btnRadiation
         background_normal: 'image/radiation-2.png'
         background_down: 'image/radiation-1.png'
-    TextInput:
-      id: txtDebug
-      size_hint: 1, 1
-      text: "File List Debug Log :\n"
-      foreground_color: [1,1,0,1]
-      background_color: [0,0,0,1]
-      readonly: True
+    BoxLayout:
+      id: boxFileList
+      size_hint: 1, 8
+      #do_scroll_y: True
+      #do_scroll_x: False
+#    TextInput:
+#      id: txtDebug
+#      size_hint: 1, 8
+#      text: "File List Debug Log :\n"
+#      foreground_color: [1,1,0,1]
+#      background_color: [0,0,0,1]
+#      readonly: True
     GridLayout:
-      size_hint: None, None
-      size: root.width, root.width/15 + root.width/20
+      id: glFooter
+      size_hint: 1, 1
+      #size: root.width, root.width/6# + root.width/20
       font_size: int(root.width/20)
       cols: 4
+      Button:
+        text: "Download"
       Spinner:
-        size_hint: None, None
-        size: root.width/4, root.width/15 + root.width/20
+        id: lstFileType
+        #size_hint: 1, 1
+        #size: root.width/4, root.width/15 + root.width/20
         #text_size: self.size
         #font_size: int(root.width/20)
         text: "File Type"
         values: ('All Files', 'RAW Photo', 'MP4 Video', 'JPG Photo')
+        on_text: root.manager.RefreshFile(self.text)
       Spinner:
-        size_hint: None, None
-        size: root.width/4, root.width/15 + root.width/20
+        id: lstSelection
+        #size_hint: None, None
+        #size: root.width/4, root.width/15 + root.width/20
         text: "Selection"
-        values: ('Select All', 'Clear All', 'Invert Select')
+        values: ('Invert Select','Clear All', 'Select All')
+        on_text: root.manager.SelectFile(self)
+      Button:
+        text: "Delete"
