@@ -6,7 +6,7 @@ from kivy.app import App
 from kivy.core.window import Window
 from kivy.uix.screenmanager import Screen, ScreenManager , SlideTransition
 from kivy.clock import Clock
-#from kivy.lang import Builder
+from kivy.lang import Builder
 from kivy.uix.popup import Popup
 from kivy.properties import StringProperty, NumericProperty, BooleanProperty, ObjectProperty
 # Camera Object[camera.py]
@@ -20,22 +20,6 @@ import json, os, threading, time, socket, platform
 from os.path import basename
 
 __version__='0.0.6'
-
-class ConnectScreen(Screen):
-  #config in ponerine.kv
-  pass
-
-class CameraScreen(Screen):
-  #config in ponerine.kv
-  pass
-
-class FileManagerScreen(Screen):
-  #config in ponerine.kv
-  pass
-
-class SettingScreen(Screen):
-  #config in ponerine.kv
-  pass
 
 class ConfigPopup(Popup):
   cfg = ObjectProperty()
@@ -407,16 +391,25 @@ class PonerineApp(App):
     self.appexit = threading.Event()
     ponerine = Ponerine(self.appexit)
     ponerine.duration = 0.7
-    conn = ConnectScreen(name='connect')
-    #self.ponerine.iplist = self.readcfg()
-    #conn.ids.txtCam1.text = cfg[0]
-    #conn.ids.txtCam2.text = cfg[1]
-    ponerine.add_widget(conn)
-    ponerine.add_widget(FileManagerScreen(name='filemanager'))
-    ponerine.add_widget(CameraScreen(name='camera'))
-    ponerine.add_widget(SettingScreen(name='setting'))
-    ponerine.current = 'connect'
-    ponerine.DetectCam()
+    
+    ConnectScreen = Builder.load_file('data/connectscreen.kv')
+    ConnectScreen.name = 'connect'
+    
+    FileManagerScreen = Builder.load_file('data/filemanagerscreen.kv')
+    FileManagerScreen.name = 'filemanager'
+    
+    CameraScreen = Builder.load_file('data/camerascreen.kv')
+    CameraScreen.name = 'camera'
+    
+    SettingScreen = Builder.load_file('data/settingscreen.kv')
+    SettingScreen.name = 'setting'
+    
+    ponerine.add_widget(ConnectScreen)
+    ponerine.add_widget(FileManagerScreen)
+    ponerine.add_widget(CameraScreen)
+    ponerine.add_widget(SettingScreen)
+    ponerine.current = 'filemanager'
+    #ponerine.DetectCam()
     return ponerine
     
   def on_pause(self):

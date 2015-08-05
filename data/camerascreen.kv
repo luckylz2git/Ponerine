@@ -1,0 +1,93 @@
+#:kivy 1.9.0
+#:import kivy kivy
+#:import Factory kivy.factory.Factory
+
+# class CameraScreen(Screen):
+  # pass
+
+# <CameraScreen>:
+Screen:
+  BoxLayout:
+    orientation: 'vertical'
+    canvas:
+      Color: 
+        rgba: 0,0,0,1
+      Rectangle:
+        size: self.size
+        pos: self.pos
+    GridLayout:
+      id: layTitle
+      canvas:
+        Color: 
+          rgba: 0.8,0.8,0.8,1
+        Rectangle:
+          size: self.size
+          pos: self.pos
+      size_hint: None, None
+      size: root.width, root.width/15 + root.width/20 #root.width/5
+      padding: root.width/40, root.width/100, root.width/40, root.width/100
+      #spacing=((width-padding) - icon.width * 5)/4
+      spacing: ((root.width-root.width/20) - (root.width/15+root.width/20-root.width/50)*5)/4
+      cols: 5
+      Button:
+        id: btnWifi
+        background_normal: 'image/wifi-2.png'
+        background_down: 'image/wifi-1.png'
+        on_release: root.manager.Disconnect()
+      Button:
+        id: btnPicture
+        background_normal: 'image/picture-2.png'
+        background_down: 'image/picture-1.png'
+        on_release: root.manager.FileManager()
+      Button:
+        id: btnCamera
+        disabled: True
+        background_disabled_normal: 'image/camera-1.png'
+        #background_down: 'image/camera-1.png'
+      Button:
+        id: btnSetting
+        background_normal: 'image/setting-2.png'
+        background_down: 'image/setting-1.png'
+        on_release: root.manager.Setting()
+      Button:
+        id: btnRadiation
+        background_normal: 'image/radiation-2.png'
+        background_down: 'image/radiation-1.png'
+    TextInput:
+      id: txtDebug
+      size_hint: 1, 0.75
+      text: "Camera Screen Debug Log :\nButton btnWifi W: %d H: %d\nGridlayout W: %d H: %d" %(btnWifi.width, btnWifi.height, layTitle.width, layTitle.height)
+      #text: "Camera Screen Debug Log :\n"
+      font_size: int(root.width/50)
+      foreground_color: [1,1,0,1]
+      background_color: [0,0,0,1]
+      readonly: True
+    GridLayout:
+      cols: 2
+      size_hint: 1, 0.25
+      Label:
+        id: lblCam1
+        size_hint: 1, 0.5
+        padding: [0, int(root.width/60)]
+        text: "CAM 1 [ --:--:-- ]"
+        color: 1,0,0,0.8
+        font_size: int(root.width/30)
+      Label:
+        size_hint: 1, 0.5
+        id: lblCam2
+        padding: [0, int(root.width/60)]
+        text: "CAM 2 [ --:--:-- ]"
+        color: 1,0,0,0.8
+        font_size: int(root.width/30)
+      Button:
+        size_hint: 1, 2
+        id: btnPhoto
+        text: 'Take Photo'
+        font_size: int(root.width/20)
+        on_release: root.manager.Photo()
+      Button:
+        size_hint: 1, 2
+        id: btnRecord
+        text: 'Start Record'
+        font_size: int(root.width/20)
+        on_release: root.manager.Record()

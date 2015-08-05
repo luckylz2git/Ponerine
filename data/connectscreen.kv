@@ -1,0 +1,87 @@
+#:kivy 1.9.0
+#:import kivy kivy
+#:import Factory kivy.factory.Factory
+
+# class ConnectScreen(Screen):
+  # pass
+
+# <ConnectScreen>:
+Screen:
+  #set back ground color
+  AnchorLayout:
+    anchor_x: 'left'
+    anchor_y: 'top'
+    canvas:
+      Color: 
+        rgba: 0.9,0.9,0.9,1
+      Rectangle:
+        size: self.size
+        pos: self.pos
+        #source: 'image/background.png'
+    #title & logo
+    GridLayout:
+      canvas:
+        Color: 
+          rgba: 0.8,0.8,0.8,1
+        Rectangle:
+          size: self.size
+          pos: self.pos
+      size_hint: None, None
+      size: root.width, root.width/15 + root.width/20
+      #padding: left,top,right,bottom
+      padding: root.width/40, root.width/40, 0, root.width/40
+      spacing: root.width/40
+      cols: 2
+      Button:
+        id: btnLogo
+        size_hint: None, None
+        size: root.width/15, root.width/15
+        background_disabled_normal: 'image/ponerine.png'
+        state: 'normal'
+        disabled: True
+      Label:
+        text_size: self.size
+        halign: 'left'
+        valign: 'middle'
+        color: 0,0,0,1
+        #font_size: root.width/40
+        text: 'Ponerine %s for XiaoYi Sports Camera' %app.version
+    # camera icon
+    GridLayout:
+      size_hint: None, None
+      size: root.width, root.width/2 + root.width/30
+      spacing: root.width/25, 0
+      padding: root.width/25,root.width/15+root.width/40,root.width/25,0 #root.width/30
+      #padding: root.width/30,root.width/15,root.width/30,root.width/30
+      cols: 2
+      Button:
+        text: "" #"W: %d H: %d" %(btnLogo.width, btnLogo.height) #"Button W: %d H: %d" %(self.width, self.height)
+        id: btnCam1
+        background_normal: 'image/camera_add_normal.png'
+        background_down: 'image/camera_add_down.png'
+        on_release: root.manager.ConfigPopupOpen(0)
+      Button:
+        text: "" #"Root W: %d H: %d" %(root.width, root.height)
+        id: btnCam2
+        background_normal: 'image/camera_add_normal.png'
+        background_down: 'image/camera_add_down.png'
+        on_release: root.manager.ConfigPopupOpen(1)
+    # connect icon
+    AnchorLayout:
+      anchor_x: 'center'
+      anchor_y: 'bottom'
+      size_hint: None, None
+      size: root.width, root.height * 0.8
+      #padding: 0,0,0,root.width/10
+      Button:
+        id: btnConnect
+        background_normal: 'image/connect_normal.png'
+        background_down: 'image/connect_down.png'
+        background_disabled_normal: 'image/connect_down.png'
+        background_disabled_down: 'image/connect_down.png'
+        size_hint: None, None
+        size: root.width/4, root.width/4
+        text: ''
+        color: 1,0,0,1
+        font_size: int(root.width/40)
+        on_release: root.manager.Connect()
