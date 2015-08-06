@@ -308,12 +308,15 @@ class Camera():
   def StopRecord(self):
     self.SendMsg('{"msg_id":514}')
 
-  def RefreshFile(self, dir="/tmp/fuse_d/DCIM", ext="jpg", sort="date desc"):
+  def RefreshFile(self, dir="/tmp/fuse_d/DCIM", ext="", sort="date desc"):
     self.lsdir.clear()
-    self.status["ext"] = ext
+    self.status["ext"] = ext.lower()
     self.status["sort"] = sort
     self.status["pwd"] = ""
     self.status["listing"] = []
+    if dir == "":
+      self.lsdir.set()
+      return
     self.SendMsg('{"msg_id":1283,"param":"%s"}' %dir)
     while True:
       if self.quit.isSet():
@@ -338,9 +341,14 @@ class Camera():
     if len(rvalfilelist) > 0:
       i = 0
       for item in rvalfilelist:
-        i += 1
-        print i, item.keys()[0], item[item.keys()[0]]
-        r.append(item.keys()[0])
+        add = True
+        #if self.status["ext"] in ("jpg","mp4","raw") and (self.status["ext"] not in item.keys()[0].lower() or "_thm" in item.keys()[0].lower()):
+        if self.status["ext"] in ("jpg","mp4","raw") and self.status["ext"] not in item.keys()[0].lower():
+          add = False
+        if add:
+          i += 1
+          print i, item.keys()[0], item[item.keys()[0]]
+          r.append(item.keys()[0])
     #print "create file list", r
     return r
     

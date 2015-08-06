@@ -7,6 +7,7 @@ from kivy.core.window import Window
 from kivy.uix.screenmanager import Screen, ScreenManager , SlideTransition
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.scrollview import ScrollView
+from kivy.uix.label import Label
 from kivy.uix.togglebutton import ToggleButton
 from kivy.clock import Clock
 from kivy.lang import Builder
@@ -22,7 +23,10 @@ platform.system()
 import json, os, threading, time, socket, platform
 from os.path import basename
 
-__version__='0.0.6'
+
+#print "Clock.max_iteration", Clock.max_iteration
+Clock.max_iteration = 50
+__version__='0.0.7'
 
 class ConfigPopup(Popup):
   cfg = ObjectProperty()
@@ -31,17 +35,13 @@ class ConfigPopup(Popup):
 class Ponerine(ScreenManager):
   
   def RefreshFile(self, text):
+    print text.upper()
+    print text.lower()
     self.current_screen.ids.boxFileList.clear_widgets()
     if text <> "File Type":
-      layout = GridLayout(cols=3, padding=self.width/40, spacing=self.width/40, size_hint=(None, None), width = self.width)
-      layout.bind(minimum_height=layout.setter('height'))
-      for i in range(30):
-        btn = ToggleButton(text=text[0:3] + "-%02d" %(i+1), size=((self.width-self.width/10)/3, (self.width-self.width/10)/5), size_hint=(None, None))
-        layout.add_widget(btn)
-      sv = ScrollView(size_hint=(None, None), size=(self.current_screen.ids.boxFileList.width,
-                      self.current_screen.ids.boxFileList.height), pos_hint={'center_x': .5, 'center_y': .5}, do_scroll_x=False)
-      sv.add_widget(layout)
-      self.current_screen.ids.boxFileList.add_widget(sv)
+      lbl = Label(text="Loading File List ...", size_hint=(1, 1), font_size=self.width/20)
+      self.current_screen.ids.boxFileList.add_widget(lbl)
+      threading.Thread(target=self.DoRefreshFile, args=(text[0:3],), name="DoRefreshFile").start()
   
   def SelectFile(self, instance):
     print instance.text
@@ -146,8 +146,6 @@ class Ponerine(ScreenManager):
       self.WriteConfig()
       self.stopdetect.clear()
       self.DetectCam()
-      
-
     
   def Photo(self):
     self.tphoto= threading.Thread(target=self.DoPhoto)
@@ -251,9 +249,122 @@ class Ponerine(ScreenManager):
     self.stopdetect.clear()
     self.DetectCam()
   
+  def DoRefreshFile0(self, text):
+    i = 0
+    list = []
+    for cam in self.cam:
+      i += 1
+      cam.RefreshFile()
+      cam.lsdir.wait()
+      if len(cam.status["listing"]) > 0:
+        print "file extention: %s" %text
+        cam.RefreshFile(cam.status["pwd"] + "/" + cam.status["listing"][0], text)
+        cam.lsdir.wait()
+      if len(cam.status["listing"]) > 0:
+        #print "media list: ", cam.status["listing"]
+        for item in cam.status["listing"]:
+          list.append("Cam %d: %s" %(i, item))
+    self.current_screen.ids.boxFileList.clear_widgets()
+    layout = GridLayout(cols=3, padding=self.width/40, spacing=self.width/40, size_hint=(None, None), width = self.width)
+    layout.bind(minimum_height=layout.setter('height'))
+
+ 
+    
+    buttons = []
+    for item in list:
+      ext = item[len(item)-3:len(item)].lower()
+      if ext in ("jpg","mp4","raw"):
+        buttons.append(ToggleButton(text=item, halign="center",valign="bottom",padding=(self.width/80,self.width/80),text_size=((self.width-self.width/10)/3, (self.width-self.width/10)/5),
+                         background_normal="image/file%s-2.png"%ext,background_down="image/file%s-1.png"%ext,
+                         size=((self.width-self.width/10)/3, (self.width-self.width/10)/5), size_hint=(None, None), font_size=self.width/50, color=(1,1,0,1)))
+      else:
+        buttons.append(ToggleButton(text=item, halign='center',valign='bottom',padding=(self.width/80,self.width/80),text_size=((self.width-self.width/10)/3, (self.width-self.width/10)/5),size=((self.width-self.width/10)/3, (self.width-self.width/10)/5), size_hint=(None, None), font_size=self.width/50, color=(1,1,0,1)))
+    i = 0
+    for btn in buttons:
+      layout.add_widget(btn, index=i)
+      i += 1
+      #print "No. %d children len" %i,len(layout.children[:])
+    sv = ScrollView(size_hint=(None, None), size=(self.current_screen.ids.boxFileList.width,
+                    self.current_screen.ids.boxFileList.height), pos_hint={'center_x': .5, 'center_y': .5}, do_scroll_x=False)
+    sv.add_widget(layout)
+    self.current_screen.ids.boxFileList.add_widget(sv)   
+
   def DoRefreshFile(self, text):
-    print text
-  
+    i = 0
+    list = []
+    for i in range(30):
+      list.append("Cam 1: YDXJ%04d.jpg" %i)
+    self.current_screen.ids.boxFileList.clear_widgets()
+    layout = GridLayout(cols=3, padding=self.width/40, spacing=self.width/40, size_hint=(None, None), width = self.width)
+    layout.bind(minimum_height=layout.setter('height'))
+
+    sv = ScrollView(size_hint=(None, None), size=(self.current_screen.ids.boxFileList.width,
+                    self.current_screen.ids.boxFileList.height), pos_hint={'center_x': .5, 'center_y': .5}, do_scroll_x=False)
+    sv.add_widget(layout)
+    self.current_screen.ids.boxFileList.add_widget(sv) 
+    
+    for item in list:
+      ext = item[len(item)-3:len(item)].lower()
+      if ext in ("jpg","mp4","raw"):
+        btn = ToggleButton(text=item, halign="center",valign="bottom",padding=(self.width/80,self.width/80),text_size=((self.width-self.width/10)/3, (self.width-self.width/10)/5),
+                         background_normal="image/file%s-2.png"%ext,background_down="image/file%s-1.png"%ext,
+                         size=((self.width-self.width/10)/3, (self.width-self.width/10)/5), size_hint=(None, None), font_size=self.width/50, color=(1,1,0,1))
+      else:
+        btn = ToggleButton(text=item, halign='center',valign='bottom',padding=(self.width/80,self.width/80),text_size=((self.width-self.width/10)/3, (self.width-self.width/10)/5),size=((self.width-self.width/10)/3, (self.width-self.width/10)/5), size_hint=(None, None), font_size=self.width/50, color=(1,1,0,1))
+      layout.add_widget(btn, index=i)
+    
+  def DoRefreshFile1(self, text):
+    i = 0
+    list = []
+    for i in range(30):
+      list.append("Cam 1: YDXJ%04d.jpg" %i)
+    print list
+    self.current_screen.ids.boxFileList.clear_widgets()
+    layout = Builder.load_string(self.BuildFileList(list))
+    layout.bind(minimum_height=layout.setter('height'))
+
+    sv = ScrollView(size_hint=(None, None), size=(self.current_screen.ids.boxFileList.width,
+                    self.current_screen.ids.boxFileList.height), pos_hint={'center_x': .5, 'center_y': .5}, do_scroll_x=False)
+    sv.add_widget(layout)
+    self.current_screen.ids.boxFileList.add_widget(sv)
+    for child in self.current_screen.ids.boxFileList.children[:]:
+      print child
+      
+  def BuildFileList(self, list):
+    buildstr = '''
+GridLayout:
+    padding: root.width/40, root.width/40, root.width/40, root.width/40
+    spacing: root.width/40
+    size_hint: None, None
+    width: root.width
+    cols: 3
+    #size: root.width, (root.width-root.width/10)/5*1 + root.width/40
+'''
+    for item in list:
+      ext = item[len(item)-3:len(item)].lower()
+      buildstr += '''
+    ToggleButton:
+        text: '''
+      buildstr += '"%s"' %item
+      buildstr += '''
+        size_hint: None, None
+        size: (root.width-root.width/10)/3,(root.width-root.width/10)/5
+        text_size: self.size
+        font_size: root.width/50
+        color: 1,1,0,1
+        halign: "center"
+        valign: "bottom"
+        background_normal: '''
+      buildstr += '"image/file%s-2.png"' %ext
+      buildstr += '''
+        background_down: '''
+      buildstr += '"image/file%s-1.png"' %ext
+    
+    buildstr += '''
+'''
+    print buildstr
+    return buildstr.replace("root.width",str(self.width))
+      
   def DoPhoto(self):
     i = 0
     #self.current_screen.ids.btnPhoto.state = "down"
