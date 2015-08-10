@@ -71,9 +71,12 @@ Screen:
       size_hint: 1, 1
       #size: root.width, root.width/6# + root.width/20
       font_size: int(root.width/20)
-      cols: 4
-      Button:
-        text: "Download"
+      cols: 5
+      Spinner:
+        id: lstCamera
+        text: "Camera"
+        values: ()
+        on_text: root.manager.SelectCamera(self)
       Spinner:
         id: lstFileType
         #size_hint: 1, 1
@@ -90,5 +93,7 @@ Screen:
         text: "Selection"
         values: ('Invert Select','Clear All', 'Select All')
         on_text: root.manager.SelectFile(self)
+      Button:
+        text: "Download"
       Button:
         text: "Delete"
