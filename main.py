@@ -25,7 +25,7 @@ from os.path import basename
 
 
 #print "Clock.max_iteration", Clock.max_iteration
-Clock.max_iteration = 50
+Clock.max_iteration = 500
 __version__='0.0.7'
 
 class ConfigPopup(Popup):
@@ -37,11 +37,20 @@ class Ponerine(ScreenManager):
   def RefreshFile(self, text):
     print text.upper()
     print text.lower()
-    self.current_screen.ids.boxFileList.clear_widgets()
-    if text <> "File Type":
+    str = self.current_screen.ids.lstCamera.text.replace("Camera","").replace(" ","")
+    index = -1
+    if str.isdigit():
+      index = int(str) - 1
+    if index > -1 and text <> "File Type":
+      self.current_screen.ids.boxFileList.clear_widgets()
       lbl = Label(text="Loading File List ...", size_hint=(1, 1), font_size=self.width/20)
       self.current_screen.ids.boxFileList.add_widget(lbl)
-      threading.Thread(target=self.DoRefreshFile, args=(text[0:3],), name="DoRefreshFile").start()
+      threading.Thread(target=self.DoRefreshFile, args=(text[0:3],index,), name="DoRefreshFile").start()
+  
+  def SelectCamera(self, instance):
+    print instance.text
+    #if instance.text <> "Camera":
+    #  instance.text = "Camera"
   
   def SelectFile(self, instance):
     print instance.text
@@ -103,7 +112,7 @@ class Ponerine(ScreenManager):
     
   def Disconnect(self):
     self.transition = SlideTransition(direction = "right")
-    self.current = "connect"
+    self.switch_to(Builder.load_file('data/connectscreen.kv'))
     self.current_screen.ids.btnConnect.text = ""
     threading.Thread(target=self.DoDisconnect, name="DoDisconnect").start()
     # self.tconn= threading.Thread(target=self.DoDisconnect)
@@ -112,7 +121,13 @@ class Ponerine(ScreenManager):
 
   def FileManager(self):
     self.transition = SlideTransition(direction = "right")
-    self.current = "filemanager"
+    self.switch_to(Builder.load_file('data/filemanagerscreen.kv'))
+    self.current_screen.ids.lstCamera.text = "Camera"
+    camlist = []
+    for i in range(len(self.cam)):
+      camlist.append('Camera %d'%(i+1))
+    if len(camlist) > 0:
+      self.current_screen.ids.lstCamera.values = camlist
     self.current_screen.ids.lstFileType.text = "File Type"
     self.current_screen.ids.lstSelection.text = "Selection"
     
@@ -121,12 +136,12 @@ class Ponerine(ScreenManager):
       self.transition = SlideTransition(direction = "right")
     elif self.current == "filemanager":
       self.transition = SlideTransition(direction = "left")
-    self.current = "camera"
+    self.switch_to(Builder.load_file('data/camerascreen.kv'))
     
   def Setting(self):
     #if self.current == "camera":
     self.transition = SlideTransition(direction = "left")
-    self.current = "setting"
+    self.switch_to(Builder.load_file('data/settingscreen.kv'))
   
   def ConfigPopupOpen(self, index):
     print type(self.parent)
@@ -191,6 +206,8 @@ class Ponerine(ScreenManager):
       open = srv.connect_ex((ip, 7878))
       srv.close()
       print "Detect Cam IP %s Index %d state %d retry %d" %(ip, index, open, retry)
+      if self.stopdetect.isSet():
+        break
       if open == 0:
         if index == 0:
           self.current_screen.ids.btnCam1.background_normal = 'image/camera_green.png'
@@ -230,10 +247,11 @@ class Ponerine(ScreenManager):
       self.current_screen.ids.btnConnect.state = "normal"
       self.current_screen.ids.btnConnect.text = "Error"
     else:
-      self.current_screen.ids.btnConnect.state = "normal"
-      self.current_screen.ids.btnConnect.text = ""
+      #self.current_screen.ids.btnConnect.state = "normal"
+      #self.current_screen.ids.btnConnect.text = ""
       self.transition = SlideTransition(direction = "left")
-      self.current = "camera"
+      self.current = 'camera'
+      #self.switch_to(Builder.load_file('data/camerascreen.kv'))
       i = 0
       for cam in self.cam:
         threading.Thread(target=self.DoWifi, args=(cam.wifioff,), name="DoWifi"+str(i)).start()
@@ -249,27 +267,23 @@ class Ponerine(ScreenManager):
     self.stopdetect.clear()
     self.DetectCam()
   
-  def DoRefreshFile0(self, text):
-    i = 0
+  def DoRefreshFile(self, text, index):
     list = []
-    for cam in self.cam:
-      i += 1
-      cam.RefreshFile()
+    cam = self.cam[index]
+    cam.RefreshFile()
+    cam.lsdir.wait()
+    if len(cam.status["listing"]) > 0:
+      print "file extention: %s" %text
+      cam.RefreshFile(cam.status["pwd"] + "/" + cam.status["listing"][0], text)
       cam.lsdir.wait()
-      if len(cam.status["listing"]) > 0:
-        print "file extention: %s" %text
-        cam.RefreshFile(cam.status["pwd"] + "/" + cam.status["listing"][0], text)
-        cam.lsdir.wait()
-      if len(cam.status["listing"]) > 0:
-        #print "media list: ", cam.status["listing"]
-        for item in cam.status["listing"]:
-          list.append("Cam %d: %s" %(i, item))
-    self.current_screen.ids.boxFileList.clear_widgets()
+    if len(cam.status["listing"]) > 0:
+      #print "media list: ", cam.status["listing"]
+      for item in cam.status["listing"]:
+        list.append(item)
+    
     layout = GridLayout(cols=3, padding=self.width/40, spacing=self.width/40, size_hint=(None, None), width = self.width)
     layout.bind(minimum_height=layout.setter('height'))
 
- 
-    
     buttons = []
     for item in list:
       ext = item[len(item)-3:len(item)].lower()
@@ -287,9 +301,10 @@ class Ponerine(ScreenManager):
     sv = ScrollView(size_hint=(None, None), size=(self.current_screen.ids.boxFileList.width,
                     self.current_screen.ids.boxFileList.height), pos_hint={'center_x': .5, 'center_y': .5}, do_scroll_x=False)
     sv.add_widget(layout)
+    self.current_screen.ids.boxFileList.clear_widgets()
     self.current_screen.ids.boxFileList.add_widget(sv)   
 
-  def DoRefreshFile(self, text):
+  def DoRefreshFile2(self, text):
     i = 0
     list = []
     for i in range(30):
@@ -430,7 +445,7 @@ GridLayout:
     self.transition = SlideTransition(direction = "right")
     wifioff.clear()
     self.stopdetect.clear()
-    self.current = "connect"
+    self.switch_to(Builder.load_file('data/connectscreen.kv'))
     self.current_screen.ids.btnConnect.text = ""
     self.DetectCam(45)
     print "DoWifi wait stop"
@@ -536,20 +551,22 @@ class PonerineApp(App):
     ConnectScreen = Builder.load_file('data/connectscreen.kv')
     ConnectScreen.name = 'connect'
     
-    FileManagerScreen = Builder.load_file('data/filemanagerscreen.kv')
-    FileManagerScreen.name = 'filemanager'
+    #FileManagerScreen = Builder.load_file('data/filemanagerscreen.kv')
+    #FileManagerScreen.name = 'filemanager'
     
     CameraScreen = Builder.load_file('data/camerascreen.kv')
     CameraScreen.name = 'camera'
     
-    SettingScreen = Builder.load_file('data/settingscreen.kv')
-    SettingScreen.name = 'setting'
+    #SettingScreen = Builder.load_file('data/settingscreen.kv')
+    #SettingScreen.name = 'setting'
     
     ponerine.add_widget(ConnectScreen)
-    ponerine.add_widget(FileManagerScreen)
+    #ponerine.add_widget(FileManagerScreen)
     ponerine.add_widget(CameraScreen)
-    ponerine.add_widget(SettingScreen)
-    ponerine.current = 'filemanager'
+    #ponerine.add_widget(SettingScreen)
+    ponerine.current = 'connect'
+    ponerine.DetectCam()
+    #ponerine.switch_to(Builder.load_file('data/connectscreen.kv'))
     #ponerine.DetectCam()
     return ponerine
     
