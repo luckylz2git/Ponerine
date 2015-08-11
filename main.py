@@ -13,6 +13,10 @@ from kivy.clock import Clock
 from kivy.lang import Builder
 from kivy.uix.popup import Popup
 from kivy.properties import StringProperty, NumericProperty, BooleanProperty, ObjectProperty
+
+from kivy.adapters.dictadapter import DictAdapter
+from kivy.uix.listview import ListView, ListItemButton, ListItemLabel, CompositeListItem
+
 # Camera Object[camera.py]
 from camera import Camera
 # import base64, functools, hashlib, json, os, platform, re, select, socket, subprocess, sys, tempfile, threading, time, tkFileDialog, tkMessageBox, urllib2, webbrowser, zlib
@@ -33,31 +37,34 @@ class ConfigPopup(Popup):
   apply = BooleanProperty()
 
 class Ponerine(ScreenManager):
+  def DownloadFile(self):
+    print "Download File"
   
-  def RefreshFile(self, text):
-    print text.upper()
-    print text.lower()
+  def DeleteFile(self):
+    print "Delete File"
+  
+  def FilterFile(self, text):
+    if text <> "File Type":
+      self.current_screen.ids.glFileList.clear_widgets()
+      lbl = Label(text="Loading File List ...", size_hint=(1, 1), font_size=self.width/20)
+      self.current_screen.ids.glFileList.add_widget(lbl)
+      threading.Thread(target=self.DoFilterFile, args=(text[0:3].lower(),), name="DoFilterFile").start()
+  
+  def SelectCamera(self, instance):
     str = self.current_screen.ids.lstCamera.text.replace("Camera","").replace(" ","")
     index = -1
     if str.isdigit():
       index = int(str) - 1
-    if index > -1 and text <> "File Type":
-      self.current_screen.ids.boxFileList.clear_widgets()
-      lbl = Label(text="Loading File List ...", size_hint=(1, 1), font_size=self.width/20)
-      self.current_screen.ids.boxFileList.add_widget(lbl)
-      threading.Thread(target=self.DoRefreshFile, args=(text[0:3],index,), name="DoRefreshFile").start()
-  
-  def SelectCamera(self, instance):
-    print instance.text
-    #if instance.text <> "Camera":
-    #  instance.text = "Camera"
-  
+      self.current_screen.ids.glFileList.clear_widgets()
+      lbl = Label(text="Loading File List ...", font_size=self.width/30)
+      self.current_screen.ids.glFileList.add_widget(lbl)
+      threading.Thread(target=self.DoRefreshFile, args=(index,), name="DoRefreshFile").start()
+      
   def SelectFile(self, instance):
     print instance.text
     if instance.text <> "Selection":
       instance.text = "Selection"
-    
-    
+
   def __init__(self, appexit):  
     super(Ponerine, self).__init__()  
     self.appexit = appexit
@@ -123,6 +130,8 @@ class Ponerine(ScreenManager):
     self.transition = SlideTransition(direction = "right")
     self.switch_to(Builder.load_file('data/filemanagerscreen.kv'))
     self.current_screen.ids.lstCamera.text = "Camera"
+    self.filelist = []
+    self.selectlist = []
     camlist = []
     for i in range(len(self.cam)):
       camlist.append('Camera %d'%(i+1))
@@ -130,6 +139,9 @@ class Ponerine(ScreenManager):
       self.current_screen.ids.lstCamera.values = camlist
     self.current_screen.ids.lstFileType.text = "File Type"
     self.current_screen.ids.lstSelection.text = "Selection"
+    self.current_screen.ids.lstSelection.disabled = True
+    self.current_screen.ids.btnDownload.disabled = True
+    self.current_screen.ids.btnDelete.disabled = True
     
   def Camera(self):
     if self.current == "setting":
@@ -267,56 +279,213 @@ class Ponerine(ScreenManager):
     self.stopdetect.clear()
     self.DetectCam()
   
-  def DoRefreshFile(self, text, index):
-    list = []
+  def DoFilterFile0(self, filter):
+    layout = GridLayout(cols=4, padding=self.width/60, spacing=self.width/60, size_hint=(None, None), width = self.width)
+    layout.bind(minimum_height=layout.setter('height'))
+
+    bshow = False
+    if len(self.filelist) > 0:
+      i = 0
+      for item in self.filelist:
+        if filter == "all":
+          ext = "all"
+        else:
+          ext = item[len(item)-3:len(item)].lower()
+        if filter == ext:
+          bshow = True
+          btn = ToggleButton(text=item, size=((self.width-self.width/12)/4, (self.width-self.width/12)/10), size_hint=(None, None))
+          layout.add_widget(btn,index=i)
+          i += 0
+    if bshow:
+      sv = ScrollView(size_hint=(None, None), size=(self.current_screen.ids.glFileList.width,self.current_screen.ids.glFileList.height), 
+                    pos_hint={'center_x': .5, 'center_y': .5}, do_scroll_x=False)
+      sv.add_widget(layout)
+      self.current_screen.ids.glFileList.clear_widgets()
+      self.current_screen.ids.glFileList.add_widget(sv)
+    else:
+      self.current_screen.ids.glFileList.clear_widgets()
+      if filter == "all":
+        lbl = Label(text="No Files In Camera !", font_size=self.width/30)
+      else:
+        lbl = Label(text="No %s Files In Camera !"%(filter.upper()), font_size=self.width/30)
+      self.current_screen.ids.glFileList.add_widget(lbl)
+
+	def DownloadFile(self):
+		self.FileTime = time.time()
+		self.FileSpeed = []
+		if chunk_size == 0:
+			chunk_size = self.DefaultChunkSize
+		thisPwd = self.curPwd.replace('\/','/')
+		if thisPwd.startswith("/var/www/DCIM") or thisPwd.startswith("/tmp/fuse_d/DCIM"):
+			print len(thisPwd)
+			if thisPwd.startswith("/var/www/DCIM") and len(thisPwd)>=13:
+				thisPwd = re.findall("/var/www/(.+)", thisPwd)[0]
+			elif thisPwd.startswith("/tmp/fuse_d/DCIM") and len(thisPwd)>=16:
+				thisPwd = re.findall("/tmp/fuse_d/(.+)", thisPwd)[0]
+			thisUrl = 'http://%s:%s/%s/%s' %(self.camaddr, self.camwebport, thisPwd, FileTP)
+			print thisUrl
+			if self.DebugMode:
+				self.DebugLog("FileDUrl", thisUrl)			
+			response = urllib2.urlopen(thisUrl)
+
+			total_size = response.info().getheader('Content-Length').strip()
+			total_size = int(total_size)
+			bytes_so_far = 0
+			
+			ThisFileName = "Files/%s" %FileTP
+			filek = open(ThisFileName, "wb")
+			self.FileTime = time.time()
+			while 1:
+				chunk = response.read(chunk_size)
+				bytes_so_far += len(chunk)
+				
+				if not chunk:
+					break
+				filek.write(chunk)
+				if report_hook:
+					report_hook(bytes_so_far, chunk_size, total_size, FileTP)
+			filek.close()
+			if bytes_so_far == total_size:
+				self.FileProgress.config(text="%s downloaded" %(FileTP), bg="#ddffdd")
+			
+
+
+		else:
+			self.Datasrv = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #create data socket
+			self.Datasrv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+			self.Datasrv.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+			self.Datasrv.connect((self.camaddr, self.camdataport)) #open data socket
+			tosend = '{"msg_id":1285,"token":%s,"param":"%s", "offset":0, "fetch_size":%s}' %(self.token, FileTP, self.FileSize[FileTP])
+			resp = self.Comm(tosend)
+			total_size = int(resp["size"])
+			bytes_so_far = 0
+			
+			ThisFileName = "Files/%s" %FileTP
+			filek = open(ThisFileName, "wb")
+			towrite = ""
+			while self.connected:
+				this_size = int(chunk_size)
+				if this_size+bytes_so_far > total_size:
+					this_size = total_size-bytes_so_far
+				chunk = bytearray(this_size)
+				view = memoryview(chunk)
+				while this_size:
+					nbytes = self.Datasrv.recv_into(view, this_size)
+					view = view[nbytes:]
+					this_size -= nbytes
+					bytes_so_far += nbytes
+	
+				towrite += chunk
+				if report_hook:
+					report_hook(bytes_so_far, chunk_size, total_size, FileTP)
+				if bytes_so_far >= total_size:
+					break
+	
+			tmp = 0
+			while 1:
+				if 7 in self.JsonData.keys():
+					if "type" in self.JsonData[7].keys():
+						if self.JsonData[7]["type"] == "get_file_complete":
+							self.JsonData[7]["type"] = ""
+							self.FileProgress.config(text="%s downloaded" %(FileTP), bg="#ddffdd")
+							filek.write(chunk)
+							break
+				time.sleep(1)
+				tmp += 1
+				if tmp >= 5:
+					raise Exception('File download', 'failed') #throw an exception
+					break
+			filek.close()
+			self.Datasrv.close()
+
+
+      
+  def DoFilterFile(self, filter):
+    fdict = {}
+    i = 0
+    for item in self.filelist:
+      #print item
+      if filter == "all":
+        ext = "all"
+      else:
+        ext = item["name"][len(item["name"])-3:len(item["name"])].lower()
+      if filter == ext:
+        i += 1
+        item["index"] = str(i)
+        item["is_selected"] = False
+        fdict[str(i)] = item
+        #print i
+        #print item
+    if i == 0: 
+      return
+    print fdict
+    #return
+    file_args_converter = lambda row_index, rec: {
+         'text': rec['name'],
+         'size_hint_y': None,
+         'height': self.width/15,
+         'cls_dicts':[{'cls': ListItemLabel,'kwargs': {'text': rec['index'],'size_hint_x': 0.2,'deselected_color':[0,0,0,1],'selected_color':[0.8,0.8,0.8,0.8]}},
+                    {'cls': ListItemButton,'kwargs': {'text': rec['name'],'is_representing_cls': True,'size_hint_x': 0.5,'deselected_color':[0,0,0,1],'selected_color':[0.8,0.8,0.8,0.8] }},
+                    {'cls': ListItemLabel,'kwargs': {'text': rec['size'],'size_hint_x': 0.3,'deselected_color':[0,0,0,1],'selected_color':[0.8,0.8,0.8,0.8]}},
+                    {'cls': ListItemLabel,'kwargs': {'text': rec['date'],'size_hint_x': 0.5,'deselected_color':[0,0,0,1],'selected_color':[0.8,0.8,0.8,0.8]}}
+                    ]}
+    #file_sorted = sorted(fdict.keys())
+    file_sorted = ["{0}".format(index+1) for index in range(i)]
+    #selection_mode='single'/'multiple'
+    file_dict_adapter = DictAdapter(sorted_keys=file_sorted,data=fdict,args_converter=file_args_converter,
+                                selection_mode='multiple',allow_empty_selection=True,cls=CompositeListItem)
+    file_dict_adapter.bind(on_selection_change=self.SelectChange)
+    file_list_view = ListView(adapter=file_dict_adapter)
+    self.current_screen.ids.glFileList.clear_widgets()
+    self.current_screen.ids.glFileList.add_widget(file_list_view)
+  
+  def SelectChange(self, instance):
+    self.selectlist = []
+    if len(instance.selection) > 0:
+      for item in instance.selection:
+        self.selectlist.append(item.text)
+      self.current_screen.ids.btnDownload.text = "Download %d" %len(instance.selection)
+      self.current_screen.ids.btnDownload.disabled = False
+      self.current_screen.ids.btnDelete.text = "Delete %d" %len(instance.selection)
+      self.current_screen.ids.btnDelete.disabled = False
+    else:
+      self.current_screen.ids.btnDownload.text = "Download"
+      self.current_screen.ids.btnDownload.disabled = True
+      self.current_screen.ids.btnDelete.text = "Delete"
+      self.current_screen.ids.btnDelete.disabled = True
+    
+  def DoRefreshFile(self, index):
+    self.filelist = []
+    self.current_screen.ids.lstFileType.text = "File Type"
     cam = self.cam[index]
     cam.RefreshFile()
     cam.lsdir.wait()
     if len(cam.status["listing"]) > 0:
-      print "file extention: %s" %text
-      cam.RefreshFile(cam.status["pwd"] + "/" + cam.status["listing"][0], text)
+      cam.RefreshFile(cam.status["pwd"] + "/" + cam.status["listing"][0]["name"])
       cam.lsdir.wait()
     if len(cam.status["listing"]) > 0:
-      #print "media list: ", cam.status["listing"]
-      for item in cam.status["listing"]:
-        list.append(item)
-    
-    layout = GridLayout(cols=3, padding=self.width/40, spacing=self.width/40, size_hint=(None, None), width = self.width)
-    layout.bind(minimum_height=layout.setter('height'))
-
-    buttons = []
-    for item in list:
-      ext = item[len(item)-3:len(item)].lower()
-      if ext in ("jpg","mp4","raw"):
-        buttons.append(ToggleButton(text=item, halign="center",valign="bottom",padding=(self.width/80,self.width/80),text_size=((self.width-self.width/10)/3, (self.width-self.width/10)/5),
-                         background_normal="image/file%s-2.png"%ext,background_down="image/file%s-1.png"%ext,
-                         size=((self.width-self.width/10)/3, (self.width-self.width/10)/5), size_hint=(None, None), font_size=self.width/50, color=(1,1,0,1)))
-      else:
-        buttons.append(ToggleButton(text=item, halign='center',valign='bottom',padding=(self.width/80,self.width/80),text_size=((self.width-self.width/10)/3, (self.width-self.width/10)/5),size=((self.width-self.width/10)/3, (self.width-self.width/10)/5), size_hint=(None, None), font_size=self.width/50, color=(1,1,0,1)))
-    i = 0
-    for btn in buttons:
-      layout.add_widget(btn, index=i)
-      i += 1
-      #print "No. %d children len" %i,len(layout.children[:])
-    sv = ScrollView(size_hint=(None, None), size=(self.current_screen.ids.boxFileList.width,
-                    self.current_screen.ids.boxFileList.height), pos_hint={'center_x': .5, 'center_y': .5}, do_scroll_x=False)
-    sv.add_widget(layout)
-    self.current_screen.ids.boxFileList.clear_widgets()
-    self.current_screen.ids.boxFileList.add_widget(sv)   
+      self.filelist = cam.status["listing"]
+      # for item in cam.status["listing"]:
+        # self.filelist.append(item)
+      self.DoFilterFile("all")
+    else:
+      self.current_screen.ids.glFileList.clear_widgets()
+      lbl = Label(text="No Files In Camera !", font_size=self.width/30)
+      self.current_screen.ids.glFileList.add_widget(lbl)
 
   def DoRefreshFile2(self, text):
     i = 0
     list = []
     for i in range(30):
       list.append("Cam 1: YDXJ%04d.jpg" %i)
-    self.current_screen.ids.boxFileList.clear_widgets()
+    self.current_screen.ids.glFileList.clear_widgets()
     layout = GridLayout(cols=3, padding=self.width/40, spacing=self.width/40, size_hint=(None, None), width = self.width)
     layout.bind(minimum_height=layout.setter('height'))
 
-    sv = ScrollView(size_hint=(None, None), size=(self.current_screen.ids.boxFileList.width,
-                    self.current_screen.ids.boxFileList.height), pos_hint={'center_x': .5, 'center_y': .5}, do_scroll_x=False)
+    sv = ScrollView(size_hint=(None, None), size=(self.current_screen.ids.glFileList.width,
+                    self.current_screen.ids.glFileList.height), pos_hint={'center_x': .5, 'center_y': .5}, do_scroll_x=False)
     sv.add_widget(layout)
-    self.current_screen.ids.boxFileList.add_widget(sv) 
+    self.current_screen.ids.glFileList.add_widget(sv) 
     
     for item in list:
       ext = item[len(item)-3:len(item)].lower()
@@ -334,15 +503,15 @@ class Ponerine(ScreenManager):
     for i in range(30):
       list.append("Cam 1: YDXJ%04d.jpg" %i)
     print list
-    self.current_screen.ids.boxFileList.clear_widgets()
+    self.current_screen.ids.glFileList.clear_widgets()
     layout = Builder.load_string(self.BuildFileList(list))
     layout.bind(minimum_height=layout.setter('height'))
 
-    sv = ScrollView(size_hint=(None, None), size=(self.current_screen.ids.boxFileList.width,
-                    self.current_screen.ids.boxFileList.height), pos_hint={'center_x': .5, 'center_y': .5}, do_scroll_x=False)
+    sv = ScrollView(size_hint=(None, None), size=(self.current_screen.ids.glFileList.width,
+                    self.current_screen.ids.glFileList.height), pos_hint={'center_x': .5, 'center_y': .5}, do_scroll_x=False)
     sv.add_widget(layout)
-    self.current_screen.ids.boxFileList.add_widget(sv)
-    for child in self.current_screen.ids.boxFileList.children[:]:
+    self.current_screen.ids.glFileList.add_widget(sv)
+    for child in self.current_screen.ids.glFileList.children[:]:
       print child
       
   def BuildFileList(self, list):

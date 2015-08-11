@@ -54,8 +54,27 @@ Screen:
         id: btnRadiation
         background_normal: 'image/radiation-2.png'
         background_down: 'image/radiation-1.png'
-    BoxLayout:
-      id: boxFileList
+    GridLayout:
+      size_hint: None, None
+      size: root.width, root.width/15
+      cols: 4
+      Label:
+        size_hint_x: 0.2
+        text: "No."
+      Label:
+        size_hint_x: 0.5
+        text: "File Name"
+      Label:
+        size_hint_x: 0.3
+        text: "File Size"
+      Label:
+        size_hint_x: 0.5
+        text: "Creation Date Time"
+    GridLayout:
+      id: glFileList
+      cols: 1
+      padding: 0,0,0,0 #self.width/60, self.width/60, self.width/60, self.width/60
+      spacing: 0, 0
       size_hint: 1, 8
       #do_scroll_y: True
       #do_scroll_x: False
@@ -66,6 +85,13 @@ Screen:
 #      foreground_color: [1,1,0,1]
 #      background_color: [0,0,0,1]
 #      readonly: True
+    BoxLayout:
+      size_hint: None, None
+      size: root.width, root.width/40
+      # ProgressBar:
+        # id: pbProgress
+        # max: 100
+        # value: 50
     GridLayout:
       id: glFooter
       size_hint: 1, 1
@@ -85,7 +111,7 @@ Screen:
         #font_size: int(root.width/20)
         text: "File Type"
         values: ('All Files', 'RAW Photo', 'MP4 Video', 'JPG Photo')
-        on_text: root.manager.RefreshFile(self.text)
+        on_text: root.manager.FilterFile(self.text)
       Spinner:
         id: lstSelection
         #size_hint: None, None
@@ -94,6 +120,10 @@ Screen:
         values: ('Invert Select','Clear All', 'Select All')
         on_text: root.manager.SelectFile(self)
       Button:
+        id: btnDownload
         text: "Download"
+        on_release: root.manager.DownloadFile()
       Button:
+        id: btnDelete
         text: "Delete"
+        on_release: root.manager.DeleteFile()

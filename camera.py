@@ -308,10 +308,8 @@ class Camera():
   def StopRecord(self):
     self.SendMsg('{"msg_id":514}')
 
-  def RefreshFile(self, dir="/tmp/fuse_d/DCIM", ext="", sort="date desc"):
+  def RefreshFile(self, dir="/tmp/fuse_d/DCIM"):
     self.lsdir.clear()
-    self.status["ext"] = ext.lower()
-    self.status["sort"] = sort
     self.status["pwd"] = ""
     self.status["listing"] = []
     if dir == "":
@@ -334,21 +332,28 @@ class Camera():
           break
         if self.wifioff.isSet():
           break
-          
+  def GetFileSize(self, sizebyte):
+    value = float(sizebyte)
+    option = 0
+    while value > 1024:
+      value = value/float(1024)
+      option += 1
+    pres = ["B", "KB", "MB", "GB", "TB"]
+    return("%.2f %s" %(value, pres[option]))
+    
   def CreateFileList(self, rvalfilelist):
     #print "rvalfilelist", rvalfilelist
     r = []
     if len(rvalfilelist) > 0:
       i = 0
       for item in rvalfilelist:
-        add = True
-        #if self.status["ext"] in ("jpg","mp4","raw") and (self.status["ext"] not in item.keys()[0].lower() or "_thm" in item.keys()[0].lower()):
-        if self.status["ext"] in ("jpg","mp4","raw") and self.status["ext"] not in item.keys()[0].lower():
-          add = False
-        if add:
-          i += 1
-          print i, item.keys()[0], item[item.keys()[0]]
-          r.append(item.keys()[0])
+        i += 1
+        fdesc = item[item.keys()[0]].split('|')
+        fsize = self.GetFileSize(fdesc[0].replace(' bytes',''))
+        fdict = '{"name":"%s","size":"%s","date":"%s"}' %(item.keys()[0],fsize,fdesc[1])
+        print i, fdict
+        #print i, item.keys()[0], item[item.keys()[0]]
+        r.append(json.loads(fdict))
     #print "create file list", r
     return r
     
