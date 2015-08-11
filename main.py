@@ -7,6 +7,7 @@ from kivy.core.window import Window
 from kivy.uix.screenmanager import Screen, ScreenManager , SlideTransition
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.scrollview import ScrollView
+from kivy.uix.progressbar import ProgressBar
 from kivy.uix.label import Label
 from kivy.uix.togglebutton import ToggleButton
 from kivy.clock import Clock
@@ -38,10 +39,17 @@ class ConfigPopup(Popup):
 
 class Ponerine(ScreenManager):
   def DownloadFile(self):
-    print "Download File"
+    str = self.current_screen.ids.lstCamera.text.replace("Camera","").replace(" ","")
+    index = -1
+    if str.isdigit():
+      index = int(str) - 1
+      threading.Thread(target=self.DoDownloadFile, args=(index,), name="DoDownloadFile").start()
+      #self.DoDownloadFile(index)
   
   def DeleteFile(self):
-    print "Delete File"
+    pbar = ProgressBar(max=100,value=0)
+    self.current_screen.ids.boxProgress.add_widget(pbar)
+    pbar.value = 75
   
   def FilterFile(self, text):
     if text <> "File Type":
@@ -62,8 +70,8 @@ class Ponerine(ScreenManager):
       
   def SelectFile(self, instance):
     print instance.text
-    if instance.text <> "Selection":
-      instance.text = "Selection"
+    #if instance.text <> "Selection":
+      #instance.text = "Selection"
 
   def __init__(self, appexit):  
     super(Ponerine, self).__init__()  
@@ -141,7 +149,7 @@ class Ponerine(ScreenManager):
     self.current_screen.ids.lstSelection.text = "Selection"
     self.current_screen.ids.lstSelection.disabled = True
     self.current_screen.ids.btnDownload.disabled = True
-    self.current_screen.ids.btnDelete.disabled = True
+    self.current_screen.ids.btnDelete.disabled = False
     
   def Camera(self):
     if self.current == "setting":
@@ -310,96 +318,61 @@ class Ponerine(ScreenManager):
         lbl = Label(text="No %s Files In Camera !"%(filter.upper()), font_size=self.width/30)
       self.current_screen.ids.glFileList.add_widget(lbl)
 
-	def DownloadFile(self):
-		self.FileTime = time.time()
-		self.FileSpeed = []
-		if chunk_size == 0:
-			chunk_size = self.DefaultChunkSize
-		thisPwd = self.curPwd.replace('\/','/')
-		if thisPwd.startswith("/var/www/DCIM") or thisPwd.startswith("/tmp/fuse_d/DCIM"):
-			print len(thisPwd)
-			if thisPwd.startswith("/var/www/DCIM") and len(thisPwd)>=13:
-				thisPwd = re.findall("/var/www/(.+)", thisPwd)[0]
-			elif thisPwd.startswith("/tmp/fuse_d/DCIM") and len(thisPwd)>=16:
-				thisPwd = re.findall("/tmp/fuse_d/(.+)", thisPwd)[0]
-			thisUrl = 'http://%s:%s/%s/%s' %(self.camaddr, self.camwebport, thisPwd, FileTP)
-			print thisUrl
-			if self.DebugMode:
-				self.DebugLog("FileDUrl", thisUrl)			
-			response = urllib2.urlopen(thisUrl)
-
-			total_size = response.info().getheader('Content-Length').strip()
-			total_size = int(total_size)
-			bytes_so_far = 0
-			
-			ThisFileName = "Files/%s" %FileTP
-			filek = open(ThisFileName, "wb")
-			self.FileTime = time.time()
-			while 1:
-				chunk = response.read(chunk_size)
-				bytes_so_far += len(chunk)
-				
-				if not chunk:
-					break
-				filek.write(chunk)
-				if report_hook:
-					report_hook(bytes_so_far, chunk_size, total_size, FileTP)
-			filek.close()
-			if bytes_so_far == total_size:
-				self.FileProgress.config(text="%s downloaded" %(FileTP), bg="#ddffdd")
-			
-
-
-		else:
-			self.Datasrv = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #create data socket
-			self.Datasrv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-			self.Datasrv.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-			self.Datasrv.connect((self.camaddr, self.camdataport)) #open data socket
-			tosend = '{"msg_id":1285,"token":%s,"param":"%s", "offset":0, "fetch_size":%s}' %(self.token, FileTP, self.FileSize[FileTP])
-			resp = self.Comm(tosend)
-			total_size = int(resp["size"])
-			bytes_so_far = 0
-			
-			ThisFileName = "Files/%s" %FileTP
-			filek = open(ThisFileName, "wb")
-			towrite = ""
-			while self.connected:
-				this_size = int(chunk_size)
-				if this_size+bytes_so_far > total_size:
-					this_size = total_size-bytes_so_far
-				chunk = bytearray(this_size)
-				view = memoryview(chunk)
-				while this_size:
-					nbytes = self.Datasrv.recv_into(view, this_size)
-					view = view[nbytes:]
-					this_size -= nbytes
-					bytes_so_far += nbytes
-	
-				towrite += chunk
-				if report_hook:
-					report_hook(bytes_so_far, chunk_size, total_size, FileTP)
-				if bytes_so_far >= total_size:
-					break
-	
-			tmp = 0
-			while 1:
-				if 7 in self.JsonData.keys():
-					if "type" in self.JsonData[7].keys():
-						if self.JsonData[7]["type"] == "get_file_complete":
-							self.JsonData[7]["type"] = ""
-							self.FileProgress.config(text="%s downloaded" %(FileTP), bg="#ddffdd")
-							filek.write(chunk)
-							break
-				time.sleep(1)
-				tmp += 1
-				if tmp >= 5:
-					raise Exception('File download', 'failed') #throw an exception
-					break
-			filek.close()
-			self.Datasrv.close()
-
-
+  def DoDownloadFile(self, index):
+    ichunk = 2
+    chunk_size = [1024,2048,4096,8192,16384,32768]
+    cam = self.cam[index]
+    pbar = ProgressBar(max=100,value=0)
+    self.current_screen.ids.boxProgress.add_widget(pbar)
+    #self.current_screen.ids.boxProgress.children[0].value = 75
+    for file in self.selectlist:
+      print "start download: ", file
+      cam.StartDownload(file, 0)
+      cam.dlstart.wait()
+      total_size = cam.status["size"]
       
+      Datasrv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+      Datasrv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+      Datasrv.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+      Datasrv.connect((cam.ip, 8787))
+      
+      localfile = open("files/%s" %file, "wb")
+      bytes_so_far = 0
+      while True:
+        #self.current_screen.ids.boxProgress.children[0].value = int(bytes_so_far/total_size)
+        if cam.quit.isSet():
+          return
+        if cam.wifioff.isSet():
+          return
+        this_size = chunk_size[ichunk]
+        print bytes_so_far, this_size, total_size
+        print float(bytes_so_far)/float(total_size)*100, int(float(bytes_so_far)/float(total_size)*100)
+        pbar.value = int(float(bytes_so_far)/float(total_size)*100)
+        #self.current_screen.ids.lstSelection.text = "Download %s" %int(float(bytes_so_far)/float(total_size)*100)
+        if this_size + bytes_so_far > total_size:
+          this_size = total_size - bytes_so_far
+        chunk = bytearray(this_size)
+        view = memoryview(chunk)
+        while this_size:
+          nbytes = Datasrv.recv_into(view, this_size)
+          view = view[nbytes:]
+          this_size -= nbytes
+          bytes_so_far += nbytes
+  
+        localfile.write(chunk)
+        if bytes_so_far >= total_size:
+          break
+      #final chunk
+      print bytes_so_far, this_size, total_size
+      localfile.write(chunk)
+      localfile.close()
+      Datasrv.close()
+      cam.dlstop.wait(5)
+    for item in self.file_dict_adapter.selection:
+      print item
+      item.is_selected = False
+    self.current_screen.ids.boxProgress.clear_widgets()
+
   def DoFilterFile(self, filter):
     fdict = {}
     i = 0
@@ -418,7 +391,7 @@ class Ponerine(ScreenManager):
         #print item
     if i == 0: 
       return
-    print fdict
+    #print fdict
     #return
     file_args_converter = lambda row_index, rec: {
          'text': rec['name'],
@@ -432,10 +405,10 @@ class Ponerine(ScreenManager):
     #file_sorted = sorted(fdict.keys())
     file_sorted = ["{0}".format(index+1) for index in range(i)]
     #selection_mode='single'/'multiple'
-    file_dict_adapter = DictAdapter(sorted_keys=file_sorted,data=fdict,args_converter=file_args_converter,
+    self.file_dict_adapter = DictAdapter(sorted_keys=file_sorted,data=fdict,args_converter=file_args_converter,
                                 selection_mode='multiple',allow_empty_selection=True,cls=CompositeListItem)
-    file_dict_adapter.bind(on_selection_change=self.SelectChange)
-    file_list_view = ListView(adapter=file_dict_adapter)
+    self.file_dict_adapter.bind(on_selection_change=self.SelectChange)
+    file_list_view = ListView(adapter=self.file_dict_adapter)
     self.current_screen.ids.glFileList.clear_widgets()
     self.current_screen.ids.glFileList.add_widget(file_list_view)
   
