@@ -24,6 +24,8 @@ class Camera():
     self.quit = threading.Event()
     self.wifioff = threading.Event()
     self.lsdir = threading.Event()
+    self.dlstart = threading.Event()
+    self.dlstop = threading.Event()
     
   def __str__(self):
     info = dict()
@@ -42,6 +44,8 @@ class Camera():
     self.taken.clear()
     self.wifioff.clear()
     self.lsdir.clear()
+    self.dlstart.clear()
+    self.dlstop.clear()
     self.jsonon = False
     self.jsonoff = 0
     self.msgbusy = 0
@@ -140,6 +144,8 @@ class Camera():
         self.filetaken = data["param"].replace("/tmp/fuse_d/DCIM","")
         print self.filetaken
         self.taken.set()
+      elif data["type"] == "get_file_complete":
+        self.dlstop.set()
       else:
         self.status[data["type"]] = data["param"]
     else:
@@ -227,7 +233,11 @@ class Camera():
     elif data["msg_id"] == 1282:
       self.status["listing"] = self.CreateFileList(data["listing"])
       self.lsdir.set()
-
+    # download file size
+    elif data["msg_id"] == 1285:
+      self.status["size"] = data["size"]
+      self.dlstart.set()
+      
   def RecvMsg(self):
     try:
       if self.socketopen == 0:
@@ -307,7 +317,20 @@ class Camera():
 
   def StopRecord(self):
     self.SendMsg('{"msg_id":514}')
-
+  
+  #size can be 0
+  def StartDownload(self, file, size=0):
+    self.dlstart.clear()
+    self.dlstop.clear()
+    self.SendMsg('{"msg_id":1285,"param":"%s","offset":0,"fetch_size":%d}' %(file,size))
+    while True:
+      if self.quit.isSet():
+        return
+      if self.wifioff.isSet():
+        return
+      if self.dlstart.isSet():
+        return
+     
   def RefreshFile(self, dir="/tmp/fuse_d/DCIM"):
     self.lsdir.clear()
     self.status["pwd"] = ""
@@ -332,6 +355,7 @@ class Camera():
           break
         if self.wifioff.isSet():
           break
+          
   def GetFileSize(self, sizebyte):
     value = float(sizebyte)
     option = 0
