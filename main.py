@@ -44,12 +44,72 @@ class Ponerine(ScreenManager):
     if str.isdigit():
       index = int(str) - 1
       threading.Thread(target=self.DoDownloadFile, args=(index,), name="DoDownloadFile").start()
+      self.current_screen.ids.btnDownload.text = "Downloading"
+      self.current_screen.ids.btnDownload.disabled = True
+      self.current_screen.ids.btnDelete.text = "Delete"
+      self.current_screen.ids.btnDelete.disabled = True
       #self.DoDownloadFile(index)
   
+
+
+  def DoFilterFile(self, filter):
+    fdict = {}
+    i = 0
+    for item in self.filelist:
+      #print item
+      if filter == "all":
+        ext = "all"
+      else:
+        ext = item["name"][len(item["name"])-3:len(item["name"])].lower()
+      if filter == ext:
+        i += 1
+        item["index"] = str(i)
+        item["is_selected"] = False
+        fdict[str(i)] = item
+        #print i
+        #print item
+    if i == 0: 
+      return
+    #print fdict
+    #return
+    file_args_converter = lambda row_index, rec: {
+         'text': rec['name'],
+         'size_hint_y': None,
+         'height': self.width/15,
+         'cls_dicts':[{'cls': ListItemLabel,'kwargs': {'text': rec['index'],'size_hint_x': 0.2,'deselected_color':[0,0,0,1],'selected_color':[0.8,0.8,0.8,0.8]}},
+                    {'cls': ListItemButton,'kwargs': {'text': rec['name'],'is_representing_cls': True,'size_hint_x': 0.5,'deselected_color':[0,0,0,1],'selected_color':[0.8,0.8,0.8,0.8] }},
+                    {'cls': ListItemLabel,'kwargs': {'text': rec['size'],'size_hint_x': 0.3,'deselected_color':[0,0,0,1],'selected_color':[0.8,0.8,0.8,0.8]}},
+                    {'cls': ListItemLabel,'kwargs': {'text': rec['date'],'size_hint_x': 0.5,'deselected_color':[0,0,0,1],'selected_color':[0.8,0.8,0.8,0.8]}}
+                    ]}
+    #file_sorted = sorted(fdict.keys())
+    file_sorted = ["{0}".format(index+1) for index in range(i)]
+    #selection_mode='single'/'multiple'
+    self.file_dict_adapter = DictAdapter(sorted_keys=file_sorted,data=fdict,args_converter=file_args_converter,
+                                selection_mode='multiple',allow_empty_selection=True,cls=CompositeListItem)
+    self.file_dict_adapter.bind(selection=self.SelectTest)
+    #self.file_dict_adapter.bind(on_selection_change=self.SelectChange)
+    self.file_list_view = ListView(adapter=self.file_dict_adapter)
+    self.current_screen.ids.glFileList.clear_widgets()
+    self.current_screen.ids.glFileList.add_widget(self.file_list_view)
+
   def DeleteFile(self):
-    pbar = ProgressBar(max=100,value=0)
-    self.current_screen.ids.boxProgress.add_widget(pbar)
-    pbar.value = 75
+    
+    print self.file_dict_adapter.data
+    print self.file_dict_adapter.selection,len(self.file_dict_adapter.selection)
+    print self.file_list_view.container
+    for child in self.file_list_view.container.children[:]:
+      print "container", child, child.is_selected #, child.text #, child.state
+    
+    # try to test in the listadapter.py
+    self.file_dict_adapter.deselect_list(self.file_dict_adapter.selection)
+    #self.file_list_view.deselect(self.file_dict_adapter.selection)
+    #self.file_dict_adapter.selection = []
+    #self.file_dict_adapter.select_list([], False)
+    #pbar = ProgressBar(max=100,value=0)
+    #self.current_screen.ids.boxProgress.add_widget(pbar)
+    #pbar.value = 75
+    #self.file_dict_adapter = DictAdapter(sorted_keys=file_sorted,data=fdict,args_converter=file_args_converter,
+    #                            selection_mode='multiple',allow_empty_selection=True,cls=CompositeListItem)
   
   def FilterFile(self, text):
     if text <> "File Type":
@@ -143,13 +203,14 @@ class Ponerine(ScreenManager):
     camlist = []
     for i in range(len(self.cam)):
       camlist.append('Camera %d'%(i+1))
-    if len(camlist) > 0:
-      self.current_screen.ids.lstCamera.values = camlist
     self.current_screen.ids.lstFileType.text = "File Type"
     self.current_screen.ids.lstSelection.text = "Selection"
     self.current_screen.ids.lstSelection.disabled = True
     self.current_screen.ids.btnDownload.disabled = True
     self.current_screen.ids.btnDelete.disabled = False
+    if len(camlist) > 0:
+      self.current_screen.ids.lstCamera.values = camlist
+      self.current_screen.ids.lstCamera.text = camlist[0]
     
   def Camera(self):
     # if self.current == "setting":
@@ -374,47 +435,15 @@ class Ponerine(ScreenManager):
       self.current_screen.ids.lstFileType.text = "File Type"
     else:
       self.current_screen.ids.lstFileType.text = oldtext
+    self.current_screen.ids.btnDownload.text = "Download"
+    self.current_screen.ids.btnDownload.disabled = True
     #self.FilterFile(self.current_screen.ids.lstFileType.text)
     
-  def DoFilterFile(self, filter):
-    fdict = {}
-    i = 0
-    for item in self.filelist:
-      #print item
-      if filter == "all":
-        ext = "all"
-      else:
-        ext = item["name"][len(item["name"])-3:len(item["name"])].lower()
-      if filter == ext:
-        i += 1
-        item["index"] = str(i)
-        item["is_selected"] = False
-        fdict[str(i)] = item
-        #print i
-        #print item
-    if i == 0: 
-      return
-    #print fdict
-    #return
-    file_args_converter = lambda row_index, rec: {
-         'text': rec['name'],
-         'size_hint_y': None,
-         'height': self.width/15,
-         'cls_dicts':[{'cls': ListItemLabel,'kwargs': {'text': rec['index'],'size_hint_x': 0.2,'deselected_color':[0,0,0,1],'selected_color':[0.8,0.8,0.8,0.8]}},
-                    {'cls': ListItemButton,'kwargs': {'text': rec['name'],'is_representing_cls': True,'size_hint_x': 0.5,'deselected_color':[0,0,0,1],'selected_color':[0.8,0.8,0.8,0.8] }},
-                    {'cls': ListItemLabel,'kwargs': {'text': rec['size'],'size_hint_x': 0.3,'deselected_color':[0,0,0,1],'selected_color':[0.8,0.8,0.8,0.8]}},
-                    {'cls': ListItemLabel,'kwargs': {'text': rec['date'],'size_hint_x': 0.5,'deselected_color':[0,0,0,1],'selected_color':[0.8,0.8,0.8,0.8]}}
-                    ]}
-    #file_sorted = sorted(fdict.keys())
-    file_sorted = ["{0}".format(index+1) for index in range(i)]
-    #selection_mode='single'/'multiple'
-    self.file_dict_adapter = DictAdapter(sorted_keys=file_sorted,data=fdict,args_converter=file_args_converter,
-                                selection_mode='multiple',allow_empty_selection=True,cls=CompositeListItem)
-    self.file_dict_adapter.bind(on_selection_change=self.SelectChange)
-    file_list_view = ListView(adapter=self.file_dict_adapter)
-    self.current_screen.ids.glFileList.clear_widgets()
-    self.current_screen.ids.glFileList.add_widget(file_list_view)
-  
+
+    
+  def SelectTest(self, instance, *args):
+    print "selection change"
+    
   def SelectChange(self, instance):
     self.selectlist = []
     if len(instance.selection) > 0:
