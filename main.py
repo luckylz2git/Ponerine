@@ -152,10 +152,10 @@ class Ponerine(ScreenManager):
     self.current_screen.ids.btnDelete.disabled = False
     
   def Camera(self):
-    if self.current == "setting":
-      self.transition = SlideTransition(direction = "right")
-    elif self.current == "filemanager":
-      self.transition = SlideTransition(direction = "left")
+    # if self.current == "setting":
+      # self.transition = SlideTransition(direction = "right")
+    # elif self.current == "filemanager":
+      # self.transition = SlideTransition(direction = "left")
     self.switch_to(Builder.load_file('data/camerascreen.kv'))
     
   def Setting(self):
@@ -319,60 +319,63 @@ class Ponerine(ScreenManager):
       self.current_screen.ids.glFileList.add_widget(lbl)
 
   def DoDownloadFile(self, index):
-    ichunk = 2
-    chunk_size = [1024,2048,4096,8192,16384,32768]
     cam = self.cam[index]
-    pbar = ProgressBar(max=100,value=0)
-    self.current_screen.ids.boxProgress.add_widget(pbar)
-    #self.current_screen.ids.boxProgress.children[0].value = 75
-    for file in self.selectlist:
-      print "start download: ", file
-      cam.StartDownload(file, 0)
-      cam.dlstart.wait()
-      total_size = cam.status["size"]
-      
-      Datasrv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-      Datasrv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-      Datasrv.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-      Datasrv.connect((cam.ip, 8787))
-      
-      localfile = open("files/%s" %file, "wb")
-      bytes_so_far = 0
-      while True:
-        #self.current_screen.ids.boxProgress.children[0].value = int(bytes_so_far/total_size)
-        if cam.quit.isSet():
-          return
-        if cam.wifioff.isSet():
-          return
-        this_size = chunk_size[ichunk]
-        print bytes_so_far, this_size, total_size
-        print float(bytes_so_far)/float(total_size)*100, int(float(bytes_so_far)/float(total_size)*100)
-        pbar.value = int(float(bytes_so_far)/float(total_size)*100)
-        #self.current_screen.ids.lstSelection.text = "Download %s" %int(float(bytes_so_far)/float(total_size)*100)
-        if this_size + bytes_so_far > total_size:
-          this_size = total_size - bytes_so_far
-        chunk = bytearray(this_size)
-        view = memoryview(chunk)
-        while this_size:
-          nbytes = Datasrv.recv_into(view, this_size)
-          view = view[nbytes:]
-          this_size -= nbytes
-          bytes_so_far += nbytes
-  
-        localfile.write(chunk)
-        if bytes_so_far >= total_size:
-          break
-      #final chunk
-      print bytes_so_far, this_size, total_size
-      localfile.write(chunk)
-      localfile.close()
-      Datasrv.close()
-      cam.dlstop.wait(5)
-    for item in self.file_dict_adapter.selection:
-      print item
-      item.is_selected = False
-    self.current_screen.ids.boxProgress.clear_widgets()
+    self.current_screen.ids.boxProgress.height = self.width / 10
+    
+    # lblFileName = Label(size_hint=(1,2),text_size=(self.width,self.width/15),halign="left",padding_x=self.width/40,font_size=self.width/40,color=(1,1,0,1))
+    # glProgress = GridLayout(cols=3, size_hint=(1,1))
+    # lblpercent = Label(size_hint=(1,1),text_size=(self.width,self.width/30),halign="left",padding_x=self.width/40,font_size=self.width/80,color=(1,1,0,1))
+    # pbar = ProgressBar(size_hint=(1,1))
+    # lblspeed = Label(size_hint=(0.5,1),text_size=(self.width,self.width/30),halign="right",padding_x=self.width/40,font_size=self.width/80,color=(1,1,0,1))
 
+    lblFileName = Label(size_hint=(None,None),size=(self.width,self.width/20),text_size=self.size,halign ='left',valign='middle',padding_x=self.width/50,color=(1,1,0,1),font_size=self.width/35)
+    glProgress = GridLayout(cols=3, size_hint=(None,None),size=(self.width,self.width/20))
+    lblpercent = Label(size_hint=(1,1),color=(1,1,0,1),font_size=self.width/40)
+    pbar = ProgressBar(size_hint=(2,1))
+    lblspeed = Label(size_hint=(1,1),color=(1,1,0,1),font_size=self.width/40)
+   
+    glProgress.add_widget(lblpercent)
+    glProgress.add_widget(pbar)
+    glProgress.add_widget(lblspeed)
+    self.current_screen.ids.boxProgress.add_widget(lblFileName)
+    self.current_screen.ids.boxProgress.add_widget(glProgress)
+
+    print "lblFileName", lblFileName.font_size, lblFileName.height
+    print "lblpercent", lblpercent.font_size, glProgress.height
+    
+    # time.sleep(10)    
+
+    i = 0
+    ln = len(self.selectlist)
+    for file in self.selectlist:
+      print "start download:", file
+      cam.StartDownload(file)
+      cam.dlstart.wait()
+      while True:
+        cam.dlstop.wait(0.3)
+        #print cam.dlstatus
+        if cam.dlstop.isSet():
+          break
+        fn = "Downloading : " + cam.dlstatus["file"] + "   [ %d / %d file(s) downloaded ]"%(i,ln)
+        lblFileName.text = fn
+        pct = "%0.2f" %cam.dlstatus["percent"]
+        pct += " %"
+        lblpercent.text = pct
+        pbar.value = int(cam.dlstatus["percent"])
+        lblspeed.text = cam.dlstatus["speed"]
+      i += 1
+
+    self.current_screen.ids.boxProgress.clear_widgets()
+    self.current_screen.ids.boxProgress.height = self.width / 40
+    oldtext = self.current_screen.ids.lstFileType.text
+    self.current_screen.ids.lstFileType.text = "File Type"
+    if oldtext == "File Type":
+      self.current_screen.ids.lstFileType.text = "All Files"
+      self.current_screen.ids.lstFileType.text = "File Type"
+    else:
+      self.current_screen.ids.lstFileType.text = oldtext
+    #self.FilterFile(self.current_screen.ids.lstFileType.text)
+    
   def DoFilterFile(self, filter):
     fdict = {}
     i = 0
@@ -433,12 +436,12 @@ class Ponerine(ScreenManager):
     cam = self.cam[index]
     cam.RefreshFile()
     cam.lsdir.wait()
-    if len(cam.status["listing"]) > 0:
-      cam.RefreshFile(cam.status["pwd"] + "/" + cam.status["listing"][0]["name"])
+    if len(cam.listing) > 0:
+      cam.RefreshFile(cam.status["pwd"] + "/" + cam.listing[0]["name"])
       cam.lsdir.wait()
-    if len(cam.status["listing"]) > 0:
-      self.filelist = cam.status["listing"]
-      # for item in cam.status["listing"]:
+    if len(cam.listing) > 0:
+      self.filelist = cam.listing
+      # for item in cam.listing:
         # self.filelist.append(item)
       self.DoFilterFile("all")
     else:
@@ -596,15 +599,15 @@ GridLayout:
     print "DoFileTaken start %d" %index
     while not self.cam[index].quit.isSet():
       self.cam[index].taken.wait()
-      debugtxt = self.get_screen("camera").ids.txtDebug.text
+      debugtxt = self.current_screen.ids.txtDebug.text
       if self.cam[index].filetaken <> "":
         debugtxt += "\nCAM %d : " %(index+1) + self.cam[index].filetaken
-        self.get_screen("camera").ids.txtDebug.text = debugtxt
+        debugtxt = self.current_screen.ids.txtDebug.text = debugtxt
       self.cam[index].taken.clear()
     print "DoFileTaken stop %d" %index
 
   def DoSetting(self):
-    debugtxt = self.get_screen("setting").ids.txtDebug.text
+    debugtxt = self.current_screen.ids.txtDebug.text
     settings = ""
     i = 0
     for cam in self.cam:
@@ -614,7 +617,7 @@ GridLayout:
       settings = cam.settings
       cam.settings = ""
       debugtxt += "\nCAM %d Settings :\n" %i + settings
-    self.get_screen("setting").ids.txtDebug.text = debugtxt
+    self.current_screen.ids.txtDebug.text = debugtxt
 
   def ReadConfig(self):
     print "readcfg"
