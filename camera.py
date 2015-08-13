@@ -22,7 +22,7 @@ class Camera():
     self.status = {}
     self.filetaken = ""
     self.recording = False
-    self.rectime = "00:00:00"
+    self.recordtime = "00:00:00"
     self.settings = ""
     self.taken = threading.Event()
     self.quit = threading.Event()
@@ -65,7 +65,7 @@ class Camera():
     self.status = {}
     self.filetaken = ""
     self.recording = False
-    self.rectime = "00:00:00"
+    self.recordtime = "00:00:00"
     self.settings = ""
     threading.Thread(target=self.ThreadSend, name="ThreadSend").start()
 #     self.tsend= threading.Thread(target=self.ThreadSend)
@@ -106,6 +106,7 @@ class Camera():
       while not self.link:
         if self.quit.isSet():
           break
+      self.SendMsg('{"msg_id":259,"param":"none_force"}')
       #print "start sending loop"
       while self.socketopen == 0:
         if self.quit.isSet():
@@ -246,7 +247,7 @@ class Camera():
     # change dir
     elif data["msg_id"] == 1283:
       self.status["pwd"] = data["pwd"]
-      print "I need the pwd %s" %self.status["pwd"]
+      #print "I need the pwd %s" %self.status["pwd"]
     # get file listing
     elif data["msg_id"] == 1282:
       self.listing = self.CreateFileList(data["listing"])
@@ -392,73 +393,81 @@ class Camera():
     threading.Thread(target=self.ThreadWebDownload, args=(file,),name="ThreadWebDownload").start()
         
   def ThreadWebDownload(self, file):
-    print "ThreadWebDownload", file
-    ichunk = 3
-    chunk_size = [512,1024,2048,4096,8192,16384,32768,65536,131072]
-    self.dlstatus = {}
-    info = '"file":"{0}","fetch":0,"remain":0,"total":0,"speed":"0.00 B/s","percent":0.00'.format(file)
-    info = '{%s}'%info
-    print 'blank json', info
-    self.dlstatus = json.loads(info)
-  
-    filedir = self.status["pwd"].replace('/tmp/fuse_d/','').replace('/var/www/','')
-    fileurl = 'http://%s:%s/%s/%s' %(self.ip, self.webport, filedir, file)
-    print "getting %s" %fileurl
-    response = urllib2.urlopen(fileurl)
-
-    bytes_so_far = 0
-    total_size = response.info().getheader('Content-Length').strip()
-    total_size = int(total_size)
-    info = '"file":"{0}","fetch":0,"remain":{1},"total":{1},"speed":"0.00 B/s","percent":0.00'.format(file,total_size)
-    info = '{%s}'%info
-    print 'start json', info
-    self.dlstatus = json.loads(info)
-    self.dlstart.set()
+    try:
+      print "ThreadWebDownload", file
+      ichunk = 3
+      chunk_size = [512,1024,2048,4096,8192,16384,32768,65536,131072]
+      self.dlstatus = {}
+      info = '"file":"{0}","fetch":"0.00 B","remain":"0.00 B","total":"0.00 B","speed":"0.00 B/s","percent":0.00'.format(file)
+      info = '{%s}'%info
+      print 'blank json', info
+      self.dlstatus = json.loads(info)
     
-    tstart = time.time()
-    bytes_per_sec = 0
-    bytes_old_sec = 0
-    fname = __file__.replace(basename(__file__), "files/%s" %file)
-    localfile = open(fname, "wb")
-    i = 0
-    while True:
-      chunk = response.read(chunk_size[ichunk])
-      this_size = len(chunk)
-         
-      bytes_so_far += this_size
-      bytes_per_sec += this_size
-      if this_size > 0:
-        localfile.write(chunk)
-      tstop = time.time()
-      if (tstop - tstart) >= 1:
-        print bytes_per_sec,(tstop - tstart)
-        speed = self.GetFileSize(float(bytes_per_sec)/(tstop - tstart))  + "/s"
-        percent = "%0.2f" %(float(bytes_so_far)/float(total_size)*100)
-        info = '"file":"{0}","fetch":{1},"remain":{2},"total":{3},"speed":"{4}","percent":{5}'.format(file, bytes_so_far, total_size - bytes_so_far, total_size, speed, percent)
-        info = '{%s}'%info
-        print 'running json', info
-        self.dlstatus = json.loads(info)
-        tstart = tstop
-        
-        bytes_old_sec += bytes_per_sec
-        
-        i += 1
-        if i >= 10:
-          i = 0
-          if float(bytes_per_sec) < float(bytes_old_sec)/10:
-            if ichunk > 0:
-              ichunk -= 1
-          else:
-            if ichunk < 8:
-              ichunk += 1
-          print "auto reset chunk size:",chunk_size[ichunk]
-          bytes_old_sec = 0
-        
-        bytes_per_sec = 0
-      if bytes_so_far >= total_size:
-        break
-    localfile.close()
-    self.dlstop.set()
+      filedir = self.status["pwd"].replace('/tmp/fuse_d/','').replace('/var/www/','')
+      fileurl = 'http://%s:%s/%s/%s' %(self.ip, self.webport, filedir, file)
+      print "getting %s" %fileurl
+      response = urllib2.urlopen(fileurl)
+  
+      bytes_so_far = 0
+      total_size = response.info().getheader('Content-Length').strip()
+      total_size = int(total_size)
+      info = '"file":"{0}","fetch":"0.00 B","remain":"{1}","total":"{1}","speed":"0.00 B/s","percent":0.00'.format(file,self.GetFileSize(total_size))
+      info = '{%s}'%info
+      print 'start json', info
+      self.dlstatus = json.loads(info)
+      self.dlstart.set()
+      
+      tstart = time.time()
+      bytes_per_sec = 0
+      bytes_old_sec = 0
+      fname = __file__.replace(basename(__file__), "files/%s" %file)
+      localfile = open(fname, "wb")
+      fileopen = True
+      i = 0
+      while True:
+        chunk = response.read(chunk_size[ichunk])
+        this_size = len(chunk)
+           
+        bytes_so_far += this_size
+        bytes_per_sec += this_size
+        if this_size > 0:
+          localfile.write(chunk)
+        tstop = time.time()
+        if (tstop - tstart) >= 1.1:
+          print bytes_per_sec,(tstop - tstart)
+          speed = self.GetFileSize(float(bytes_per_sec)/(tstop - tstart))  + "/s"
+          percent = "%0.2f" %(float(bytes_so_far)/float(total_size)*100)
+          info = '"file":"{0}","fetch":"{1}","remain":"{2}","total":"{3}","speed":"{4}","percent":{5}'.format(file, self.GetFileSize(bytes_so_far), self.GetFileSize(total_size - bytes_so_far), self.GetFileSize(total_size), speed, percent)
+          info = '{%s}'%info
+          print 'running json', info
+          self.dlstatus = json.loads(info)
+          tstart = tstop
+          
+          bytes_old_sec += bytes_per_sec
+          
+          i += 1
+          if i >= 5:
+            i = 0
+            if float(bytes_per_sec) < float(bytes_old_sec)/5:
+              if ichunk > 0:
+                ichunk -= 1
+            else:
+              if ichunk < 8:
+                ichunk += 1
+            print "auto reset chunk size:",chunk_size[ichunk]
+            bytes_old_sec = 0
+          
+          bytes_per_sec = 0
+        if bytes_so_far >= total_size:
+          break
+      localfile.close()
+      self.dlstop.set()
+    except StandardError as err:
+      print "ThreadWebDownload",err
+      self.dlerror.set()
+      if fileopen:
+        localfile.close()
+      
   
   def ThreadDownload2(self, file, total_size, offset):
     #try:
@@ -549,13 +558,16 @@ class Camera():
         # time.sleep(60)
         # self.StartDownload(self.status["file"], self.status["size"], gsize)
       
-  def RefreshFile(self, dir="/tmp/fuse_d/DCIM"):
+  def RefreshFile(self, dir="/var/www/DCIM"):
     self.lsdir.clear()
     self.status["pwd"] = ""
     self.listing = []
     if dir == "":
-      self.lsdir.set()
+      self.lsdir.set() #error
       return
+    threading.Thread(target=self.ThreadRefreshFile, args=(dir,), name="ThreadRefreshFile").start()
+
+  def ThreadRefreshFile(self, dir):
     self.SendMsg('{"msg_id":1283,"param":"%s"}' %dir)
     while True:
       if self.quit.isSet():
@@ -568,12 +580,9 @@ class Camera():
         break
     if self.status["pwd"] <> "":
       self.SendMsg('{"msg_id":1282,"param":" -D -S"}')
-      while not self.lsdir.isSet():
-        if self.quit.isSet():
-          break
-        if self.wifioff.isSet():
-          break
-          
+    else:
+      self.lsdir.set() #error
+     
   def GetFileSize(self, sizebyte):
     value = float(sizebyte)
     option = 0
