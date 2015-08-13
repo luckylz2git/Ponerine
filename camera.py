@@ -1,12 +1,15 @@
 from Queue import Queue
-import json, socket, threading, time, select, os
+import json, socket, threading, time, select, os, urllib2
 from os.path import basename, getsize
 
 class Camera():
-  def __init__(self, ip="192.168.42.1", port=7878):
+  def __init__(self, ip="192.168.42.1", port=7878, dataport=8787, webport=80):
     self.ip = ip
     self.port = port
+    self.dataport = dataport
+    self.webport = webport
     self.socketopen = -1
+    self.datasocketopen = -1
     self.qsend = Queue()
     self.token = 0
     self.recv = ""
@@ -29,6 +32,7 @@ class Camera():
     self.dlcomplete = threading.Event()
     self.dlstop = threading.Event()
     self.dlerror = threading.Event()
+    self.dlopen = threading.Event()
     
   def __str__(self):
     info = dict()
@@ -39,6 +43,7 @@ class Camera():
 
   def LinkCamera(self):
     self.socketopen = -1
+    self.datasocketopen = -1
     self.qsend = Queue()
     self.token = 0
     self.recv = ""
@@ -51,6 +56,7 @@ class Camera():
     self.dlcomplete.clear()
     self.dlstop.clear()
     self.dlerror.clear()
+    self.dlopen.clear()
     self.jsonon = False
     self.jsonoff = 0
     self.msgbusy = 0
@@ -240,6 +246,7 @@ class Camera():
     # change dir
     elif data["msg_id"] == 1283:
       self.status["pwd"] = data["pwd"]
+      print "I need the pwd %s" %self.status["pwd"]
     # get file listing
     elif data["msg_id"] == 1282:
       self.listing = self.CreateFileList(data["listing"])
@@ -282,6 +289,26 @@ class Camera():
         break
       self.RecvMsg()
 
+  def ConnectData(self):
+    socket.setdefaulttimeout(5)
+    #create socket
+    self.datasrv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    self.datasrv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    self.datasrv.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+    self.datasocketopen = self.datasrv.connect_ex((self.ip, self.dataport))
+    print "socket status: %d" %self.datasocketopen
+    if self.datasocketopen == 0:
+      #self.datasrv.setblocking(0)
+      self.dlopen.set()
+      
+  def DisconnectData(self):
+    if self.datasocketopen == 0:
+      self.datasocketopen == -1
+      try:
+        self.datasrv.close()
+      except:
+        pass
+        
   def Connect(self):
     socket.setdefaulttimeout(5)
     #create socket
@@ -353,104 +380,174 @@ class Camera():
         return
       if self.dlstart.isSet():
         print "StartDownload", file, offset
-        threading.Thread(target=self.ThreadDownload, args=(file,self.status["size"],self.status["offset"],),name="ThreadDownload").start()
+        threading.Thread(target=self.ThreadWebDownload, args=(file,),name="ThreadWebDownload").start()
+        #threading.Thread(target=self.ThreadDownload2, args=(file,self.status["size"],self.status["offset"],),name="ThreadDownload2").start()
         break
-
-  def ThreadDownload(self, file, total_size, offset):
-    try:
-      print "ThreadDownload", file, total_size
-      ichunk = 2
-      chunk_size = [1024,2048,4096,8192,16384,32768]
-      self.dlstatus = {}
-      percent = "%0.2f" %(float(offset)/float(total_size)*100)
-      info = '"file":"{0}","fetch":{1},"remain":{2},"total":{3},"speed":"0.00 B/s","percent":{4}'.format(file,offset,total_size-offset,total_size,percent)
-      info = '{%s}'%info
-      print 'blank json', info
-      self.dlstatus = json.loads(info)
-      self.dlstart.clear()
-      socket.setdefaulttimeout(10)
-      Datasrv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-      Datasrv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-      Datasrv.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-      Datasrv.connect((self.ip, 8787))
-      
-      tstart = time.time()
-      bytes_per_sec = 0
-      fname = __file__.replace(basename(__file__), "files/%s" %file)
-      print "saving to", fname
-      if offset == 0:
-        localfile = open(fname, "wb")
-      else:
-        localfile = open(fname, "ab")
-      bytes_so_far = 0
-      while True:
-        if self.quit.isSet():
-          return
-        if self.wifioff.isSet():
-          return
-        this_size = chunk_size[ichunk]
-        #print bytes_so_far, this_size, total_size
-        #print float(bytes_so_far)/float(total_size)*100, int(float(bytes_so_far)/float(total_size)*100)
-        #self.current_screen.ids.lstSelection.text = "Download %s" %int(float(bytes_so_far)/float(total_size)*100)
-        if this_size + bytes_so_far > total_size:
-          this_size = total_size - bytes_so_far
-        chunk = bytearray(this_size)
-        view = memoryview(chunk)
-        bytes_per_sec += this_size
-        while this_size:
-          nbytes = Datasrv.recv_into(view, this_size)
-          view = view[nbytes:]
-          this_size -= nbytes
-          bytes_so_far += nbytes
-
-        localfile.write(chunk)
         
-        if bytes_so_far >= total_size:
-          break
-          
-        if self.dlcomplete.isSet():
-          info = '"file":"{0}","fetch":{1},"remain":0,"total":{1},"speed":"- - -","percent":100.00'.format(file, total_size)
+  def StartWebDownload(self, file):
+    self.dlstart.clear()
+    self.dlcomplete.clear()
+    self.dlstop.clear()
+    self.dlerror.clear()
+    threading.Thread(target=self.ThreadWebDownload, args=(file,),name="ThreadWebDownload").start()
+        
+  def ThreadWebDownload(self, file):
+    print "ThreadWebDownload", file
+    ichunk = 3
+    chunk_size = [512,1024,2048,4096,8192,16384,32768,65536,131072]
+    self.dlstatus = {}
+    info = '"file":"{0}","fetch":0,"remain":0,"total":0,"speed":"0.00 B/s","percent":0.00'.format(file)
+    info = '{%s}'%info
+    print 'blank json', info
+    self.dlstatus = json.loads(info)
+  
+    filedir = self.status["pwd"].replace('/tmp/fuse_d/','').replace('/var/www/','')
+    fileurl = 'http://%s:%s/%s/%s' %(self.ip, self.webport, filedir, file)
+    print "getting %s" %fileurl
+    response = urllib2.urlopen(fileurl)
+
+    bytes_so_far = 0
+    total_size = response.info().getheader('Content-Length').strip()
+    total_size = int(total_size)
+    info = '"file":"{0}","fetch":0,"remain":{1},"total":{1},"speed":"0.00 B/s","percent":0.00'.format(file,total_size)
+    info = '{%s}'%info
+    print 'start json', info
+    self.dlstatus = json.loads(info)
+    self.dlstart.set()
+    
+    tstart = time.time()
+    bytes_per_sec = 0
+    bytes_old_sec = 0
+    fname = __file__.replace(basename(__file__), "files/%s" %file)
+    localfile = open(fname, "wb")
+    i = 0
+    while True:
+      chunk = response.read(chunk_size[ichunk])
+      this_size = len(chunk)
+         
+      bytes_so_far += this_size
+      bytes_per_sec += this_size
+      if this_size > 0:
+        localfile.write(chunk)
+      tstop = time.time()
+      if (tstop - tstart) >= 1:
+        print bytes_per_sec,(tstop - tstart)
+        speed = self.GetFileSize(float(bytes_per_sec)/(tstop - tstart))  + "/s"
+        percent = "%0.2f" %(float(bytes_so_far)/float(total_size)*100)
+        info = '"file":"{0}","fetch":{1},"remain":{2},"total":{3},"speed":"{4}","percent":{5}'.format(file, bytes_so_far, total_size - bytes_so_far, total_size, speed, percent)
+        info = '{%s}'%info
+        print 'running json', info
+        self.dlstatus = json.loads(info)
+        tstart = tstop
+        
+        bytes_old_sec += bytes_per_sec
+        
+        i += 1
+        if i >= 10:
+          i = 0
+          if float(bytes_per_sec) < float(bytes_old_sec)/10:
+            if ichunk > 0:
+              ichunk -= 1
+          else:
+            if ichunk < 8:
+              ichunk += 1
+          print "auto reset chunk size:",chunk_size[ichunk]
+          bytes_old_sec = 0
+        
+        bytes_per_sec = 0
+      if bytes_so_far >= total_size:
+        break
+    localfile.close()
+    self.dlstop.set()
+  
+  def ThreadDownload2(self, file, total_size, offset):
+    #try:
+    print "ThreadDownload", file, total_size
+    ichunk = 3
+    chunk_size = [1024,2048,4096,8192,16384,32768,65536]
+    self.dlstatus = {}
+    percent = "%0.2f" %(float(offset)/float(total_size)*100)
+    info = '"file":"{0}","fetch":{1},"remain":{2},"total":{3},"speed":"0.00 B/s","percent":{4}'.format(file,offset,total_size-offset,total_size,percent)
+    info = '{%s}'%info
+    print 'blank json', info
+    self.dlstatus = json.loads(info)
+    self.dlstart.clear()
+    
+    tstart = time.time()
+    bytes_per_sec = 0
+    fname = __file__.replace(basename(__file__), "files/%s" %file)
+    print "saving to", fname
+    if offset == 0:
+      localfile = open(fname, "wb")
+    else:
+      localfile = open(fname, "ab")
+    bytes_so_far = 0
+    while True:
+      if self.quit.isSet():
+        return
+      if self.wifioff.isSet():
+        return
+      this_size = chunk_size[ichunk]
+      #print bytes_so_far, this_size, total_size
+      #print float(bytes_so_far)/float(total_size)*100, int(float(bytes_so_far)/float(total_size)*100)
+      #self.current_screen.ids.lstSelection.text = "Download %s" %int(float(bytes_so_far)/float(total_size)*100)
+      if this_size + bytes_so_far > total_size:
+        this_size = total_size - bytes_so_far
+      chunk = bytearray(this_size)
+      view = memoryview(chunk)
+      bytes_per_sec += this_size
+      while this_size:
+        nbytes = self.datasrv.recv_into(view, this_size)
+        view = view[nbytes:]
+        this_size -= nbytes
+        bytes_so_far += nbytes
+
+      localfile.write(chunk)
+      
+      if bytes_so_far >= total_size:
+        break
+        
+      if self.dlcomplete.isSet():
+        info = '"file":"{0}","fetch":{1},"remain":0,"total":{1},"speed":"- - -","percent":100.00'.format(file, total_size)
+        info = '{%s}'%info
+        print 'running json', info
+        self.dlstatus = json.loads(info)
+      else:
+        tstop = time.time()
+        if (tstop - tstart) > 1:
+          speed = self.GetFileSize(float(bytes_per_sec)/(tstop - tstart)) + "/s"
+          percent = "%0.2f" %(float(bytes_so_far)/float(total_size)*100)
+          info = '"file":"{0}","fetch":{1},"remain":{2},"total":{3},"speed":"{4}","percent":{5}'.format(file, bytes_so_far, total_size - bytes_so_far, total_size, speed, percent)
           info = '{%s}'%info
           print 'running json', info
           self.dlstatus = json.loads(info)
-        else:
-          tstop = time.time()
-          if (tstop - tstart) > 1:
-            speed = self.GetFileSize(bytes_per_sec) + "/s"
-            percent = "%0.2f" %(float(bytes_so_far)/float(total_size)*100)
-            info = '"file":"{0}","fetch":{1},"remain":{2},"total":{3},"speed":"{4}","percent":{5}'.format(file, bytes_so_far, total_size - bytes_so_far, total_size, speed, percent)
-            info = '{%s}'%info
-            print 'running json', info
-            self.dlstatus = json.loads(info)
-            tstart = tstop
-            bytes_per_sec = 0
-      
-      self.dlcomplete.wait()
-      localfile.write(chunk)
-      localfile.close()
-      #final chunk
-      print bytes_so_far, this_size, total_size, "chunk", len(chunk)
-      print "closing Datasrv"
-      Datasrv.close()
-      self.dlstop.set()
+          tstart = tstop
+          bytes_per_sec = 0
+    
+    self.dlcomplete.wait()
+    localfile.write(chunk)
+    localfile.close()
+    #final chunk
+    print bytes_so_far, this_size, total_size, "chunk", len(chunk)
+    print "closing Datasrv"
+    self.dlstop.set()
      
-    except Exception as err:
-      print "ThreadDownload error", err
-      # try to reconnect
-      self.dlerror.wait(10)
-      if self.dlerror.isSet():
-        #localfile.write(chunk)
-        localfile.close()
-        gsize = getsize(fname)
-        print "fname", gsize
-        print "error wait 30 seconds"
-        print "byte_so_far",bytes_so_far
-        print "offset",self.status["offset"]
-        print "total",self.status["size"]
-        print "chunk",len("chunk")
-        time.sleep(60)
-        self.StartDownload(self.status["file"], self.status["size"], gsize)
-      Datasrv.close()
+    # except Exception as err:
+      # print "ThreadDownload error", err
+      # # try to reconnect
+      # self.dlerror.wait(10)
+      # if self.dlerror.isSet():
+        # #localfile.write(chunk)
+        # localfile.close()
+        # gsize = getsize(fname)
+        # print "fname", gsize
+        # print "error wait 30 seconds"
+        # print "byte_so_far",bytes_so_far
+        # print "offset",self.status["offset"]
+        # print "total",self.status["size"]
+        # print "chunk",len("chunk")
+        # time.sleep(60)
+        # self.StartDownload(self.status["file"], self.status["size"], gsize)
       
   def RefreshFile(self, dir="/tmp/fuse_d/DCIM"):
     self.lsdir.clear()

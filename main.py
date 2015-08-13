@@ -17,6 +17,7 @@ from kivy.properties import StringProperty, NumericProperty, BooleanProperty, Ob
 
 from kivy.adapters.dictadapter import DictAdapter
 from kivy.uix.listview import ListView, ListItemButton, ListItemLabel, CompositeListItem
+from kivy.adapters.models import SelectableDataItem
 
 # Camera Object[camera.py]
 from camera import Camera
@@ -25,7 +26,7 @@ from camera import Camera
 platform.system()
 "Windows", "Darwin"
 '''
-import json, os, threading, time, socket, platform
+import json, os, threading, time, socket, platform, inspect
 from os.path import basename
 
 
@@ -49,8 +50,6 @@ class Ponerine(ScreenManager):
       self.current_screen.ids.btnDelete.text = "Delete"
       self.current_screen.ids.btnDelete.disabled = True
       #self.DoDownloadFile(index)
-  
-
 
   def DoFilterFile(self, filter):
     fdict = {}
@@ -86,31 +85,44 @@ class Ponerine(ScreenManager):
     #selection_mode='single'/'multiple'
     self.file_dict_adapter = DictAdapter(sorted_keys=file_sorted,data=fdict,args_converter=file_args_converter,
                                 selection_mode='multiple',allow_empty_selection=True,cls=CompositeListItem)
-    self.file_dict_adapter.bind(selection=self.SelectTest)
-    #self.file_dict_adapter.bind(on_selection_change=self.SelectChange)
+    #self.file_dict_adapter.bind(selection=self.SelectChange)
+    self.file_dict_adapter.bind(on_selection_change=self.SelectChange)
     self.file_list_view = ListView(adapter=self.file_dict_adapter)
     self.current_screen.ids.glFileList.clear_widgets()
     self.current_screen.ids.glFileList.add_widget(self.file_list_view)
 
   def DeleteFile(self):
     
-    print self.file_dict_adapter.data
-    print self.file_dict_adapter.selection,len(self.file_dict_adapter.selection)
-    print self.file_list_view.container
-    for child in self.file_list_view.container.children[:]:
-      print "container", child, child.is_selected #, child.text #, child.state
+    print "self.file_dict_adapter.data",type(self.file_dict_adapter.data)
+    print "self.file_dict_adapter.selection",type(self.file_dict_adapter.selection),len(self.file_dict_adapter.selection)
+    while len(self.file_dict_adapter.selection) > 0:
+      for item in self.file_dict_adapter.selection:
+        print "self.file_dict_adapter.selection.item", type(item), item.text
+        self.file_dict_adapter.deselect_item_view(item)
     
-    # try to test in the listadapter.py
-    self.file_dict_adapter.deselect_list(self.file_dict_adapter.selection)
-    #self.file_list_view.deselect(self.file_dict_adapter.selection)
-    #self.file_dict_adapter.selection = []
-    #self.file_dict_adapter.select_list([], False)
-    #pbar = ProgressBar(max=100,value=0)
-    #self.current_screen.ids.boxProgress.add_widget(pbar)
-    #pbar.value = 75
-    #self.file_dict_adapter = DictAdapter(sorted_keys=file_sorted,data=fdict,args_converter=file_args_converter,
-    #                            selection_mode='multiple',allow_empty_selection=True,cls=CompositeListItem)
+    # print self.file_list_view.container
+    for child in self.file_list_view.container.children[:]:
+      if isinstance(child, CompositeListItem):
+        for sub in child.children[:]:
+          if isinstance(sub, ListItemButton):
+            self.file_dict_adapter.select_item_view(sub)
+        # for subchild in child.children[:]:
+          # print "subchild",type(subchild)
+      # print "self.file_list_view.container.children", type(child), child.is_selected #, child.text #, child.state
+        
   
+  def set_data_item_selection(self, item, value):
+      if isinstance(item, SelectableDataItem):
+          item.is_selected = value
+      elif type(item) == dict:
+          item['is_selected'] = value
+      elif hasattr(item, 'is_selected'):
+          if (inspect.isfunction(item.is_selected)
+                  or inspect.ismethod(item.is_selected)):
+              item.is_selected()
+          else:
+              item.is_selected = value
+      
   def FilterFile(self, text):
     if text <> "File Type":
       self.current_screen.ids.glFileList.clear_widgets()
@@ -389,6 +401,9 @@ class Ponerine(ScreenManager):
     # pbar = ProgressBar(size_hint=(1,1))
     # lblspeed = Label(size_hint=(0.5,1),text_size=(self.width,self.width/30),halign="right",padding_x=self.width/40,font_size=self.width/80,color=(1,1,0,1))
 
+    self.current_screen.ids.boxProgress.clear_widgets()
+    self.current_screen.ids.boxProgress.add_widget(Label(text="Start to download ..."))
+    
     lblFileName = Label(size_hint=(None,None),size=(self.width,self.width/20),text_size=self.size,halign ='left',valign='middle',padding_x=self.width/50,color=(1,1,0,1),font_size=self.width/35)
     glProgress = GridLayout(cols=3, size_hint=(None,None),size=(self.width,self.width/20))
     lblpercent = Label(size_hint=(1,1),color=(1,1,0,1),font_size=self.width/40)
@@ -398,19 +413,34 @@ class Ponerine(ScreenManager):
     glProgress.add_widget(lblpercent)
     glProgress.add_widget(pbar)
     glProgress.add_widget(lblspeed)
+    self.current_screen.ids.boxProgress.clear_widgets()
     self.current_screen.ids.boxProgress.add_widget(lblFileName)
     self.current_screen.ids.boxProgress.add_widget(glProgress)
-
+    
     print "lblFileName", lblFileName.font_size, lblFileName.height
     print "lblpercent", lblpercent.font_size, glProgress.height
     
-    # time.sleep(10)    
+    # i = 0
+    # cam.ConnectData()
+    # while True:
+      # i += 1
+      # cam.dlopen.wait(10)
+      # if cam.dlopen.isSet():
+        # break
+      # else:
+        # print "retry %d connect dataport, socket error %d" %(i,cam.datasocketopen)
+        # cam.ConnectData()
+      # if i >= 5:
+        # lblFileName.text = "retry connect dataport error, stop download"
+        # return
 
     i = 0
     ln = len(self.selectlist)
     for file in self.selectlist:
+      fn = "Getting : " + file + "   [ %d / %d file(s) downloaded ]"%(i,ln)
+      lblFileName.text = fn
       print "start download:", file
-      cam.StartDownload(file)
+      cam.StartWebDownload(file)
       cam.dlstart.wait()
       while True:
         cam.dlstop.wait(0.3)
@@ -424,8 +454,10 @@ class Ponerine(ScreenManager):
         lblpercent.text = pct
         pbar.value = int(cam.dlstatus["percent"])
         lblspeed.text = cam.dlstatus["speed"]
+      lblpercent.text = "100.00%"
+      pbar.value = 100
       i += 1
-
+    #cam.DisconnectData()
     self.current_screen.ids.boxProgress.clear_widgets()
     self.current_screen.ids.boxProgress.height = self.width / 40
     oldtext = self.current_screen.ids.lstFileType.text
@@ -439,10 +471,10 @@ class Ponerine(ScreenManager):
     self.current_screen.ids.btnDownload.disabled = True
     #self.FilterFile(self.current_screen.ids.lstFileType.text)
     
-
-    
   def SelectTest(self, instance, *args):
-    print "selection change"
+    #return
+    for item in instance.selection:
+      print "SelectTest", type(item), item.text
     
   def SelectChange(self, instance):
     self.selectlist = []
