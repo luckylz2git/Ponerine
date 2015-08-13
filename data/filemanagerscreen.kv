@@ -86,20 +86,19 @@ Screen:
 #      background_color: [0,0,0,1]
 #      readonly: True
     BoxLayout:
-      # canvas:
-        # Color: 
-          # rgba: 1,0,0,1
-        # Rectangle:
-          # size: self.size
-          # pos: self.pos
       orientation: 'vertical'
       id: boxProgress
       size_hint: None, None
-      size: root.width, root.width/40
-      # ProgressBar:
-        # id: pbProgress
-        # max: 100
-        # value: 50
+      size: root.width, root.width/20
+      Label:
+        text: ''
+        #size: root.width, root.width/20
+        #text_size: (root.width, root.width/20)
+        #halign: 'left'
+        #valign: 'middle'
+        #padding_x: root.width/50
+        color: (1,1,0,1)
+        font_size: root.width/40
     GridLayout:
       id: glFooter
       size_hint: 1, 1
