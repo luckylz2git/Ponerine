@@ -395,14 +395,14 @@ class Camera():
         #threading.Thread(target=self.ThreadDownload2, args=(file,self.status["size"],self.status["offset"],),name="ThreadDownload2").start()
         break
         
-  def StartWebDownload(self, file):
+  def StartWebDownload(self, file, destdir):
     self.dlstart.clear()
     self.dlcomplete.clear()
     self.dlstop.clear()
     self.dlerror.clear()
-    threading.Thread(target=self.ThreadWebDownload, args=(file,),name="ThreadWebDownload").start()
+    threading.Thread(target=self.ThreadWebDownload, args=(file,destdir,),name="ThreadWebDownload").start()
         
-  def ThreadWebDownload(self, file):
+  def ThreadWebDownload(self, file, destdir):
     fileopen = False
     try:
       print "ThreadWebDownload", file
@@ -431,7 +431,8 @@ class Camera():
       tstart = time.time()
       bytes_per_sec = 0
       bytes_old_sec = 0
-      fname = __file__.replace(basename(__file__), "files/%s" %file)
+      #fname = __file__.replace(basename(__file__), "files/%s" %file)
+      fname = destdir + "/%s" %file
       localfile = open(fname, "wb")
       fileopen = True
       i = 0
