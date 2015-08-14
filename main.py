@@ -36,7 +36,7 @@ Builder.load_file('data/settingscreen.kv')
 
 #print "Clock.max_iteration", Clock.max_iteration
 Clock.max_iteration = 100
-__version__='0.0.7'
+__version__='0.0.8'
 
 class ConnectScreen(Screen):
   pass
@@ -52,6 +52,9 @@ class SettingScreen(Screen):
 
 class ConfigPopup(Popup):
   cfg = ObjectProperty()
+  apply = BooleanProperty()
+
+class DeletePopup(Popup):
   apply = BooleanProperty()
 
 class Ponerine(ScreenManager):
@@ -241,11 +244,21 @@ class Ponerine(ScreenManager):
   def Setting(self):
     self.switch_to(self.screen[3],direction = "left")
   
+  def DeletePopupOpen(self):
+    self.deletepop = DeletePopup(title='Delete Confirmation', size_hint=(0.8, 0.35), size=self.size)
+    self.deletepop.bind(on_dismiss=self.DeletePopupApply)
+    self.deletepop.apply = False
+    self.deletepop.open()
+    
+  def DeletePopupApply(self, popup):
+    if popup.apply:
+      self.DeleteFile()
+  
   def ConfigPopupOpen(self, index):
     print type(self.parent)
     print "Config Popup Open index %d" %index, self.cfglist
     self.stopdetect.set()
-    self.configpop = ConfigPopup(title='Connection Config - Camera %d' %(index+1), size_hint=(0.8, 0.8), size=self.size, cfg=self.cfglist[index], index=index)
+    self.configpop = ConfigPopup(title='Connection Config - Camera %d' %(index+1), size_hint=(0.8, 0.85), size=self.size, cfg=self.cfglist[index], index=index)
     self.configpop.bind(on_dismiss=self.ConfigPopupApply)
     self.configpop.apply = False
     self.configpop.index = int(index)
@@ -257,6 +270,7 @@ class Ponerine(ScreenManager):
       print "index %d ip %s" %(popup.index,popup.cfg)
       self.cfglist[popup.index] = popup.cfg
       self.WriteConfig()
+      self.cfglist = self.ReadConfig()
       self.stopdetect.clear()
       self.DetectCam()
     
@@ -393,8 +407,33 @@ class Ponerine(ScreenManager):
       # else:
         # lbl = Label(text="No %s Files In Camera !"%(filter.upper()), font_size=self.width/30)
       # self.current_screen.ids.glFileList.add_widget(lbl)
-
+  def GetDownloadDir(self, index):
+    r = ""
+    if index >= len(self.cfglist):
+      return r
+    if "download" in self.cfglist[index].keys():
+      r = self.cfglist[index]["download"]
+    if r == "":
+      r = "/mnt/sdcard/pronerine/download/camera%d"%(index+1)
+    else:
+      r = r + "/camera%d"%(index+1)
+    if os.path.isdir(r):
+      return r
+    try:
+      os.makedirs(r,0o777)
+      return r
+    except StandardError as err:
+      print err
+      return ""
+    
   def DoDownloadFile(self, index):
+    downdir = self.GetDownloadDir(index)
+    print "downdir",downdir
+    if downdir == "" and isinstance(self.current_screen.ids.boxProgress.children[0], Label):
+      self.current_screen.ids.boxProgress.children[0].text = "error: can not create download dir"
+      self.current_screen.ids.btnDownload.text = "Download"
+      return
+      
     cam = self.cam[index]
     
     # lblFileName = Label(size_hint=(1,2),text_size=(self.width,self.width/15),halign="left",padding_x=self.width/40,font_size=self.width/40,color=(1,1,0,1))
@@ -429,8 +468,8 @@ class Ponerine(ScreenManager):
       lblFileTotal.text = "status:  %d downloaded  %d remains"%(i,ln-i) if e == 0 else "status:  %d downloaded  %d remains  %d error"%(i,ln-i-e,e)
       lblFileName.text = "{0} ( 0.00% )".format(file)
       pbar.value = 0
-      print "start download:", file
-      cam.StartWebDownload(file)
+      print "start download: %s to %s" %(file, downdir)
+      cam.StartWebDownload(file, downdir)
       cam.dlstart.wait()
       if i+e == 0:
         self.current_screen.ids.boxProgress.height = self.width / 10
@@ -500,7 +539,7 @@ class Ponerine(ScreenManager):
     oldtext = self.current_screen.ids.lstFileType.text
     print oldtext
     self.current_screen.ids.glFileList.clear_widgets()
-    self.DoRefreshFile(index, False)
+    self.DoRefreshFile(index) #, False)
     if oldtext[0:3].lower() in ("jpg","mp4","raw"):
       self.DoFilterFile(oldtext[0:3].lower())
     self.showfiletotal.clear()
@@ -591,7 +630,10 @@ class Ponerine(ScreenManager):
         fdict[str(i)] = item
         #print i
         #print item
-    if i == 0: 
+    if i == 0:
+      self.current_screen.ids.glFileList.clear_widgets()
+      if self.showfiletotal.isSet() and isinstance(self.current_screen.ids.boxProgress.children[0], Label):
+        self.current_screen.ids.boxProgress.children[0].text = "0 file"
       return
     #print fdict
     #return
@@ -801,7 +843,9 @@ class Ponerine(ScreenManager):
       "stationip": "",
       "gateway": "",
       "ssid": "",
-      "password": ""
+      "password": "",
+      "download": "",
+      "upload": ""
     }
     '''
     r = []
@@ -839,6 +883,11 @@ class Ponerine(ScreenManager):
       cfginit = json.loads(initstr)
       cfginit["camera"] = 2
       r.append(cfginit)
+    for item in r:
+      if item["download"] == "":
+        item["download"] = "/mnt/sdcard/ponerine/download"
+      if item["upload"] == "":
+        item["upload"] = "/mnt/sdcard/ponerine/upload"
     print r
     return r
 
