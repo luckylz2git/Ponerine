@@ -5,8 +5,8 @@
 # class CameraScreen(Screen):
   # pass
 
-# <CameraScreen>:
-Screen:
+<CameraScreen>:
+#Screen:
   BoxLayout:
     orientation: 'vertical'
     canvas:
@@ -16,7 +16,7 @@ Screen:
         size: self.size
         pos: self.pos
     GridLayout:
-      id: layTitle
+      cols: 5
       canvas:
         Color: 
           rgba: 0.8,0.8,0.8,1
@@ -28,7 +28,6 @@ Screen:
       padding: root.width/40, root.width/100, root.width/40, root.width/100
       #spacing=((width-padding) - icon.width * 5)/4
       spacing: ((root.width-root.width/20) - (root.width/15+root.width/20-root.width/50)*5)/4
-      cols: 5
       Button:
         id: btnWifi
         background_normal: 'image/wifi-2.png'
@@ -56,8 +55,8 @@ Screen:
     TextInput:
       id: txtDebug
       size_hint: 1, 0.75
-      text: "Camera Screen Debug Log :\nButton btnWifi W: %d H: %d\nGridlayout W: %d H: %d" %(btnWifi.width, btnWifi.height, layTitle.width, layTitle.height)
-      #text: "Camera Screen Debug Log :\n"
+      #text: "Camera Screen Debug Log :\nButton btnWifi W: %d H: %d\nGridlayout W: %d H: %d" %(btnWifi.width, btnWifi.height, layTitle.width, layTitle.height)
+      text: "Camera Screen Debug Log :\n"
       font_size: int(root.width/50)
       foreground_color: [1,1,0,1]
       background_color: [0,0,0,1]

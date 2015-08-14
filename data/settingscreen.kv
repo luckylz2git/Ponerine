@@ -5,11 +5,12 @@
 # class SettingScreen(Screen):
   # pass
 
-# <SettingScreen>:
-Screen:
+<SettingScreen>:
+#Screen:
   BoxLayout:
     orientation: 'vertical'
     GridLayout:
+      cols: 5
       canvas:
         Color: 
           rgba: 0.8,0.8,0.8,1
@@ -21,7 +22,6 @@ Screen:
       padding: root.width/40, root.width/100, root.width/40, root.width/100
       #spacing=((width-padding) - icon.width * 5)/4
       spacing: ((root.width-root.width/20) - (root.width/15+root.width/20-root.width/50)*5)/4
-      cols: 5
       Button:
         id: btnWifi
         background_normal: 'image/wifi-2.png'

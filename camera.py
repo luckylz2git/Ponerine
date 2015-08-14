@@ -206,6 +206,9 @@ class Camera():
         self.status["pwd"] = ""
         self.listing = []
         self.lsdir.set()
+      elif data["msg_id"] == 1281:
+        self.dlerror.set()
+        self.dlstop.set()
       data["msg_id"] = 0
     # get token
     if data["msg_id"] == 257:
@@ -248,6 +251,8 @@ class Camera():
     elif data["msg_id"] == 1283:
       self.status["pwd"] = data["pwd"]
       #print "I need the pwd %s" %self.status["pwd"]
+    elif data["msg_id"] == 1281:
+      self.dlstop.set()
     # get file listing
     elif data["msg_id"] == 1282:
       self.listing = self.CreateFileList(data["listing"])
@@ -359,6 +364,11 @@ class Camera():
   def StopRecord(self):
     self.SendMsg('{"msg_id":514}')
   
+  def StartDelete(self, file):
+    self.dlstop.clear()
+    self.dlerror.clear()
+    self.SendMsg('{"msg_id":1281,"param":"%s"}'%file)
+    
   #size can be 0
   def StartDownload(self, file, size=0, offset=0):
     self.dlstart.clear()

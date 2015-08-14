@@ -5,8 +5,8 @@
 # class FileManagerScreen(Screen):
   # pass
 
-# <FileManagerScreen>:
-Screen:
+<FileManagerScreen>:
+# Screen:
   BoxLayout:
     orientation: 'vertical'
     canvas:
@@ -16,7 +16,7 @@ Screen:
         size: self.size
         pos: self.pos
     GridLayout:
-      id: glHeader
+      cols: 5
       canvas:
         Color: 
           rgba: 0.8,0.8,0.8,1
@@ -28,13 +28,11 @@ Screen:
       padding: root.width/40, root.width/100, root.width/40, root.width/100
       #spacing=((width-padding) - icon.width * 5)/4
       spacing: ((root.width-root.width/20) - (root.width/15+root.width/20-root.width/50)*5)/4
-      cols: 5
       Button:
         id: btnWifi
         background_normal: 'image/wifi-2.png'
         background_down: 'image/wifi-1.png'
-        on_release: 
-          root.manager.Disconnect()
+        on_release: root.manager.Disconnect()
       Button:
         id: btnPicture
         disabled: True
@@ -100,11 +98,11 @@ Screen:
         color: (1,1,0,1)
         font_size: root.width/40
     GridLayout:
+      cols: 5
       id: glFooter
       size_hint: 1, 1
       #size: root.width, root.width/6# + root.width/20
       font_size: int(root.width/20)
-      cols: 5
       Spinner:
         id: lstCamera
         text: "Camera"
@@ -126,11 +124,14 @@ Screen:
         text: "Selection"
         values: ('Invert Select','Clear All', 'Select All')
         on_text: root.manager.SelectFile(self)
+        disabled: True
       Button:
         id: btnDownload
         text: "Download"
         on_release: root.manager.DownloadFile()
+        disabled: True
       Button:
         id: btnDelete
         text: "Delete"
         on_release: root.manager.DeleteFile()
+        disabled: True
