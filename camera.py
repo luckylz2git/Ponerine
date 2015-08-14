@@ -1,6 +1,6 @@
 from Queue import Queue
 import json, socket, threading, time, select, os, urllib2
-from os.path import basename, getsize
+from os.path import basename #, getsize
 
 class Camera():
   def __init__(self, ip="192.168.42.1", port=7878, dataport=8787, webport=80):
@@ -403,6 +403,7 @@ class Camera():
     threading.Thread(target=self.ThreadWebDownload, args=(file,),name="ThreadWebDownload").start()
         
   def ThreadWebDownload(self, file):
+    fileopen = False
     try:
       print "ThreadWebDownload", file
       ichunk = 3
@@ -472,7 +473,7 @@ class Camera():
           break
       localfile.close()
       self.dlstop.set()
-    except StandardError as err:
+    except Exception as err:
       print "ThreadWebDownload",err
       self.dlerror.set()
       if fileopen:

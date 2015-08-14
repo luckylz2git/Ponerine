@@ -466,12 +466,12 @@ class Ponerine(ScreenManager):
       oldtext = "all"
     #self.current_screen.ids.btnDownload.text = "Download"
     #self.current_screen.ids.btnDownload.disabled = True
-    self.DoFilterFile(oldtext,False)
+    self.DoFilterFile(oldtext)
     #self.showfiletotal.wait()
-    if isinstance(self.current_screen.ids.boxProgress.children[0], Label):
-      self.current_screen.ids.boxProgress.children[0].text = "status:  %d downloaded"%i if e == 0 else "status:  %d downloaded  %d error"%(i,e)
     self.current_screen.ids.btnDownload.text = "Download"
     self.showfiletotal.set()
+    if isinstance(self.current_screen.ids.boxProgress.children[0], Label):
+      self.current_screen.ids.boxProgress.children[0].text = "status:  %d downloaded"%i if e == 0 else "status:  %d downloaded  %d error"%(i,e)
 
   def DoDeleteFile(self, index):
     cam = self.cam[index]
@@ -505,10 +505,10 @@ class Ponerine(ScreenManager):
       self.DoFilterFile(oldtext[0:3].lower())
     self.showfiletotal.clear()
     self.current_screen.ids.lstFileType.text = oldtext
-    if isinstance(self.current_screen.ids.boxProgress.children[0], Label):
-      self.current_screen.ids.boxProgress.children[0].text = "status:  %d deleted"%i if e == 0 else "status:  %d deleted  %d error"%(i,e)
     self.current_screen.ids.btnDelete.text = "Delete"
     self.showfiletotal.set()
+    if isinstance(self.current_screen.ids.boxProgress.children[0], Label):
+      self.current_screen.ids.boxProgress.children[0].text = "status:  %d deleted"%i if e == 0 else "status:  %d deleted  %d error"%(i,e)
     
   def SelectTest(self, instance, *args):
     #return

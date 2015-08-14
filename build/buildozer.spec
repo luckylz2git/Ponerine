@@ -14,7 +14,8 @@ package.domain = chn.luckylz
 source.dir = .
 
 # (list) Source files to include (let empty to include all the files)
-source.include_exts = py,png,jpg,kv,atlas,cfg
+source.include_exts = py,png,jpg,kv,atlas,txt
+#,cfg
 
 # (list) Source files to exclude (let empty to not exclude anything)
 #source.exclude_exts = spec
@@ -30,7 +31,7 @@ source.include_exts = py,png,jpg,kv,atlas,cfg
 # version.filename = %(source.dir)s/main.py
 
 # (str) Application versioning (method 2)
-version = 0.0.6
+version = 0.0.7
 
 # (list) Application requirements
 # comma seperated e.g. requirements = sqlite3,kivy
