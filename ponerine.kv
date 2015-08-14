@@ -16,8 +16,8 @@
     # Camera Enabled
     GridLayout:
       size_hint: 1, None
-      height: root.width/10 + root.width/40
-      padding: 0,0,0,root.width/40
+      height: root.width/13 + root.width/50
+      padding: 0,0,0,root.width/50
       spacing: root.width/35
       cols: 3
       Label:
@@ -31,8 +31,8 @@
         id: optEnabled
         active: root.cfg["ip"] <> ""
         size_hint: 0.25, 1
-        text_size: self.size
-        font_size: root.width/25
+        #text_size: self.size
+        #font_size: root.width/50
       Label:
         size_hint: 0.35, 1
     
@@ -40,8 +40,8 @@
     GridLayout:
       disabled: (True if optWifiMode.active else False) if optEnabled.active else True
       size_hint: 1, None
-      height: root.width/10+root.width/40
-      padding: 0,0,0,root.width/40
+      height: root.width/13 + root.width/50
+      padding: 0,0,0,root.width/50
       spacing: root.width/35
       cols: 3
       Label:
@@ -56,8 +56,8 @@
         multiline: False
         text: root.cfg["defaultip"]
         size_hint: 0.4, 1
-        font_size: root.width/20
-        padding: root.width/60, root.width/50, 0, 0
+        font_size: root.width/25
+        padding: root.width/60, root.width/70, 0, 0
       Label:
         size_hint: 0.2, 1
     
@@ -65,8 +65,8 @@
     GridLayout:
       disabled: False if optEnabled.active else True
       size_hint: 1, None
-      height: root.width/10 + root.width/40
-      padding: 0,0,0,root.width/40
+      height: root.width/13 + root.width/50
+      padding: 0,0,0,root.width/50
       spacing: root.width/35
       cols: 3
       Label:
@@ -81,7 +81,7 @@
         active: root.cfg["wifimode"] == 1
         size_hint: 0.25, 1
         text_size: self.size
-        font_size: root.width/25
+        font_size: root.width/50
       Label:
         size_hint: 0.35, 1
         
@@ -89,12 +89,12 @@
     GridLayout:
       disabled: (False if optWifiMode.active else True) if optEnabled.active else True
       size_hint: 1, None
-      height: root.width/10+root.width/40
-      padding: 0,0,0,root.width/40
+      height: root.width/13 + root.width/50
+      padding: 0,0,0,root.width/50
       spacing: root.width/35
       cols: 3
       Label:
-        text: 'Station IP : ' 
+        text: 'Station IP : '
         size_hint: 0.4, 1
         text_size: self.size
         font_size: root.width/25
@@ -105,8 +105,8 @@
         multiline: False
         text: root.cfg["stationip"]
         size_hint: 0.4, 1
-        font_size: root.width/20
-        padding: root.width/60, root.width/50, 0, 0
+        font_size: root.width/25
+        padding: root.width/60, root.width/70, 0, 0
       Label:
         size_hint: 0.2, 1
     
@@ -114,8 +114,8 @@
     GridLayout:
       disabled: (False if optWifiMode.active else True) if optEnabled.active else True
       size_hint: 1, None
-      height: root.width/10+root.width/40
-      padding: 0,0,0,root.width/40
+      height: root.width/13 + root.width/50
+      padding: 0,0,0,root.width/50
       spacing: root.width/35
       cols: 3
       Label:
@@ -130,8 +130,8 @@
         multiline: False
         text: root.cfg["gateway"]
         size_hint: 0.4, 1
-        font_size: root.width/20
-        padding: root.width/60, root.width/50, 0, 0
+        font_size: root.width/25
+        padding: root.width/60, root.width/70, 0, 0
       Label:
         size_hint: 0.2, 1
     
@@ -139,8 +139,8 @@
     GridLayout:
       disabled: (False if optWifiMode.active else True) if optEnabled.active else True
       size_hint: 1, None
-      height: root.width/10+root.width/40
-      padding: 0,0,0,root.width/40
+      height: root.width/13 + root.width/50
+      padding: 0,0,0,root.width/50
       spacing: root.width/35
       cols: 3
       Label:
@@ -155,8 +155,8 @@
         multiline: False
         text: root.cfg["ssid"]
         size_hint: 0.4, 1
-        font_size: root.width/20
-        padding: root.width/60, root.width/50, 0, 0
+        font_size: root.width/25
+        padding: root.width/60, root.width/70, 0, 0
       Label:
         size_hint: 0.2, 1
     
@@ -164,8 +164,8 @@
     GridLayout:
       disabled: (False if optWifiMode.active else True) if optEnabled.active else True
       size_hint: 1, None
-      height: root.width/10+root.width/40
-      padding: 0,0,0,root.width/40
+      height: root.width/13 + root.width/50
+      padding: 0,0,0,root.width/50
       spacing: root.width/35
       cols: 3
       Label:
@@ -181,12 +181,60 @@
         multiline: False
         text: root.cfg["password"]
         size_hint: 0.4, 1
-        font_size: root.width/20
-        padding: root.width/60, root.width/50, 0, 0
+        font_size: root.width/25
+        padding: root.width/60, root.width/70, 0, 0
       CheckBox:
         id: chkShowPass
         active: True
         size_hint: 0.2, 1
+    
+    #Download Dir
+    GridLayout:
+      size_hint: 1, None
+      height: root.width/13 + root.width/50
+      padding: 0,0,0,root.width/50
+      spacing: root.width/60
+      cols: 2
+      Label:
+        text: 'Download : ' 
+        size_hint: None, None
+        size: root.width*0.24, root.width/13
+        text_size: (root.width*0.24, root.width/13) #self.size
+        font_size: root.width/25
+        halign: 'right'
+        valign: 'middle'
+      TextInput:
+        id: txtDownload
+        multiline: False
+        text: root.cfg["download"]
+        size_hint: None, None
+        size: root.width*0.64, root.width/13
+        font_size: root.width/30
+        padding: root.width/60, root.width/60, 0, 0
+        
+    #Upload Dir
+    GridLayout:
+      size_hint: 1, None
+      height: root.width/13 + root.width/50
+      padding: 0,0,0,root.width/50
+      spacing: root.width/60
+      cols: 2
+      Label:
+        text: 'Upload : ' 
+        size_hint: None, None
+        size: root.width*0.24, root.width/13
+        text_size: (root.width*0.24, root.width/13) #self.size
+        font_size: root.width/25
+        halign: 'right'
+        valign: 'middle'
+      TextInput:
+        id: txtUpload
+        multiline: False
+        text: root.cfg["upload"]
+        size_hint: None, None
+        size: root.width*0.64, root.width/13
+        font_size: root.width/30
+        padding: root.width/60, root.width/60, 0, 0
     
     AnchorLayout:
       anchor_x: 'center'
@@ -213,6 +261,47 @@
             root.cfg["gateway"] = txtGateway.text
             root.cfg["ssid"] = txtSSID.text
             root.cfg["password"] = txtPassword.text
+            root.cfg["download"] = txtDownload.text
+            root.cfg["upload"] = txtUpload.text
+            root.dismiss()
+        # Cancel Button
+        Button:
+          text: 'Cancel'
+          size_hint: 1, 1
+          on_release:
+            root.apply = False
+            root.dismiss()
+
+<DeletePopup>:
+  auto_dismiss: False
+  #title: 'File Delete Confirmation'
+  BoxLayout:
+    orientation: 'vertical'
+    spacing: 5
+    
+    #Widget:
+      #size_hint: 1, None
+      #size: root.width, root.width/50
+    Label:
+      text: "Do you really want to delete files in camera ?"
+      font_size: root.width/25
+    AnchorLayout:
+      anchor_x: 'center'
+      anchor_y: 'bottom'
+      orientation: 'horizontal'
+      size_hint: 1, 1
+      GridLayout:
+        cols: 2
+        size_hint: None, None
+        size: root.width*0.8, root.width*0.15+root.width/20
+        padding: 0,0,0,root.width/20
+        spacing: root.width/20
+        # Apply Button
+        Button:
+          text: 'Delete'
+          size_hint: 1, 1
+          on_release:
+            root.apply = True
             root.dismiss()
         # Cancel Button
         Button:
