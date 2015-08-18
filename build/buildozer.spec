@@ -14,7 +14,7 @@ package.domain = chn.luckylz
 source.dir = .
 
 # (list) Source files to include (let empty to include all the files)
-source.include_exts = py,png,jpg,kv,atlas,txt
+source.include_exts = py,png,jpg,kv,atlas
 #,cfg
 
 # (list) Source files to exclude (let empty to not exclude anything)
@@ -31,7 +31,7 @@ source.include_exts = py,png,jpg,kv,atlas,txt
 # version.filename = %(source.dir)s/main.py
 
 # (str) Application versioning (method 2)
-version = 0.0.7
+version = 0.0.8
 
 # (list) Application requirements
 # comma seperated e.g. requirements = sqlite3,kivy
@@ -57,7 +57,7 @@ fullscreen = 0
 #
 
 # (list) Permissions
-android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE
+android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,WAKE_LOCK
 
 # (int) Android API to use
 android.api = 14
@@ -121,7 +121,7 @@ android.ndk = 9c
 
 # (bool) Indicate whether the screen should stay on
 # Don't forget to add the WAKE_LOCK permission if you set this to True
-#android.wakelock = False
+android.wakelock = True
 
 # (list) Android application meta-data to set (key=value format)
 #android.meta_data =

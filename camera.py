@@ -409,7 +409,7 @@ class Camera():
       ichunk = 3
       chunk_size = [512,1024,2048,4096,8192,16384,32768,65536,131072]
       self.dlstatus = {}
-      info = '"file":"{0}","fetch":"0.00 B","remain":"0.00 B","total":"0.00 B","speed":"0.00 B/s","percent":0.00'.format(file)
+      info = '"file":"{0}","fetch":0,"remain":0,"total":0,"speed":0'.format(file)
       info = '{%s}'%info
       print 'blank json', info
       self.dlstatus = json.loads(info)
@@ -422,7 +422,7 @@ class Camera():
       bytes_so_far = 0
       total_size = response.info().getheader('Content-Length').strip()
       total_size = int(total_size)
-      info = '"file":"{0}","fetch":"0.00 B","remain":"{1}","total":"{1}","speed":"0.00 B/s","percent":0.00'.format(file,self.GetFileSize(total_size))
+      info = '"file":"{0}","fetch":0,"remain":{1},"total":{1},"speed":0'.format(file,total_size)
       info = '{%s}'%info
       print 'start json', info
       self.dlstatus = json.loads(info)
@@ -447,9 +447,9 @@ class Camera():
         tstop = time.time()
         if (tstop - tstart) >= 1.1:
           print bytes_per_sec,(tstop - tstart)
-          speed = self.GetFileSize(float(bytes_per_sec)/(tstop - tstart))  + "/s"
-          percent = "%0.2f" %(float(bytes_so_far)/float(total_size)*100)
-          info = '"file":"{0}","fetch":"{1}","remain":"{2}","total":"{3}","speed":"{4}","percent":{5}'.format(file, self.GetFileSize(bytes_so_far), self.GetFileSize(total_size - bytes_so_far), self.GetFileSize(total_size), speed, percent)
+          speed = int(float(bytes_per_sec)/(tstop - tstart))
+          print "speed %s" %speed
+          info = '"file":"{0}","fetch":{1},"remain":{2},"total":{3},"speed":{4}'.format(file, bytes_so_far, total_size - bytes_so_far, total_size, speed)
           info = '{%s}'%info
           print 'running json', info
           self.dlstatus = json.loads(info)
@@ -487,8 +487,7 @@ class Camera():
     ichunk = 3
     chunk_size = [1024,2048,4096,8192,16384,32768,65536]
     self.dlstatus = {}
-    percent = "%0.2f" %(float(offset)/float(total_size)*100)
-    info = '"file":"{0}","fetch":{1},"remain":{2},"total":{3},"speed":"0.00 B/s","percent":{4}'.format(file,offset,total_size-offset,total_size,percent)
+    info = '"file":"{0}","fetch":{1},"remain":{2},"total":{3},"speed":0'.format(file,offset,total_size-offset,total_size)
     info = '{%s}'%info
     print 'blank json', info
     self.dlstatus = json.loads(info)
@@ -529,16 +528,15 @@ class Camera():
         break
         
       if self.dlcomplete.isSet():
-        info = '"file":"{0}","fetch":{1},"remain":0,"total":{1},"speed":"- - -","percent":100.00'.format(file, total_size)
+        info = '"file":"{0}","fetch":{1},"remain":0,"total":{1},"speed":0'.format(file, total_size)
         info = '{%s}'%info
         print 'running json', info
         self.dlstatus = json.loads(info)
       else:
         tstop = time.time()
         if (tstop - tstart) > 1:
-          speed = self.GetFileSize(float(bytes_per_sec)/(tstop - tstart)) + "/s"
-          percent = "%0.2f" %(float(bytes_so_far)/float(total_size)*100)
-          info = '"file":"{0}","fetch":{1},"remain":{2},"total":{3},"speed":"{4}","percent":{5}'.format(file, bytes_so_far, total_size - bytes_so_far, total_size, speed, percent)
+          speed = float(bytes_per_sec)/(tstop - tstart)
+          info = '"file":"{0}","fetch":{1},"remain":{2},"total":{3},"speed":{4}'.format(file, bytes_so_far, total_size - bytes_so_far, total_size, speed)
           info = '{%s}'%info
           print 'running json', info
           self.dlstatus = json.loads(info)
@@ -595,15 +593,6 @@ class Camera():
     else:
       self.lsdir.set() #error
      
-  def GetFileSize(self, sizebyte):
-    value = float(sizebyte)
-    option = 0
-    while value > 1024:
-      value = value/float(1024)
-      option += 1
-    pres = ["B", "KB", "MB", "GB", "TB"]
-    return("%.2f %s" %(value, pres[option]))
-    
   def CreateFileList(self, rvalfilelist):
     #print "rvalfilelist", rvalfilelist
     r = []
@@ -613,7 +602,7 @@ class Camera():
         i += 1
         fdesc = item[item.keys()[0]].split('|')
         fsize = fdesc[0].replace(' bytes','')
-        fdict = '{"name":"%s","byte":%s,"size":"%s","date":"%s"}' %(item.keys()[0],fsize,self.GetFileSize(fsize),fdesc[1])
+        fdict = '{"name":"%s","size":%s,"date":"%s"}' %(item.keys()[0],fsize,fdesc[1])
         #print i, fdict
         #print i, item.keys()[0], item[item.keys()[0]]
         r.append(json.loads(fdict))

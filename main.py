@@ -7,7 +7,7 @@ from kivy.core.window import Window
 from kivy.uix.screenmanager import Screen, ScreenManager , SlideTransition
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.scrollview import ScrollView
-from kivy.uix.progressbar import ProgressBar
+#from kivy.uix.progressbar import ProgressBar
 from kivy.uix.label import Label
 from kivy.uix.togglebutton import ToggleButton
 from kivy.clock import Clock
@@ -59,13 +59,35 @@ class DeletePopup(Popup):
 
 class Ponerine(ScreenManager):
 
+  def GetFileSize(self, sizebyte, unit=""):
+    pres = ["B", "KB", "MB", "GB", "TB"]
+    value = float(sizebyte)
+    option = 0
+    if unit == "":
+      while value > 1024:
+        value = value/float(1024)
+        option += 1
+      
+      return("%.2f %s" %(value, pres[option]))
+    else:
+      i = 0
+      for u in pres:
+        if u.lower() == unit.lower():
+          break
+        i += 1
+      while True:
+        if option > 4 or i == option:
+          return ("%.2f %s" %(value, pres[option]))
+        value = value/float(1024)
+        option += 1
+        
   def DownloadFile(self):
     str = self.current_screen.ids.lstCamera.text.replace("Camera","").replace(" ","")
     index = -1
     if str.isdigit():
       index = int(str) - 1
       threading.Thread(target=self.DoDownloadFile, args=(index,), name="DoDownloadFile").start()
-      self.current_screen.ids.btnDownload.text = "Downloading"
+      self.current_screen.ids.btnDownload.text = "Download"
       self.current_screen.ids.btnDownload.disabled = True
       self.current_screen.ids.btnDelete.text = "Delete"
       self.current_screen.ids.btnDelete.disabled = True
@@ -79,7 +101,7 @@ class Ponerine(ScreenManager):
       threading.Thread(target=self.DoDeleteFile, args=(index,), name="DoDeleteFile").start()
       self.current_screen.ids.btnDownload.text = "Download"
       self.current_screen.ids.btnDownload.disabled = True
-      self.current_screen.ids.btnDelete.text = "Deleting"
+      self.current_screen.ids.btnDelete.text = "Delete"
       self.current_screen.ids.btnDelete.disabled = True
   
   def set_data_item_selection(self, item, value):
@@ -161,6 +183,8 @@ class Ponerine(ScreenManager):
     self.cfglist = self.ReadConfig()
     self.stopdetect = threading.Event()
     sysname = platform.system()
+    self.totaldownloadsize = 0
+    self.currentdownloadsize = 0
     self.showfiletotal = threading.Event()
     self.showfiletotal.set()
     if sysname == "Windows":
@@ -428,71 +452,112 @@ class Ponerine(ScreenManager):
     
   def DoDownloadFile(self, index):
     downdir = self.GetDownloadDir(index)
-    print "downdir",downdir
+    #print "downdir",downdir
     if downdir == "" and isinstance(self.current_screen.ids.boxProgress.children[0], Label):
       self.current_screen.ids.boxProgress.children[0].text = "error: can not create download dir"
       self.current_screen.ids.btnDownload.text = "Download"
       return
       
     cam = self.cam[index]
-    
-    # lblFileName = Label(size_hint=(1,2),text_size=(self.width,self.width/15),halign="left",padding_x=self.width/40,font_size=self.width/40,color=(1,1,0,1))
-    # glProgress = GridLayout(cols=3, size_hint=(1,1))
-    # lblpercent = Label(size_hint=(1,1),text_size=(self.width,self.width/30),halign="left",padding_x=self.width/40,font_size=self.width/80,color=(1,1,0,1))
-    # pbar = ProgressBar(size_hint=(1,1))
-    # lblspeed = Label(size_hint=(0.5,1),text_size=(self.width,self.width/30),halign="right",padding_x=self.width/40,font_size=self.width/80,color=(1,1,0,1))
-    
-    print self.current_screen.ids.boxProgress.children[0]
-#     self.current_screen.ids.boxProgress.clear_widgets()
-#     self.current_screen.ids.boxProgress.add_widget(Label(text="Start to download ..."))
-    
-    #lblFileName = Label(size_hint=(None,None),size=(self.width,self.width/20),text_size=self.size,halign ='left',valign='middle',padding_x=self.width/50,color=(1,1,0,1),font_size=self.width/35)
-    lblFileTotal = Label(size_hint=(None,None),size=(self.width,self.width/20),color=(1,1,0,1),font_size=self.width/40)
-    glProgress = GridLayout(cols=3, size_hint=(None,None),size=(self.width,self.width/20))
-    lblFileName = Label(size_hint=(4,1),color=(1,1,0,1),font_size=self.width/40)
-    pbar = ProgressBar(size_hint=(1,1))
-    lblSpeed = Label(size_hint=(5,1),color=(1,1,0,1),font_size=self.width/40)
+
+    glProgress = GridLayout(cols=4, size_hint=(None,None),size=(self.width,self.width/10))
+    lblFileName = Label(size_hint=(None,None),size=(self.width*0.4,self.width/10),color=(1,1,0,1),font_size=self.width/40,text_size=(self.width*0.4,self.width/10),halign='center',valign='middle')
+    lblFilePercent = Label(size_hint=(None,None),size=(self.width*0.1,self.width/10),color=(1,1,0,1),font_size=self.width/40,text_size=(self.width*0.2,self.width/10),halign='center',valign='middle')
+    lblFileSize = Label(size_hint=(None,None),size=(self.width*0.3,self.width/10),color=(1,1,0,1),font_size=self.width/40,text_size=(self.width*0.2,self.width/10),halign='center',valign='middle')
+    lblFileTime = Label(size_hint=(None,None),size=(self.width*0.2,self.width/10),color=(1,1,0,1),font_size=self.width/40,text_size=(self.width*0.2,self.width/10),halign='center',valign='middle')
 
     glProgress.add_widget(lblFileName)
-    glProgress.add_widget(pbar)
-    glProgress.add_widget(lblSpeed)
-
+    glProgress.add_widget(lblFilePercent)
+    glProgress.add_widget(lblFileSize)
+    glProgress.add_widget(lblFileTime)
+    
     self.current_screen.ids.boxProgress.clear_widgets()
-    self.current_screen.ids.boxProgress.add_widget(lblFileTotal,index=0)
-    # a blank label
-    self.current_screen.ids.boxProgress.add_widget(Label(size_hint=(1,1),color=(1,1,0,1),font_size=self.width/40))
+    self.current_screen.ids.boxProgress.add_widget(Label(text='start to download',size_hint=(1,1),color=(1,1,0,1),font_size=self.width/40))
+
     i = 0
     e = 0
     ln = len(self.selectlist)
+    self.currentdownloadsize = 0
+    total = 0
     for file in self.selectlist:
-      lblFileTotal.text = "status:  %d downloaded  %d remains"%(i,ln-i) if e == 0 else "status:  %d downloaded  %d remains  %d error"%(i,ln-i-e,e)
-      lblFileName.text = "{0} ( 0.00% )".format(file)
-      pbar.value = 0
-      print "start download: %s to %s" %(file, downdir)
+      #lblFileTotal.text = "status:  %d downloaded  %d remains"%(i,ln-i) if e == 0 else "status:  %d downloaded  %d remains  %d error"%(i,ln-i-e,e)
+      #lblFileName.text = "{0}\n".format(file)
+      #lblFileName.text += "d%d/e%d/t%d" %(i,ln-i-e,e)
+      #pct = "%0.2f" %cam.dlstatus["percent"]
+      #lblFilePercent.text = "\n{0} %".format()
       cam.StartWebDownload(file, downdir)
       cam.dlstart.wait()
+      self.currentdownloadsize += total
+      fetchall = self.currentdownloadsize
+      #print "self.currentdownloadsize" ,self.currentdownloadsize
       if i+e == 0:
+        self.current_screen.ids.boxProgress.clear_widgets()
         self.current_screen.ids.boxProgress.height = self.width / 10
-        #self.current_screen.ids.boxProgress.clear_widgets()
-        self.current_screen.ids.boxProgress.add_widget(glProgress,index=1)
-        #self.current_screen.ids.boxProgress.add_widget(lblFileTotal)
+        self.current_screen.ids.boxProgress.add_widget(glProgress)
       while True:
-        cam.dlstop.wait(0.9)
         #print cam.dlstatus
         if cam.dlstop.isSet():
           i += 1
-          pbar.value = 100
+          if ln > 1:
+            pct = "100.00 %\n"
+            pct += "%0.2f" %(float(fetch)/self.totaldownloadsize*100)
+            pct += " %"
+            lblFilePercent.text = pct
+          else:
+            lblFilePercent.text = "100.00 %"
           break
         if cam.dlerror.isSet():
           lblFileName.text = "%s ( error )" %file
           e += 1
           time.sleep(5)
           break
-        pct = "%0.2f" %cam.dlstatus["percent"]
-        pct += " %"
-        lblFileName.text = "%s ( %s )" %(file,pct) 
-        lblSpeed.text = "%s / %s @ %s" %(cam.dlstatus["fetch"].split(' ')[0],cam.dlstatus["total"],cam.dlstatus["speed"])
-        pbar.value = int(cam.dlstatus["percent"])
+        
+        speed = cam.dlstatus["speed"]
+        fname = "{0}\n".format(file)
+        fname += "%d/%d @ %s/s" %(i+1,ln,self.GetFileSize(speed)) if e==0 else "%d/%d(e%d) @ %s/s" %(i+1,ln,e,self.GetFileSize(speed))
+        pct = ""
+        fsize = ""
+        ftime = ""
+        lblFileName.text = fname
+        total = int(cam.dlstatus["total"])
+        #print "total" ,total
+        if total > 0:
+          fetch = cam.dlstatus["fetch"]
+          pct = "%0.2f" %(float(fetch)/total*100)
+          #print "lblFilePercent", lblFilePercent.text
+          pct += " %"
+          totalsize = self.GetFileSize(total)
+          ext = totalsize[len(totalsize)-2:len(totalsize)]
+          #print "ext",ext
+          fetchsize = self.GetFileSize(fetch,ext).replace(ext,"").replace(" ","")
+          #print "fetchsize" ,fetchsize
+          fsize = "%s/%s" %(fetchsize,totalsize)
+          if speed > 0:
+            remain = total - fetch
+            ftime = "%s" %(self.Second2Time(remain/speed))
+            #print "lblFileTime",lblFileTime.text
+            
+        if ln >1 and self.totaldownloadsize > 0:
+          fetch = fetchall + cam.dlstatus["fetch"]
+          pct += "\n%0.2f" %(float(fetch)/self.totaldownloadsize*100)
+          #print "lblFilePercent", lblFilePercent.text
+          pct += " %"
+          totalsize = self.GetFileSize(self.totaldownloadsize)
+          ext = totalsize[len(totalsize)-2:len(totalsize)]
+          fetchsize = self.GetFileSize(fetch,ext).replace(ext,"").replace(" ","")
+          fsize += "\n%s/%s" %(fetchsize,totalsize)
+          if speed > 0:
+            remain = self.totaldownloadsize - fetch
+            ftime += "\n%s" %(self.Second2Time(remain/speed))
+            #print "lblFileTime",lblFileTime.text
+        
+        if pct <> "":
+          lblFilePercent.text = pct
+        if fsize <> "":
+          lblFileSize.text = fsize
+        if ftime <> "":
+          lblFileTime.text = ftime
+        cam.dlstop.wait(1)
       
     #cam.DisconnectData()
     self.current_screen.ids.boxProgress.clear_widgets()
@@ -512,6 +577,19 @@ class Ponerine(ScreenManager):
     if isinstance(self.current_screen.ids.boxProgress.children[0], Label):
       self.current_screen.ids.boxProgress.children[0].text = "status:  %d downloaded"%i if e == 0 else "status:  %d downloaded  %d error"%(i,e)
 
+  def Second2Time(self, seconds):
+    rectime = "00:00:00"
+    ihour = 0
+    iminute = 0
+    isecond = 0
+    if seconds <> 0:
+      ihour = seconds / 3600
+      seconds = seconds % 3600
+      iminute = seconds / 60
+      isecond = seconds % 60
+      rectime = "%02d:%02d:%02d" %(ihour, iminute, isecond)
+    return rectime
+      
   def DoDeleteFile(self, index):
     cam = self.cam[index]
 
@@ -555,18 +633,25 @@ class Ponerine(ScreenManager):
       print "SelectTest", type(item), item.text
     
   def SelectChange(self, instance):
-    print type(instance)
+    #print type(instance)
     self.selectlist = []
     i = len(instance.selection)
     ln = len(self.file_dict_adapter.data)
     if i > 0:
+      self.totaldownloadsize = 0
       for item in instance.selection:
         self.selectlist.append(item.text)
+        for file in self.filelist:
+          if item.text == file["name"]:
+            #print file["size"]
+            self.totaldownloadsize += file["size"]
+      #print self.totaldownloadsize
       self.current_screen.ids.btnDownload.disabled = False
       self.current_screen.ids.btnDelete.disabled = False
       if self.showfiletotal.isSet() and isinstance(self.current_screen.ids.boxProgress.children[0], Label):
         self.current_screen.ids.boxProgress.children[0].text = "%d of %d selected" %(i,ln)
     else:
+      self.totaldownloadsize = 0
       self.current_screen.ids.btnDownload.disabled = True
       self.current_screen.ids.btnDelete.disabled = True
       if self.showfiletotal.isSet() and isinstance(self.current_screen.ids.boxProgress.children[0], Label):
@@ -643,7 +728,7 @@ class Ponerine(ScreenManager):
          'height': self.width/15,
          'cls_dicts':[{'cls': ListItemLabel,'kwargs': {'text': rec['index'],'size_hint_x': 0.2,'deselected_color':[0,0,0,1],'selected_color':[0.8,0.8,0.8,0.8]}},
                     {'cls': ListItemButton,'kwargs': {'text': rec['name'],'is_representing_cls': True,'size_hint_x': 0.5,'deselected_color':[0,0,0,1],'selected_color':[0.8,0.8,0.8,0.8] }},
-                    {'cls': ListItemLabel,'kwargs': {'text': rec['size'],'size_hint_x': 0.3,'deselected_color':[0,0,0,1],'selected_color':[0.8,0.8,0.8,0.8]}},
+                    {'cls': ListItemLabel,'kwargs': {'text': self.GetFileSize(rec['size']),'size_hint_x': 0.3,'deselected_color':[0,0,0,1],'selected_color':[0.8,0.8,0.8,0.8]}},
                     {'cls': ListItemLabel,'kwargs': {'text': rec['date'],'size_hint_x': 0.5,'deselected_color':[0,0,0,1],'selected_color':[0.8,0.8,0.8,0.8]}}
                     ]}
     #file_sorted = sorted(fdict.keys())
