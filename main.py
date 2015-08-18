@@ -36,7 +36,7 @@ Builder.load_file('data/settingscreen.kv')
 
 #print "Clock.max_iteration", Clock.max_iteration
 Clock.max_iteration = 100
-__version__='0.0.8'
+__version__='0.0.9'
 
 class ConnectScreen(Screen):
   pass
@@ -172,6 +172,36 @@ class Ponerine(ScreenManager):
               list.append(child)
             elif child.text not in oldlist:
               list.append(child)
+      self.file_dict_adapter.select_list(list)
+    elif instance.text == "Undownload":
+      #Loop Clear
+      while len(self.file_dict_adapter.selection) > 0:
+        self.file_dict_adapter.deselect_list(self.file_dict_adapter.selection)
+      #Select All
+      list = []
+      ln = self.file_dict_adapter.get_count()
+      for i in range(ln):
+        for child in self.file_dict_adapter.get_view(i).children[:]:
+          if isinstance(child, ListItemButton):
+            for item in self.filelist:
+              if item["name"] == child.text:
+                if not self.CheckDownloadHistory(item["name"],item["date"],item["size"]):
+                  list.append(child)
+      self.file_dict_adapter.select_list(list)
+    elif instance.text == "Downloaded":
+      #Loop Clear
+      while len(self.file_dict_adapter.selection) > 0:
+        self.file_dict_adapter.deselect_list(self.file_dict_adapter.selection)
+      #Select All
+      list = []
+      ln = self.file_dict_adapter.get_count()
+      for i in range(ln):
+        for child in self.file_dict_adapter.get_view(i).children[:]:
+          if isinstance(child, ListItemButton):
+            for item in self.filelist:
+              if item["name"] == child.text:
+                if self.CheckDownloadHistory(item["name"],item["date"],item["size"]):
+                  list.append(child)
       self.file_dict_adapter.select_list(list)
     instance.text = "Selection"
 
@@ -496,6 +526,12 @@ class Ponerine(ScreenManager):
         self.current_screen.ids.boxProgress.add_widget(glProgress)
       while True:
         #print cam.dlstatus
+        
+        if cam.dlerror.isSet():
+          lblFileName.text = "%s ( error )" %file
+          e += 1
+          time.sleep(5)
+          break
         if cam.dlstop.isSet():
           i += 1
           if ln > 1:
@@ -505,11 +541,7 @@ class Ponerine(ScreenManager):
             lblFilePercent.text = pct
           else:
             lblFilePercent.text = "100.00 %"
-          break
-        if cam.dlerror.isSet():
-          lblFileName.text = "%s ( error )" %file
-          e += 1
-          time.sleep(5)
+          self.WriteDownloadHistory(file, downdir)
           break
         
         speed = cam.dlstatus["speed"]
@@ -658,6 +690,10 @@ class Ponerine(ScreenManager):
         self.current_screen.ids.boxProgress.children[0].text = "1 file" if ln == 1 else "%d files"%ln
     
   def DoRefreshFile(self, index, showlabel = True):
+    downdir = self.GetDownloadDir(index)
+    if downdir <> "":
+      self.ReadDownloadHistory(downdir)
+      
     if showlabel:
       info = "Loading Camera %d File List "%(index+1)
       #print info
@@ -691,6 +727,7 @@ class Ponerine(ScreenManager):
           i = (i+1) % 4
     if len(cam.listing) > 0:
       self.filelist = cam.listing
+      #print "self.filelist",self.filelist
       if showlabel:
         self.DoFilterFile("all")
     else:
@@ -710,9 +747,15 @@ class Ponerine(ScreenManager):
         ext = item["name"][len(item["name"])-3:len(item["name"])].lower()
       if filter == ext:
         i += 1
-        item["index"] = str(i)
-        item["is_selected"] = True #False
-        fdict[str(i)] = item
+        #item["index"] = str(i)
+        #item["is_selected"] = True #False
+        fdict[str(i)] = {}
+        fdict[str(i)].update(item)
+        if self.CheckDownloadHistory(item["name"],item["date"],item["size"]):
+          fdict[str(i)]["index"] = "*%s*" %str(i)
+        else:
+          fdict[str(i)]["index"] = str(i)
+        fdict[str(i)]["is_selected"] = True
         #print i
         #print item
     if i == 0:
@@ -915,7 +958,55 @@ class Ponerine(ScreenManager):
       cam.settings = ""
       debugtxt += "\nCAM %d Settings :\n" %i + settings
     self.current_screen.ids.txtDebug.text = debugtxt
-
+  def CheckDownloadHistory(self, name, date, size):
+    if len(self.downloadhistory) > 0:
+      for item in self.downloadhistory:
+        if item["name"] == name and item["date"] == date and item["size"] == size:
+          return True
+    return False
+    
+  def WriteDownloadHistory(self, file, downdir):
+    #print "WriteDownloadHistory",downdir, file
+    saveitem = {}
+    history = {}
+    for item in self.filelist:
+      if item["name"] == file:
+        saveitem.update(item)
+        break
+    if len(self.downloadhistory) > 0:
+      bfound = False
+      for item in self.downloadhistory:
+        if item["name"] == saveitem["name"]:
+          bfound = True
+          item.update(saveitem)
+          break
+      if not bfound:
+        self.downloadhistory.append(saveitem)
+    else:
+      self.downloadhistory.append(saveitem)
+    
+    history["downloaded"] = self.downloadhistory
+    print "WriteDownloadHistory",json.dumps(history, indent=2)
+    try:
+      with open(downdir + "/download.list",'w') as file:
+        file.write(json.dumps(history, indent=2))
+    except StandardError:
+      pass
+    self.ReadDownloadHistory(downdir)
+    
+  def ReadDownloadHistory(self, downdir):
+    self.downloadhistory = []
+    try:
+      with open(downdir + "/download.list") as file:
+        readstr = file.read()
+      print "ReadDownloadHistory",readstr
+      history = json.loads(readstr)
+      if history.has_key("downloaded"):
+        for item in history["downloaded"]:
+          self.downloadhistory.append(item)
+    except StandardError:
+      pass
+    
   def ReadConfig(self):
     print "readcfg"
     cfgfile = __file__.replace(basename(__file__), "data/camera.cfg")
