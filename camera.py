@@ -121,6 +121,10 @@ class Camera():
             print "sent out:", json.dumps(data, indent=2)
             self.msgbusy = data["msg_id"]
             self.srv.send(json.dumps(data))
+            #{"token":1,"msg_id":2,"type": "dev_reboot","param":"on"}
+            if data["msg_id"] == 2 and data["type"] == "dev_reboot" and data["param"] == "on":
+              time.sleep(5)
+              self.wifioff.set()
 
   def JsonHandle(self, data):
     print "received:", json.dumps(data, indent=2)
