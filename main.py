@@ -986,7 +986,7 @@ class Ponerine(ScreenManager):
       self.downloadhistory.append(saveitem)
     
     history["downloaded"] = self.downloadhistory
-    print "WriteDownloadHistory",json.dumps(history, indent=2)
+    #print "WriteDownloadHistory",json.dumps(history, indent=2)
     try:
       with open(downdir + "/download.list",'w') as file:
         file.write(json.dumps(history, indent=2))
@@ -999,7 +999,7 @@ class Ponerine(ScreenManager):
     try:
       with open(downdir + "/download.list") as file:
         readstr = file.read()
-      print "ReadDownloadHistory",readstr
+      #print "ReadDownloadHistory",readstr
       history = json.loads(readstr)
       if history.has_key("downloaded"):
         for item in history["downloaded"]:
@@ -1008,7 +1008,7 @@ class Ponerine(ScreenManager):
       pass
     
   def ReadConfig(self):
-    print "readcfg"
+    #print "readcfg"
     cfgfile = __file__.replace(basename(__file__), "data/camera.cfg")
     initstr = '''
     {
@@ -1028,15 +1028,15 @@ class Ponerine(ScreenManager):
     try:
       with open(cfgfile) as file:
         readstr = file.read()
-        print "readstr", readstr
+        #print "readstr", readstr
         cfg = json.loads(readstr)
-        print "readcfg",cfg
+        #print "readcfg",cfg
       if cfg.has_key("config"):
         for item in cfg["config"]:
           cfginit = json.loads(initstr)
           cfginit.update(item)
           r.append(cfginit)
-        print "r", r
+        #print "r", r
         if len(r) < 2:
           cfginit = json.loads(initstr)
           cfginit["camera"] = 2
@@ -1064,17 +1064,17 @@ class Ponerine(ScreenManager):
         item["download"] = "/mnt/sdcard/ponerine/download"
       if item["upload"] == "":
         item["upload"] = "/mnt/sdcard/ponerine/upload"
-    print r
+    #print r
     return r
 
   def WriteConfig(self):
     cfg = {}
     cfg["config"] = self.cfglist
-    print cfg
+    #print cfg
     cfgfile = __file__.replace(basename(__file__), "data/camera.cfg")
-    print __file__
-    print cfgfile
-    print json.dumps(cfg, indent=2)
+    #print __file__
+    #print cfgfile
+    #print json.dumps(cfg, indent=2)
     try:
       with open(cfgfile,'w') as file:
         file.write(json.dumps(cfg, indent=2))

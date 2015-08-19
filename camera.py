@@ -164,9 +164,17 @@ class Camera():
         #self.StartDownload(self.status["file"], self.status["size"], self.status["offset"])
         #threading.Thread(target=self.ThreadDownload, args=(self.status["file"],self.status["size"],self.status["offset"],),name="ThreadDownload").start()
         #self.SendMsg('{"msg_id": 1285,"fetch_size":%d,"param": "%s", "offset": %d}'%(self.status["size"],self.status["file"],data["param"]))
+
+      #{"md5sum":"e9976d54a00d136813565bfaa56f2e1b","msg_id":7,"type":"put_file_complete","param":15109422}
+      elif data["type"] == "put_file_complete":
+        self.dlcomplete.set()
+      #{"msg_id":7,"type":"put_file_fail","param": 0}
+      elif data["type"] == "put_file_fail":
+        self.dlerror.set()
       else:
         self.status[data["type"]] = data["param"]
     else:
+      print data
       if data["type"] == "start_video_record":
         self.cambusy = False
         self.recording = True
@@ -180,6 +188,8 @@ class Camera():
         self.wifioff.set()
         self.link = False
         self.UnlinkCamera()
+      elif data["type"] == "put_file_complete":
+        self.dlcomplete.set()
 
   '''
   normal rval = 0
@@ -191,17 +201,17 @@ class Camera():
   '''
   # rval message
   def JsonRval(self, data):
-    # allow next msg send out
-    if self.msgbusy == data["msg_id"] and data["msg_id"] <> 258:
-        self.msgbusy = 0
     # token lost, need to re-new token
-    if data["rval"] == -4:
+    if data["msg_id"] == 257 and data["rval"] < 0:
       self.token = 0
       self.link = False
       self.srv.send('{"msg_id":257,"token":0}')
       self.SendMsg('{"msg_id":%d}' %data["msg_id"])
+    # allow next msg send out
+    if self.msgbusy == data["msg_id"] and data["msg_id"] <> 258:
+        self.msgbusy = 0
     # error rval < 0, clear msg_id
-    elif data["rval"] < 0:
+    if data["rval"] < 0:
       if data["msg_id"] == 1283:
         self.status["pwd"] = ""
         self.listing = []
@@ -418,7 +428,7 @@ class Camera():
       ichunk = 3
       chunk_size = [512,1024,2048,4096,8192,16384,32768,65536,131072]
       self.dlstatus = {}
-      info = '"file":"{0}","fetch":"0.00 B","remain":"0.00 B","total":"0.00 B","speed":"0.00 B/s","percent":0.00'.format(file)
+      info = '"file":"{0}","fetch":0,"remain":0,"total":0,"speed":0'.format(file)
       info = '{%s}'%info
       print 'blank json', info
       self.dlstatus = json.loads(info)
@@ -431,7 +441,7 @@ class Camera():
       bytes_so_far = 0
       total_size = response.info().getheader('Content-Length').strip()
       total_size = int(total_size)
-      info = '"file":"{0}","fetch":"0.00 B","remain":"{1}","total":"{1}","speed":"0.00 B/s","percent":0.00'.format(file,self.GetFileSize(total_size))
+      info = '"file":"{0}","fetch":0,"remain":{1},"total":{1},"speed":0'.format(file,total_size)
       info = '{%s}'%info
       print 'start json', info
       self.dlstatus = json.loads(info)
@@ -456,9 +466,9 @@ class Camera():
         tstop = time.time()
         if (tstop - tstart) >= 1.1:
           print bytes_per_sec,(tstop - tstart)
-          speed = self.GetFileSize(float(bytes_per_sec)/(tstop - tstart))  + "/s"
-          percent = "%0.2f" %(float(bytes_so_far)/float(total_size)*100)
-          info = '"file":"{0}","fetch":"{1}","remain":"{2}","total":"{3}","speed":"{4}","percent":{5}'.format(file, self.GetFileSize(bytes_so_far), self.GetFileSize(total_size - bytes_so_far), self.GetFileSize(total_size), speed, percent)
+          speed = int(float(bytes_per_sec)/(tstop - tstart))
+          print "speed %s" %speed
+          info = '"file":"{0}","fetch":{1},"remain":{2},"total":{3},"speed":{4}'.format(file, bytes_so_far, total_size - bytes_so_far, total_size, speed)
           info = '{%s}'%info
           print 'running json', info
           self.dlstatus = json.loads(info)
@@ -496,8 +506,7 @@ class Camera():
     ichunk = 3
     chunk_size = [1024,2048,4096,8192,16384,32768,65536]
     self.dlstatus = {}
-    percent = "%0.2f" %(float(offset)/float(total_size)*100)
-    info = '"file":"{0}","fetch":{1},"remain":{2},"total":{3},"speed":"0.00 B/s","percent":{4}'.format(file,offset,total_size-offset,total_size,percent)
+    info = '"file":"{0}","fetch":{1},"remain":{2},"total":{3},"speed":0'.format(file,offset,total_size-offset,total_size)
     info = '{%s}'%info
     print 'blank json', info
     self.dlstatus = json.loads(info)
@@ -538,16 +547,15 @@ class Camera():
         break
         
       if self.dlcomplete.isSet():
-        info = '"file":"{0}","fetch":{1},"remain":0,"total":{1},"speed":"- - -","percent":100.00'.format(file, total_size)
+        info = '"file":"{0}","fetch":{1},"remain":0,"total":{1},"speed":0'.format(file, total_size)
         info = '{%s}'%info
         print 'running json', info
         self.dlstatus = json.loads(info)
       else:
         tstop = time.time()
         if (tstop - tstart) > 1:
-          speed = self.GetFileSize(float(bytes_per_sec)/(tstop - tstart)) + "/s"
-          percent = "%0.2f" %(float(bytes_so_far)/float(total_size)*100)
-          info = '"file":"{0}","fetch":{1},"remain":{2},"total":{3},"speed":"{4}","percent":{5}'.format(file, bytes_so_far, total_size - bytes_so_far, total_size, speed, percent)
+          speed = float(bytes_per_sec)/(tstop - tstart)
+          info = '"file":"{0}","fetch":{1},"remain":{2},"total":{3},"speed":{4}'.format(file, bytes_so_far, total_size - bytes_so_far, total_size, speed)
           info = '{%s}'%info
           print 'running json', info
           self.dlstatus = json.loads(info)
@@ -578,9 +586,10 @@ class Camera():
         # print "chunk",len("chunk")
         # time.sleep(60)
         # self.StartDownload(self.status["file"], self.status["size"], gsize)
-        
+
   def StartUpload(self, filewithpath):
     self.dlstart.clear()
+    self.dlcomplete.clear()
     self.dlstop.clear()
     self.dlerror.clear()
     threading.Thread(target=self.ThreadUpload, args=(filewithpath,),name="ThreadUpload").start()
@@ -591,16 +600,74 @@ class Camera():
     ichunk = 3
     chunk_size = [512,1024,2048,4096,8192,16384,32768,65536,131072]
     offset = 0
-    bytes_so_far = 0
     with open(filewithpath, 'rb') as uploadfile:
       file_name = uploadfile.name.split("/")[-1:][0]
       file_name = file_name.encode('utf-8')
       file_content = uploadfile.read()
-      total_size = len(file_content)
-      md5_value = hashlib.md5(file_content).hexdigest()
-      print '{"msg_id":1286,"param":"%s","md5sum":"%s","offset":%d,"size":%d}' %(file_name,md5_value,offset,total_size)
-      self.SendMsg('{"msg_id":1286,"param":"%s","md5sum":"%s","offset":%d,"size":%d}' %(file_name,md5_value,offset,total_size))
-
+      #print len(file_content)
+      #print hashlib.md5(file_content).hexdigest()
+    total_size = len(file_content)
+    md5_value = hashlib.md5(file_content).hexdigest()
+    #print '{"msg_id":1286,"param":"%s","md5sum":"%s","offset":%d,"size":%d}' %(file_name,md5_value,offset,total_size)
+    self.SendMsg('{"msg_id":1286,"param":"%s","md5sum":"%s","offset":%d,"size":%d}' %(file_name,md5_value,offset,total_size))
+    while True:
+      if self.dlerror.isSet():
+        return
+      if self.dlstop.isSet():
+        return
+      self.dlstart.wait(5)
+      if self.dlstart.isSet():
+        print "Start Upload", filewithpath, file_name
+        break
+    
+    #Start Upload
+    try:
+      Datasrv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+      Datasrv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+      Datasrv.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+      Datasrv.connect((self.ip, self.dataport))
+      tstart = time.time()
+      while True:
+        if self.quit.isSet():
+          return
+        if self.wifioff.isSet():
+          return
+        chunk = chunk_size[ichunk]
+        if offset+chunk > total_size:
+          chunk = total_size - offset
+        sendchunk = buffer(file_content, offset, chunk)
+        Datasrv.sendall(sendchunk)
+        offset += chunk
+        tstop = time.time()
+        if tstop - tstart > 5.0:
+          tstart = tstop
+          print ("upload percent %0.2f" %(float(offset)/total_size*100)) + " %"
+        if offset == total_size:
+          print ("upload percent 100%")
+          break
+      i = 0
+      while True:
+        i += 1
+        if self.quit.isSet():
+          return
+        if self.wifioff.isSet():
+          return
+        if self.dlerror.isSet():
+          break
+        self.dlcomplete.wait(5)
+        if self.dlcomplete.isSet():
+          print "upload complete"
+          self.dlstop.set()
+          break
+        elif i > 6:
+          self.dlerror.set()
+          print "upload timeout"
+          break
+      Datasrv.close()
+    except Exception as error:
+      self.dlerror.set()
+      self.dlstop.set()
+      pass
 # sent out: {
 #   "md5sum": "38c3bc506d741fd353738136bdccabdc", 
 #   "msg_id": 1286, 
@@ -616,16 +683,29 @@ class Camera():
 # enable_info_display.script
 # "md5sum": "d41d8cd98f00b204e9800998ecf8427e"
 
+  def ChangeDir(self, dir="/tmp/fuse_d"):
+    self.lsdir.clear()
+    self.status["pwd"] = ""
+    #self.listing = []
+    if dir == "":
+      self.lsdir.set() #error
+      return
+    threading.Thread(target=self.ThreadChangeDir, args=(dir,), name="ThreadChangeDir").start()
+    
+  def ThreadChangeDir(self, dir):
+    self.SendMsg('{"msg_id":1283,"param":"%s"}' %dir)
     while True:
       if self.quit.isSet():
         return
       if self.wifioff.isSet():
         return
-      self.dlstart.wait(5)
-      if self.dlstart.isSet():
-        print "StartUpload", file_name
+      if self.lsdir.isSet():
+        return
+      if self.status["pwd"] <> "":
+        print "ChangeDir to" ,self.status["pwd"]
+        self.lsdir.set()
         break
-          
+        
   def RefreshFile(self, dir="/var/www/DCIM"):
     self.lsdir.clear()
     self.status["pwd"] = ""
@@ -651,15 +731,6 @@ class Camera():
     else:
       self.lsdir.set() #error
      
-  def GetFileSize(self, sizebyte):
-    value = float(sizebyte)
-    option = 0
-    while value > 1024:
-      value = value/float(1024)
-      option += 1
-    pres = ["B", "KB", "MB", "GB", "TB"]
-    return("%.2f %s" %(value, pres[option]))
-    
   def CreateFileList(self, rvalfilelist):
     #print "rvalfilelist", rvalfilelist
     r = []
@@ -669,7 +740,7 @@ class Camera():
         i += 1
         fdesc = item[item.keys()[0]].split('|')
         fsize = fdesc[0].replace(' bytes','')
-        fdict = '{"name":"%s","byte":%s,"size":"%s","date":"%s"}' %(item.keys()[0],fsize,self.GetFileSize(fsize),fdesc[1])
+        fdict = '{"name":"%s","size":%s,"date":"%s"}' %(item.keys()[0],fsize,fdesc[1])
         #print i, fdict
         #print i, item.keys()[0], item[item.keys()[0]]
         r.append(json.loads(fdict))
