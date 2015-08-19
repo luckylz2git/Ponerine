@@ -48,14 +48,18 @@
         id: btnRadiation
         background_normal: 'image/radiation-2.png'
         background_down: 'image/radiation-1.png'
-    TextInput:
-      id: txtDebug
-      size_hint: 1, 8
-      text: "Setting Screen is under construction ...\n\nDebug Log:\n"
-      font_size: int(root.width/50)
-      foreground_color: [1,1,0,1]
-      background_color: [0,0,0,1]
-      readonly: True
+        on_release: root.manager.Radiation()
+    Settings:
+      id: setCamera
+      size_hint: 1, 8  
+#    TextInput:
+#      id: txtDebug
+#      size_hint: 1, 8
+#      text: "Setting Screen is under construction ...\n\nDebug Log:\n"
+#      font_size: int(root.width/50)
+#      foreground_color: [1,1,0,1]
+#      background_color: [0,0,0,1]
+#      readonly: True
     Button:
       size_hint: 1, 1
       text: 'Read Settings'
