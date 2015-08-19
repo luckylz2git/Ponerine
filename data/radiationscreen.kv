@@ -1,0 +1,63 @@
+#:kivy 1.9.0
+#:import kivy kivy
+#:import Factory kivy.factory.Factory
+
+# class RadiationScreen(Screen):
+  # pass
+
+<RadiationScreen>:
+#Screen:
+  BoxLayout:
+    orientation: 'vertical'
+    GridLayout:
+      cols: 5
+      canvas:
+        Color: 
+          rgba: 0.8,0.8,0.8,1
+        Rectangle:
+          size: self.size
+          pos: self.pos
+      size_hint: None, None
+      size: root.width, root.width/15 + root.width/20 #root.width/5
+      padding: root.width/40, root.width/100, root.width/40, root.width/100
+      #spacing=((width-padding) - icon.width * 5)/4
+      spacing: ((root.width-root.width/20) - (root.width/15+root.width/20-root.width/50)*5)/4
+      Button:
+        id: btnWifi
+        background_normal: 'image/wifi-2.png'
+        background_down: 'image/wifi-1.png'
+        on_release: 
+          root.manager.Disconnect()
+      Button:
+        id: btnPicture
+        background_normal: 'image/picture-2.png'
+        background_down: 'image/picture-1.png'
+        on_release: root.manager.FileManager()
+      Button:
+        id: btnCamera
+        background_normal: 'image/camera-2.png'
+        background_down: 'image/camera-1.png'
+        on_release: root.manager.Camera()
+      Button:
+        id: btnSetting
+        background_normal: 'image/setting-2.png'
+        background_down: 'image/setting-1.png'
+        on_release: root.manager.Setting()
+      Button:
+        id: btnRadiation
+        disabled: True
+        background_disabled_normal: 'image/radiation-1.png'
+        #background_down: 'image/radiation-1.png'
+    TextInput:
+      id: txtInfo
+      size_hint: 1, 8
+      text: "Start Advance Screen"
+      font_size: int(root.width/50)
+      foreground_color: [1,1,0,1]
+      background_color: [0,0,0,1]
+      readonly: True
+    Button:
+      size_hint: 1, 1
+      text: 'Apply Settings'
+      font_size: int(root.width/20)
+      #on_release: root.manager.ReadSetting()
