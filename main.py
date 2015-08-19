@@ -1,5 +1,6 @@
 import kivy
-
+# config ref
+# http://www.cnblogs.com/sitemanager/p/4117687.html
 kivy.require('1.9.0')
 
 from kivy.app import App
@@ -14,7 +15,7 @@ from kivy.clock import Clock
 from kivy.lang import Builder
 from kivy.uix.popup import Popup
 from kivy.properties import StringProperty, NumericProperty, BooleanProperty, ObjectProperty
-
+from kivy.config import ConfigParser
 from kivy.adapters.dictadapter import DictAdapter
 from kivy.uix.listview import ListView, ListItemButton, ListItemLabel, CompositeListItem
 from kivy.adapters.models import SelectableDataItem
@@ -33,6 +34,7 @@ Builder.load_file('data/connectscreen.kv')
 Builder.load_file('data/filemanagerscreen.kv')
 Builder.load_file('data/camerascreen.kv')
 Builder.load_file('data/settingscreen.kv')
+Builder.load_file('data/radiationscreen.kv')
 
 #print "Clock.max_iteration", Clock.max_iteration
 Clock.max_iteration = 100
@@ -48,6 +50,9 @@ class CameraScreen(Screen):
   pass
 
 class SettingScreen(Screen):
+  pass
+  
+class RadiationScreen(Screen):
   pass
 
 class ConfigPopup(Popup):
@@ -268,7 +273,7 @@ class Ponerine(ScreenManager):
     threading.Thread(target=self.DoDisconnect, name="DoDisconnect").start()
 
   def FileManager(self):
-    if self.current_screen.name in ("camera","setting"):
+    if self.current_screen.name in ("camera","setting","radiation"):
       dirct = "right"
     else:
       dirct = "left"
@@ -289,14 +294,21 @@ class Ponerine(ScreenManager):
       self.current_screen.ids.lstCamera.text = camlist[0]
     
   def Camera(self):
-    if self.current_screen.name in ("setting"):
-       dirct = "right"
+    if self.current_screen.name in ("setting","radiation"):
+      dirct = "right"
     else:
       dirct = "left"
     self.switch_to(self.screen[2],direction = dirct)
 
   def Setting(self):
-    self.switch_to(self.screen[3],direction = "left")
+    if self.current_screen.name in ("radiation"):
+      dirct = "right"
+    else:
+      dirct = "left"
+    self.switch_to(self.screen[3],direction = dirct)
+  
+  def Radiation(self):
+    self.switch_to(self.screen[4],direction = "left")
   
   def DeletePopupOpen(self):
     self.deletepop = DeletePopup(title='Delete Confirmation', size_hint=(0.8, 0.35), size=self.size)
@@ -1106,7 +1118,7 @@ class PonerineApp(App):
     #ponerine.add_widget(SettingScreen)
     #ponerine.current = 'connect'
     #ponerine.DetectCam()
-    ponerine.screen = [ConnectScreen(name="connect"),FileManagerScreen(name="filemanager"),CameraScreen(name="camera"),SettingScreen(name="setting")]
+    ponerine.screen = [ConnectScreen(name="connect"),FileManagerScreen(name="filemanager"),CameraScreen(name="camera"),SettingScreen(name="setting"),RadiationScreen(name="radiation")]
     ponerine.switch_to(ponerine.screen[0])
     ponerine.DetectCam()
     return ponerine
