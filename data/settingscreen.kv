@@ -49,9 +49,9 @@
         background_normal: 'image/radiation-2.png'
         background_down: 'image/radiation-1.png'
         on_release: root.manager.Radiation()
-    Settings:
-      id: setCamera
-      size_hint: 1, 8  
+    BoxLayout:
+      id: boxCameraSetting
+      size_hint: 1, 8
 #    TextInput:
 #      id: txtDebug
 #      size_hint: 1, 8
@@ -60,8 +60,14 @@
 #      foreground_color: [1,1,0,1]
 #      background_color: [0,0,0,1]
 #      readonly: True
-    Button:
+    Spinner:
+      id: lstCamera
       size_hint: 1, 1
-      text: 'Read Settings'
-      font_size: int(root.width/20)
-      on_release: root.manager.ReadSetting()
+      text: "Read Camera Settings"
+      values: ()
+      on_text: root.manager.ReadSetting(self)
+    # Button:
+      # size_hint: 1, 1
+      # text: 'Read Settings'
+      # font_size: int(root.width/20)
+      # on_release: root.manager.ReadSetting()

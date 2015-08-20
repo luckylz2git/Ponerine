@@ -23,7 +23,8 @@ class Camera():
     self.filetaken = ""
     self.recording = False
     self.recordtime = "00:00:00"
-    self.settings = ""
+    self.settings = []
+    self.options = []
     self.taken = threading.Event()
     self.quit = threading.Event()
     self.wifioff = threading.Event()
@@ -33,6 +34,8 @@ class Camera():
     self.dlstop = threading.Event()
     self.dlerror = threading.Event()
     self.dlopen = threading.Event()
+    self.setok = threading.Event()
+    self.seterror = threading.Event()
     
   def __str__(self):
     info = dict()
@@ -57,6 +60,10 @@ class Camera():
     self.dlstop.clear()
     self.dlerror.clear()
     self.dlopen.clear()
+    
+    self.setok.clear()
+    self.seterror.clear()
+    
     self.jsonon = False
     self.jsonoff = 0
     self.msgbusy = 0
@@ -66,7 +73,8 @@ class Camera():
     self.filetaken = ""
     self.recording = False
     self.recordtime = "00:00:00"
-    self.settings = ""
+    self.settings = []
+    self.options = []
     threading.Thread(target=self.ThreadSend, name="ThreadSend").start()
 #     self.tsend= threading.Thread(target=self.ThreadSend)
 #     self.tsend.setDaemon(True)
@@ -135,6 +143,11 @@ class Camera():
     elif data["msg_id"] == 7:
       self.JsonStatus(data)
       #print "camera status:", json.dumps(self.status, indent=2)
+    elif data["msg_id"] == 1793:
+      print "change different app msg_id: 1793"
+      self.wifioff.set()
+      self.link = False
+      self.UnlinkCamera()
 
   # status message: 7
   def JsonStatus(self, data):
@@ -229,6 +242,8 @@ class Camera():
       elif data["msg_id"] == 1286:
         self.dlerror.set()
         self.dlstop.set()
+      elif data["msg_id"] == 2:
+        self.seterror.set()
       data["msg_id"] = 0
     # get token
     if data["msg_id"] == 257:
@@ -239,11 +254,19 @@ class Camera():
       self.token = 0
       self.link = False
       self.UnlinkCamera()
+    elif data["msg_id"] == 2:
+      self.setok.set()
     # all config information
     elif data["msg_id"] == 3:
-      self.settings = json.dumps(data["param"], indent=0).replace("{\n","{").replace("\n}","}")
+      #self.settings = json.dumps(data["param"], indent=0).replace("{\n","{").replace("\n}","}")
+      self.settings = data["param"]
       #self.status["config"] = data["param"]
     # battery status
+    elif data["msg_id"] == 9:
+      if data["permission"] == "settable":
+        self.options = data["options"]
+      else:
+        self.options = []
     elif data["msg_id"] == 13:
       self.status["battery"] = data["param"]
       if data["type"] == "batterty":
@@ -391,6 +414,20 @@ class Camera():
     self.dlstop.clear()
     self.dlerror.clear()
     self.SendMsg('{"msg_id":1281,"param":"%s"}'%file)
+  
+  def ChangeSetting(self, type, value):
+    self.setok.clear()
+    self.seterror.clear()
+    self.SendMsg('{"msg_id":2,"type":"%s","param":"%s"}' %(type,value))
+    threading.Thread(target=self.ThreadChangeSetting, name="ThreadChangeSetting").start()
+
+  def ThreadChangeSetting(self):
+    self.setok.wait(15)
+    if self.setok.isSet():
+      print "setting changed"
+    else:
+      print "setting error"
+      self.seterror.set()
     
   #size can be 0
   def StartDownload(self, file, size=0, offset=0):
