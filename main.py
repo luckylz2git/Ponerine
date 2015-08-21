@@ -27,6 +27,7 @@ from kivy.uix.settings import SettingsWithNoMenu
 
 # Camera Object[camera.py]
 from camera import Camera
+from camerasetting import CameraSetting
 # import base64, functools, hashlib, json, os, platform, re, select, socket, subprocess, sys, tempfile, threading, time, tkFileDialog, tkMessageBox, urllib2, webbrowser, zlib
 '''
 platform.system()
@@ -68,12 +69,16 @@ class DeletePopup(Popup):
   apply = BooleanProperty()
 
 class Ponerine(ScreenManager):
-  def __init__(self, config, cfgevent, appexit):
+  
+  #def __init__(self, config, cfgevent, appexit):
+  def __init__(self, appexit):
     super(Ponerine, self).__init__()
-
-    self.config = config
-    self.cfgtoken = cfgtoken
-    self.cfgevent = cfgevent
+    
+    #self.config = ConfigParser()
+    #self.BuildConfig(self.config)
+    #print "__init__",self.config
+    #self.cfgtoken = cfgtoken
+    #self.cfgevent = cfgevent
     self.applyconfig = False
 
     self.appexit = appexit
@@ -365,7 +370,7 @@ class Ponerine(ScreenManager):
       return
     index = int(camtext.replace('Read Camera ','').replace(' Settings','')) - 1
     self.cam[index].SendMsg('{"msg_id":3}')
-    threading.Thread(target=self.DoSetting, args=(index,), name="DoSetting"+str(index)).start()
+    threading.Thread(target=self.DoReadSetting, args=(index,), name="DoReadSetting"+str(index)).start()
     instance.text = "Read Camera Settings"
     
   def DoDetectCam(self, index, ip, timewait = 1):
@@ -439,7 +444,7 @@ class Ponerine(ScreenManager):
         time.sleep(1)
         threading.Thread(target=self.DoFileTaken, args=(i,), name="DoFileTaken"+str(i)).start()
         time.sleep(1)
-        threading.Thread(target=self.DoConfig, args=(self.cfgevent,i,), name="DoConfig"+str(i)).start()
+        #threading.Thread(target=self.DoConfig, args=(self.cfgevent,i,), name="DoConfig"+str(i)).start()
         i +=1
   
   def DoDisconnect(self):
@@ -944,9 +949,13 @@ class Ponerine(ScreenManager):
     self.current_screen.ids.btnRecord.state = "normal"
     self.current_screen.ids.btnRecord.text = "Start Record"
   
-  def DoConfig(self, cfgevent, index):
+  #def DoConfig(self, cfgevent, index):
+  def DoConfig(self):
+    return
     while not self.appexit.isSet():
+      print "start cfgevent wait"
       cfgevent.wait()
+      print "get cfgevent set"
       if self.applyconfig:
         global cfgtoken
         print "changesetting", cfgtoken
@@ -978,15 +987,16 @@ class Ponerine(ScreenManager):
   def DoFileTaken(self, index):
     print "DoFileTaken start %d" %index
     while not self.cam[index].quit.isSet():
-      self.cam[index].taken.wait()
-      debugtxt = self.current_screen.ids.txtDebug.text
-      if self.cam[index].filetaken <> "":
-        debugtxt += "\nCAM %d : " %(index+1) + self.cam[index].filetaken
-        self.current_screen.ids.txtDebug.text = debugtxt
-      self.cam[index].taken.clear()
+      self.cam[index].taken.wait(1)
+      if self.cam[index].taken.isSet():
+        debugtxt = self.current_screen.ids.txtDebug.text
+        if self.cam[index].filetaken <> "":
+          debugtxt += "\nCAM %d : " %(index+1) + self.cam[index].filetaken
+          self.current_screen.ids.txtDebug.text = debugtxt
+        self.cam[index].taken.clear()
     print "DoFileTaken stop %d" %index
 
-  def DoSetting(self, index):
+  def DoReadSetting(self, index):
     self.current_screen.ids.boxCameraSetting.clear_widgets()
     settings = []
     cam = self.cam[index]
@@ -997,10 +1007,15 @@ class Ponerine(ScreenManager):
     self.applyconfig = False
     #debugtxt += "\nCAM %d Settings :\n" %i + settings
     print "Camera %d" %(index+1), settings
+    if cam.webportopen:
+      cam.RenewToken()
     for item in settings:
       for key,value in item.items():
         if key == "video_resolution":
-          self.config.set("setting",key,value.replace("2304x1296 30P 16:9","* 2304x1296 30P 16:9"))
+          print "DoSetting",self.config
+          print "key",key,"value",value
+          #self.config.set("setting",key,value.replace("2304x1296 30P 16:9","* 2304x1296 30P 16:9"))
+          self.config.set('setting',key,value)
           cam.SendMsg('{"msg_id":9,"param":"video_resolution"}')
           break
     while len(cam.options) == 0:
@@ -1008,15 +1023,10 @@ class Ponerine(ScreenManager):
     #options = '["* 2304x1296 30P 16:9", ' + json.dumps(cam.options).replace('[','')
     options = json.dumps(cam.options)
     #print options
-    jsondata = '''[{
-        "type": "options",
-        "title": "Video Resolution",
-        "desc": "Set video resolution. With * is experimental resolution.",
-        "section": "setting",
-        "key": "video_resolution",
-        "options": OPTIONSLIST
-      }]'''
-    jsondata = jsondata.replace("OPTIONSLIST", options)
+    jsondata = '['
+    c = CameraSetting()
+    jsondata += c.BuildSetting("video_resolution",options)
+    jsondata += ']'
     print jsondata
     
     s = SettingsWithNoMenu(size_hint=(1,1))
@@ -1025,7 +1035,24 @@ class Ponerine(ScreenManager):
     self.applyconfig = True
     #print "key:",key,"value:",value
     #self.current_screen.ids.txtDebug.text = debugtxt
+  
+  def BuildConfig(self, config):
+    config.setdefaults(u'setting', {
+      u'camera': '1',
+      u'video_resolution': '2304x1296 30P 16:9',
+      u'bitrate': '35'
+      })
+    config.add_callback(self.ConfigChange)
     
+  def ConfigChange(self, section, key, value):
+    print "testconfigchange config", self.config
+    # self.config.set(section,key,value)
+    # token = (section, key)
+    # if token == ('setting', 'video_resolution'):
+      # global cfgtoken
+      # cfgtoken = (section,key,value)
+      # self.cfgevent.set()
+      # print "resolution change: %s %s %s" %(section,key,value)    
   def CheckDownloadHistory(self, name, date, size):
     if len(self.downloadhistory) > 0:
       for item in self.downloadhistory:
@@ -1150,14 +1177,15 @@ class Ponerine(ScreenManager):
       pass
     
 class PonerineApp(App):
+  #use_kivy_settings = False
   version = __version__
-  
   def build(self):
     global cfgtoken
     cfgtoken = ()
     self.cfgevent = threading.Event()
     self.appexit = threading.Event()
-    ponerine = Ponerine(self.config, self.cfgevent, self.appexit)
+    #ponerine = Ponerine(self.config, self.cfgevent, self.appexit)
+    ponerine = Ponerine(self.appexit)
     ponerine.duration = 0.7
     #ConnectScreen = Builder.load_file('data/connectscreen.kv')
     #ConnectScreen.name = 'connect'
@@ -1194,35 +1222,7 @@ class PonerineApp(App):
           thread._Thread__stop()
         except:
           pass
-          
-  def build_config(self, config):
-    config.setdefaults('camera', {
-      'camera': '1',
-      'ip': '192.168.42.1',
-      'defaultip': '192.168.42.1',
-      'wifimode': 0, 
-      'stationip': '',
-      'ssid': '',
-      'password': '',
-      'gateway': '',
-      'download': '/mnt/sdcard/ponerine/download',
-      'upload': '/mnt/sdcard/ponerine/upload'
-      })
-    config.setdefaults('setting', {
-      'camera': '1',
-      'video_resolution': '2304x1296 30P 16:9',
-      'bitrate': '35'
-      })
-    config.add_callback(self.on_config_change)
-    
-  def on_config_change(self, section, key, value):
-    token = (section, key)
-    if token == ('setting', 'video_resolution'):
-      global cfgtoken
-      cfgtoken = (section,key,value)
-      self.cfgevent.set()
-      print "resolution change: %s" %value
-    
+
 if __name__ == '__main__':
-  print Window.size
+  #print Window.size
   PonerineApp().run() 
