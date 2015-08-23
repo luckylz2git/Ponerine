@@ -8,6 +8,7 @@ class Camera():
     self.port = port
     self.dataport = dataport
     self.webport = webport
+    self.webportopen = False
     self.socketopen = -1
     self.datasocketopen = -1
     self.qsend = Queue()
@@ -24,7 +25,10 @@ class Camera():
     self.recording = False
     self.recordtime = "00:00:00"
     self.settings = []
-    self.options = []
+    self.cfgdict = {}
+    self.optcount = 0
+    self.settable = {}
+    self.readonly = {}
     self.taken = threading.Event()
     self.quit = threading.Event()
     self.wifioff = threading.Event()
@@ -36,6 +40,8 @@ class Camera():
     self.dlopen = threading.Event()
     self.setok = threading.Event()
     self.seterror = threading.Event()
+    self.optok = threading.Event()
+    self.opterror = threading.Event()
     
   def __str__(self):
     info = dict()
@@ -63,6 +69,8 @@ class Camera():
     
     self.setok.clear()
     self.seterror.clear()
+    self.optok.clear()
+    self.opterror.clear()
     
     self.jsonon = False
     self.jsonoff = 0
@@ -74,7 +82,8 @@ class Camera():
     self.recording = False
     self.recordtime = "00:00:00"
     self.settings = []
-    self.options = []
+    self.settable = {}
+    self.readonly = {}
     threading.Thread(target=self.ThreadSend, name="ThreadSend").start()
 #     self.tsend= threading.Thread(target=self.ThreadSend)
 #     self.tsend.setDaemon(True)
@@ -89,9 +98,12 @@ class Camera():
   def UnlinkCamera(self):
     if self.link:
       self.SendMsg('{"msg_id":258}')
-    else:
-      self.Disconnect()
-
+    self.Disconnect()
+  
+  def RenewToken():
+    self.SendMsg('{"msg_id":258}')
+    self.SendMsg('{"msg_id":257}')
+    
   def SendMsg(self, msg):
     self.qsend.put(msg)
 
@@ -114,7 +126,7 @@ class Camera():
       while not self.link:
         if self.quit.isSet():
           break
-      self.SendMsg('{"msg_id":259,"param":"none_force"}')
+      #self.SendMsg('{"msg_id":259,"param":"none_force"}')
       #print "start sending loop"
       while self.socketopen == 0:
         if self.quit.isSet():
@@ -126,7 +138,8 @@ class Camera():
             allowsendout = False
           if allowsendout:
             data["token"] = self.token
-            print "sent out:", json.dumps(data, indent=2)
+            #print "sent out:", json.dumps(data, indent=2)
+            #print "sent out:", json.dumps(data)
             self.msgbusy = data["msg_id"]
             self.srv.send(json.dumps(data))
             #{"token":1,"msg_id":2,"type": "dev_reboot","param":"on"}
@@ -135,7 +148,8 @@ class Camera():
               self.wifioff.set()
 
   def JsonHandle(self, data):
-    print "received:", json.dumps(data, indent=2)
+    #print "received:", json.dumps(data, indent=2)
+    #print "received:", json.dumps(data)
     # confirm message: rval = 0
     if data.has_key("rval"):
       self.JsonRval(data)
@@ -207,6 +221,9 @@ class Camera():
         self.UnlinkCamera()
       elif data["type"] == "put_file_complete":
         self.dlcomplete.set()
+      elif data["type"] == "vf_start":
+        print "webport open"
+        self.webportopen = True
 
   '''
   normal rval = 0
@@ -252,21 +269,35 @@ class Camera():
     # drop token
     elif data["msg_id"] == 258:
       self.token = 0
-      self.link = False
-      self.UnlinkCamera()
+      #self.link = False
+      #self.UnlinkCamera()
+    # open webport
+    elif data["msg_id"] == 259:
+      self.webportopen = True
     elif data["msg_id"] == 2:
       self.setok.set()
     # all config information
     elif data["msg_id"] == 3:
       #self.settings = json.dumps(data["param"], indent=0).replace("{\n","{").replace("\n}","}")
       self.settings = data["param"]
+      #if self.cfgdict == {}:
+      print "first time msg_id 3"
+      for item in data["param"]:
+        self.cfgdict.update(item)
+        #print json.dumps(self.cfgdict,indent=0)
       #self.status["config"] = data["param"]
     # battery status
     elif data["msg_id"] == 9:
       if data["permission"] == "settable":
-        self.options = data["options"]
-      else:
-        self.options = []
+        self.settable[data["param"]] = data["options"]
+        #print json.dumps(data["param"]), json.dumps(data["permission"]), json.dumps(data["options"])
+      else: #readonly
+        self.readonly[data["param"]] = data["options"]
+        print json.dumps(data["param"]), json.dumps(data["permission"]), json.dumps(data["options"])
+      self.optcount -= 1
+      if self.optcount == 0:
+        print "read all options"
+        self.optok.set()
     elif data["msg_id"] == 13:
       self.status["battery"] = data["param"]
       if data["type"] == "batterty":
@@ -415,6 +446,19 @@ class Camera():
     self.dlerror.clear()
     self.SendMsg('{"msg_id":1281,"param":"%s"}'%file)
   
+  def ReadSetting(self,type=""):
+    self.optcount = 0
+    self.optok.clear()
+    self.opterror.clear()
+    if self.cfgdict <> {}:
+      print "start read setting"
+      for key in self.cfgdict.keys():
+        if type == "" or type == key:
+          self.optcount += 1
+          #print "readsetting: %s" %key
+          self.SendMsg('{"msg_id":9,"param":"%s"}'%key)
+          #time.sleep(5)
+  
   def ChangeSetting(self, type, value):
     self.setok.clear()
     self.seterror.clear()
@@ -463,6 +507,15 @@ class Camera():
     threading.Thread(target=self.ThreadWebDownload, args=(file,destdir,),name="ThreadWebDownload").start()
         
   def ThreadWebDownload(self, file, destdir):
+    if not self.webportopen:
+      self.SendMsg('{"msg_id":259,"param":"none_force"}')
+      t1 = time.time()
+      while not self.webportopen:
+        t2 = time.time()
+        if t2-t1 > 15.0:
+          self.dlerror.set()
+          return
+        
     fileopen = False
     try:
       print "ThreadWebDownload", file
@@ -757,6 +810,15 @@ class Camera():
     threading.Thread(target=self.ThreadRefreshFile, args=(dir,), name="ThreadRefreshFile").start()
 
   def ThreadRefreshFile(self, dir):
+    if not self.webportopen:
+      self.SendMsg('{"msg_id":259,"param":"none_force"}')
+      t1 = time.time()
+      while not self.webportopen:
+        t2 = time.time()
+        if t2-t1 > 15.0:
+          self.lsdir.set()
+          return
+      
     self.SendMsg('{"msg_id":1283,"param":"%s"}' %dir)
     while True:
       if self.quit.isSet():
