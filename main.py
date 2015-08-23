@@ -23,7 +23,7 @@ from kivy.uix.listview import ListView, ListItemButton, ListItemLabel, Composite
 from kivy.adapters.models import SelectableDataItem
 
 from kivy.config import ConfigParser
-from kivy.uix.settings import SettingsWithNoMenu
+from kivy.uix.settings import SettingsWithNoMenu,SettingOptions
 
 # Camera Object[camera.py]
 from camera import Camera
@@ -257,11 +257,13 @@ class Ponerine(ScreenManager):
     self.stopdetect.set()
     if self.current_screen.ids.btnConnect.text == "" or self.current_screen.ids.btnConnect.text == "Error":
       self.cam = []
+      self.config = []
       print "ip list" ,len(self.cfglist), self.cfglist
       for cfg in self.cfglist:
         print "ip list %s" %cfg["ip"]
         if cfg["ip"] <> "":
           self.cam.append(Camera(cfg["ip"]))
+          self.config.append(ConfigParser())
       if len(self.cam) > 0:
         self.tconn= threading.Thread(target=self.DoConnect)
         self.tconn.setName('DoConnect')
@@ -363,15 +365,6 @@ class Ponerine(ScreenManager):
       self.tstop= threading.Thread(target=self.DoStopRecord)
       self.tstop.setName('DoStopRecord')
       self.tstop.start()
-      
-  def ReadSetting(self, instance):
-    camtext = instance.text
-    if camtext == "Read Camera Settings":
-      return
-    index = int(camtext.replace('Read Camera ','').replace(' Settings','')) - 1
-    self.cam[index].SendMsg('{"msg_id":3}')
-    threading.Thread(target=self.DoReadSetting, args=(index,), name="DoReadSetting"+str(index)).start()
-    instance.text = "Read Camera Settings"
     
   def DoDetectCam(self, index, ip, timewait = 1):
     if ip == "":
@@ -443,7 +436,7 @@ class Ponerine(ScreenManager):
         threading.Thread(target=self.DoWifi, args=(cam.wifioff,), name="DoWifi"+str(i)).start()
         time.sleep(1)
         threading.Thread(target=self.DoFileTaken, args=(i,), name="DoFileTaken"+str(i)).start()
-        time.sleep(1)
+        #time.sleep(1)
         #threading.Thread(target=self.DoConfig, args=(self.cfgevent,i,), name="DoConfig"+str(i)).start()
         i +=1
   
@@ -996,17 +989,32 @@ class Ponerine(ScreenManager):
         self.cam[index].taken.clear()
     print "DoFileTaken stop %d" %index
 
+  def ReadSetting(self, instance):
+    camtext = instance.text
+    if camtext == "Read Camera Settings":
+      return
+    index = int(camtext.replace('Read Camera ','').replace(' Settings','')) - 1
+    self.cam[index].SendMsg('{"msg_id":3}')
+    threading.Thread(target=self.DoReadSetting, args=(index,), name="DoReadSetting"+str(index)).start()
+    instance.text = "Read Camera Settings"
+
   def DoReadSetting(self, index):
     self.current_screen.ids.boxCameraSetting.clear_widgets()
+
     settings = []
     cam = self.cam[index]
+          
     while len(cam.settings) == 0:
       pass
     settings = cam.settings
     cam.settings = []
+    if cam.webportopen:
+      cam.RenewToken()
+      
+    self.BuildConfig(self.config[index], cam.cfgdict)
     self.applyconfig = False
     #debugtxt += "\nCAM %d Settings :\n" %i + settings
-    print "Camera %d" %(index+1), settings
+    #print "Camera %d" %(index+1), settings
     if cam.webportopen:
       cam.RenewToken()
     for item in settings:
@@ -1015,13 +1023,14 @@ class Ponerine(ScreenManager):
           print "DoSetting",self.config
           print "key",key,"value",value
           #self.config.set("setting",key,value.replace("2304x1296 30P 16:9","* 2304x1296 30P 16:9"))
-          self.config.set('setting',key,value)
+          self.config[index].set('setting',key,value)
           cam.SendMsg('{"msg_id":9,"param":"video_resolution"}')
           break
-    while len(cam.options) == 0:
-      pass
+    #while len(cam.options) == 0:
+      #pass
     #options = '["* 2304x1296 30P 16:9", ' + json.dumps(cam.options).replace('[','')
     options = json.dumps(cam.options)
+    #options = '[]'
     #print options
     jsondata = '['
     c = CameraSetting()
@@ -1030,18 +1039,79 @@ class Ponerine(ScreenManager):
     print jsondata
     
     s = SettingsWithNoMenu(size_hint=(1,1))
-    s.add_json_panel('Camera %d Settings' %(index+1), self.config, data = jsondata)
+    s.add_json_panel('Camera %d Settings' %(index+1), self.config[index], data = jsondata)
+    for child in s.children[0].children[0].children[0].children[:]:
+        print child,type(child)
+        if isinstance(child, SettingOptions):
+          child.disabled = True
+        else:
+          print child.text
+          
     self.current_screen.ids.boxCameraSetting.add_widget(s)
     self.applyconfig = True
     #print "key:",key,"value:",value
     #self.current_screen.ids.txtDebug.text = debugtxt
   
-  def BuildConfig(self, config):
-    config.setdefaults(u'setting', {
-      u'camera': '1',
-      u'video_resolution': '2304x1296 30P 16:9',
-      u'bitrate': '35'
-      })
+  def BuildConfig(self, config, camcfgdict):
+    if camcfgdict == {}:
+      config.setdefaults("setting", {
+        "camera_clock": "",
+        "video_standard": "",
+        "app_status": "",
+        "video_resolution": "",
+        "video_stamp": "",
+        "video_quality": "",
+        "timelapse_video": "",
+        "capture_mode": "",
+        "photo_size": "",
+        "photo_stamp": "",
+        "photo_quality": "",
+        "timelapse_photo": "",
+        "preview_status": "",
+        "buzzer_volume": "",
+        "buzzer_ring": "",
+        "capture_default_mode": "",
+        "precise_cont_time": "",
+        "burst_capture_number": "",
+        "wifi_ssid": "",
+        "wifi_password": "",
+        "led_mode": "",
+        "meter_mode": "",
+        "sd_card_status": "",
+        "video_output_dev_type": "",
+        "sw_version": "",
+        "hw_version": "",
+        "dual_stream_status": "",
+        "streaming_status": "",
+        "precise_cont_capturing": "",
+        "piv_enable": "",
+        "auto_low_light": "",
+        "loop_record": "",
+        "warp_enable": "",
+        "support_auto_low_light": "",
+        "precise_selftime": "",
+        "precise_self_running": "",
+        "auto_power_off": "",
+        "serial_number": "",
+        "system_mode": "",
+        "system_default_mode": "",
+        "start_wifi_while_booted": "",
+        "quick_record_time": "",
+        "precise_self_remain_time": "",
+        "sdcard_need_format": "",
+        "video_rotate": "",
+        "emergency_file_backup": "",
+        "osd_enable": "",
+        "rec_default_mode": "",
+        "rec_mode": "",
+        "record_photo_time": "",
+        "dev_functions": "",
+        "rc_button_mode": "",
+        "timelapse_video_duration": "",
+        "timelapse_video_resolution": ""
+        })
+    else:
+      config.setdefaults("setting", camcfgdict)
     config.add_callback(self.ConfigChange)
     
   def ConfigChange(self, section, key, value):
