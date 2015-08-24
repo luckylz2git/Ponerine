@@ -28,7 +28,21 @@ class Camera():
     self.cfgdict = {}
     self.optcount = 0
     self.settable = {}
-    self.readonly = {}
+    self.readonly = ["app_status",
+                   "dev_functions",
+                   "dual_stream_status",
+                   "hw_version",
+                   "piv_enable",
+                   "precise_cont_capturing",
+                   "precise_self_remain_time",
+                   "quick_record_time",
+                   "sd_card_status",
+                   "sdcard_need_format",
+                   "serial_number",
+                   "streaming_status",
+                   "support_auto_low_light",
+                   "sw_version",
+                   "timelapse_photo"]
     self.taken = threading.Event()
     self.quit = threading.Event()
     self.wifioff = threading.Event()
@@ -83,7 +97,21 @@ class Camera():
     self.recordtime = "00:00:00"
     self.settings = []
     self.settable = {}
-    self.readonly = {}
+    self.readonly = ["app_status",
+                   "dev_functions",
+                   "dual_stream_status",
+                   "hw_version",
+                   "piv_enable",
+                   "precise_cont_capturing",
+                   "precise_self_remain_time",
+                   "quick_record_time",
+                   "sd_card_status",
+                   "sdcard_need_format",
+                   "serial_number",
+                   "streaming_status",
+                   "support_auto_low_light",
+                   "sw_version",
+                   "timelapse_photo"]
     threading.Thread(target=self.ThreadSend, name="ThreadSend").start()
 #     self.tsend= threading.Thread(target=self.ThreadSend)
 #     self.tsend.setDaemon(True)
@@ -139,7 +167,7 @@ class Camera():
           if allowsendout:
             data["token"] = self.token
             #print "sent out:", json.dumps(data, indent=2)
-            #print "sent out:", json.dumps(data)
+            print "sent out:", json.dumps(data)
             self.msgbusy = data["msg_id"]
             self.srv.send(json.dumps(data))
             #{"token":1,"msg_id":2,"type": "dev_reboot","param":"on"}
@@ -148,7 +176,7 @@ class Camera():
               self.wifioff.set()
 
   def JsonHandle(self, data):
-    #print "received:", json.dumps(data, indent=2)
+    print "received:", json.dumps(data, indent=2)
     #print "received:", json.dumps(data)
     # confirm message: rval = 0
     if data.has_key("rval"):
@@ -279,21 +307,18 @@ class Camera():
     # all config information
     elif data["msg_id"] == 3:
       #self.settings = json.dumps(data["param"], indent=0).replace("{\n","{").replace("\n}","}")
-      self.settings = data["param"]
       #if self.cfgdict == {}:
       print "first time msg_id 3"
       for item in data["param"]:
         self.cfgdict.update(item)
-        #print json.dumps(self.cfgdict,indent=0)
+      self.settings = data["param"]
+      print json.dumps(self.cfgdict,indent=2)
       #self.status["config"] = data["param"]
     # battery status
     elif data["msg_id"] == 9:
       if data["permission"] == "settable":
         self.settable[data["param"]] = data["options"]
         #print json.dumps(data["param"]), json.dumps(data["permission"]), json.dumps(data["options"])
-      else: #readonly
-        self.readonly[data["param"]] = data["options"]
-        print json.dumps(data["param"]), json.dumps(data["permission"]), json.dumps(data["options"])
       self.optcount -= 1
       if self.optcount == 0:
         print "read all options"
@@ -446,18 +471,19 @@ class Camera():
     self.dlerror.clear()
     self.SendMsg('{"msg_id":1281,"param":"%s"}'%file)
   
-  def ReadSetting(self,type=""):
+  def ReadSetting(self, type=""):
     self.optcount = 0
     self.optok.clear()
     self.opterror.clear()
     if self.cfgdict <> {}:
       print "start read setting"
       for key in self.cfgdict.keys():
-        if type == "" or type == key:
-          self.optcount += 1
-          #print "readsetting: %s" %key
-          self.SendMsg('{"msg_id":9,"param":"%s"}'%key)
-          #time.sleep(5)
+        if key not in self.readonly:
+          if type == "" or type == key:
+            self.optcount += 1
+            #print "readsetting: %s" %key
+            self.SendMsg('{"msg_id":9,"param":"%s"}'%key)
+            #time.sleep(5)
   
   def ChangeSetting(self, type, value):
     self.setok.clear()

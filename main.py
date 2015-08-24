@@ -999,6 +999,13 @@ class Ponerine(ScreenManager):
     instance.text = "Read Camera Settings"
 
   def DoReadSetting(self, index):
+    for child in self.current_screen.ids.boxCameraSetting.children[:]:
+      if isinstance(child, SettingsWithNoMenu):
+        print "Destory SettingsWithNoMenu"
+        self.destroy_settings()
+      else:
+        print type(child)
+        
     self.current_screen.ids.boxCameraSetting.clear_widgets()
 
     settings = []
@@ -1010,42 +1017,59 @@ class Ponerine(ScreenManager):
     cam.settings = []
     if cam.webportopen:
       cam.RenewToken()
-      
+    
+    print json.dumps(cam.cfgdict)
     self.BuildConfig(self.config[index], cam.cfgdict)
     self.applyconfig = False
     #debugtxt += "\nCAM %d Settings :\n" %i + settings
     #print "Camera %d" %(index+1), settings
     if cam.webportopen:
       cam.RenewToken()
+    vstand = ""
     for item in settings:
       for key,value in item.items():
-        if key == "video_resolution":
-          print "DoSetting",self.config
-          print "key",key,"value",value
+        if key == "video_standard":
+          vstand = "_" + value
+          #print "DoSetting",self.config
+          #print "key",key,"value",value
           #self.config.set("setting",key,value.replace("2304x1296 30P 16:9","* 2304x1296 30P 16:9"))
-          self.config[index].set('setting',key,value)
-          cam.SendMsg('{"msg_id":9,"param":"video_resolution"}')
+          #self.config[index].set('setting',key,value)
+          #cam.SendMsg('{"msg_id":9,"param":"video_resolution"}')
           break
     #while len(cam.options) == 0:
       #pass
     #options = '["* 2304x1296 30P 16:9", ' + json.dumps(cam.options).replace('[','')
-    options = json.dumps(cam.options)
+    #options = "" #json.dumps(cam.options)
     #options = '[]'
     #print options
     jsondata = '['
     c = CameraSetting()
-    jsondata += c.BuildSetting("video_resolution",options)
+    # Add Video Sections
+    jsondata += c.BuildSetting("rec_mode") + ","
+    jsondata += c.BuildSetting("video_standard") + ","
+    jsondata += c.BuildSetting("video_resolution" + vstand) + ","
+    jsondata += c.BuildSetting("timelapse_video_resolution" + vstand) + ","
+    jsondata += c.BuildSetting("timelapse_video") + ","
+    jsondata += c.BuildSetting("video_stamp") + ","
+    jsondata += c.BuildSetting("video_rotate") + ","
+    jsondata += c.BuildSetting("loop_record") + ","
+    jsondata += c.BuildSetting("emergency_file_backup") + ","
+    jsondata += c.BuildSetting("rec_default_mode") + ","
+    jsondata += c.BuildSetting("record_photo_time")
+    # Add Photo Sections
     jsondata += ']'
-    print jsondata
+    #print jsondata
     
     s = SettingsWithNoMenu(size_hint=(1,1))
     s.add_json_panel('Camera %d Settings' %(index+1), self.config[index], data = jsondata)
     for child in s.children[0].children[0].children[0].children[:]:
-        print child,type(child)
-        if isinstance(child, SettingOptions):
-          child.disabled = True
-        else:
-          print child.text
+      print child,type(child)
+      if isinstance(child, SettingOptions):
+        pass
+        #child.disabled = True
+      else:
+        pass
+        #print child.text
           
     self.current_screen.ids.boxCameraSetting.add_widget(s)
     self.applyconfig = True
@@ -1116,13 +1140,20 @@ class Ponerine(ScreenManager):
     
   def ConfigChange(self, section, key, value):
     print "testconfigchange config", self.config
+    print section,key,value
+    #camtext = self.current_screen.ids.lstCamera.text
+    index = 0 #int(camtext.replace('Read Camera ','').replace(' Settings','')) - 1
+    self.cam[index].ChangeSetting(key,value)
+    self.cam[index].SendMsg('{"msg_id":3}')
+    threading.Thread(target=self.DoReadSetting, args=(index,), name="DoReadSetting"+str(index)).start()
+    #instance.text = "Read Camera Settings"
     # self.config.set(section,key,value)
     # token = (section, key)
     # if token == ('setting', 'video_resolution'):
       # global cfgtoken
       # cfgtoken = (section,key,value)
       # self.cfgevent.set()
-      # print "resolution change: %s %s %s" %(section,key,value)    
+      # print "resolution change: %s %s %s" %(section,key,value)
   def CheckDownloadHistory(self, name, date, size):
     if len(self.downloadhistory) > 0:
       for item in self.downloadhistory:
