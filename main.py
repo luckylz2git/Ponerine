@@ -1157,6 +1157,9 @@ class Ponerine(ScreenManager):
     config.add_callback(self.ConfigChange)
     
   def ConfigChange(self, section, key, value):
+    
+    if not self.applyconfig:
+      return
     booloptions = ["video_rotate", "emergency_file_backup", "loop_record", "precise_self_running",
                    "preview_status", "auto_low_light", "buzzer_ring", "osd_enable", "start_wifi_while_booted"]
     for child in self.settings.children[0].children[0].children[0].children[:]:
@@ -1166,7 +1169,21 @@ class Ponerine(ScreenManager):
     index = int(camtext.replace('Camera ','').replace(' Settings','')) - 1    
     if key not in ["wifi_ssid", "wifi_password", "camera_clock"]:
       self.cam[index].ChangeSetting(key, value)
-    
+    # NTSC or PAL
+    if key == "video_standard":
+      c = CameraSetting()
+      r = c.BuildSetting("video_resolution_" + value)
+      opt = []
+      for item in json.loads(r)["options"]:
+        opt.append(json.dumps(item).replace('"',''))
+      #applycfg = self.applyconfig
+      #self.applyconfig = False
+      for child in self.settings.children[0].children[0].children[0].children[:]:
+        if isinstance(child, SettingOptions):
+          if child.key in ["video_resolution", "timelapse_video_resolution"]:
+            child.options = opt
+      #self.applyconfig = applycfg
+
   def CheckDownloadHistory(self, name, date, size):
     if len(self.downloadhistory) > 0:
       for item in self.downloadhistory:
