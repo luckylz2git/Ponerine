@@ -44,7 +44,7 @@ Builder.load_file('data/radiationscreen.kv')
 
 #print "Clock.max_iteration", Clock.max_iteration
 Clock.max_iteration = 100
-__version__='0.1.0'
+__version__='0.1.1'
 
 class ConnectScreen(Screen):
   pass
