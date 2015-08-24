@@ -348,7 +348,8 @@ class CameraSetting():
         "title": "Video Rotation",
         "desc": "Set video rotation, on or off.",
         "section": "setting",
-        "key": "video_rotate"
+        "key": "video_rotate",
+        "values": ["off","on"]
         }
         '''
     return r.replace('[options]',options)
@@ -362,7 +363,8 @@ class CameraSetting():
         "title": "Emergency File Backup",
         "desc": "Set video emergency file backup, on or off.",
         "section": "setting",
-        "key": "emergency_file_backup"
+        "key": "emergency_file_backup",
+        "values": ["off","on"]
         }
         '''
     return r.replace('[options]',options)
@@ -376,7 +378,8 @@ class CameraSetting():
         "title": "Loop Record",
         "desc": "Set video loop record after card is full, on or off.",
         "section": "setting",
-        "key": "loop_record"
+        "key": "loop_record",
+        "values": ["off","on"]
         }
         '''
     return r.replace('[options]',options)
@@ -562,7 +565,8 @@ class CameraSetting():
         "title": "Stop Selftime",
         "desc": "Stop precise selftime.",
         "section": "setting",
-        "key": "precise_self_running"
+        "key": "precise_self_running",
+        "values": ["off","on"]
         }
         '''
     return r.replace('[options]',options)
@@ -591,7 +595,8 @@ class CameraSetting():
         "title": "Preview Status",
         "desc": "Set preview status, on or off.",
         "section": "setting",
-        "key": "preview_status"
+        "key": "preview_status",
+        "values": ["off","on"]
         }
         '''
     return r.replace('[options]',options)
@@ -605,7 +610,8 @@ class CameraSetting():
         "title": "Auto Low Light",
         "desc": "Set auto low light, on or off.",
         "section": "setting",
-        "key": "auto_low_light"
+        "key": "auto_low_light",
+        "values": ["off","on"]
         }
         '''
     return r.replace('[options]',options)
@@ -649,7 +655,8 @@ class CameraSetting():
         "title": "Buzzer Ring",
         "desc": "Set buzzer ring to find your camera, on or off.",
         "section": "setting",
-        "key": "buzzer_ring"
+        "key": "buzzer_ring",
+        "values": ["off","on"]
         }
         '''
     return r.replace('[options]',options)
@@ -693,7 +700,8 @@ class CameraSetting():
         "title": "OSD Enable",
         "desc": "Set on screen display (OSD), on or off.",
         "section": "setting",
-        "key": "osd_enable"
+        "key": "osd_enable",
+        "values": ["off","on"]
         }
         '''
     return r.replace('[options]',options)
@@ -722,7 +730,8 @@ class CameraSetting():
         "title": "Start WiFi",
         "desc": "Set wifi while booted.",
         "section": "setting",
-        "key": "start_wifi_while_booted"
+        "key": "start_wifi_while_booted",
+        "values": ["off","on"]
         }
         '''
     return r.replace('[options]',options)
@@ -766,7 +775,7 @@ class CameraSetting():
         "title": "Video Output Device",
         "desc": "Set video output device type.",
         "section": "setting",
-        "key": "system_mode",
+        "key": "video_output_dev_type",
         "options": [options]
         }
         '''
