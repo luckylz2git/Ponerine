@@ -80,7 +80,7 @@ class Ponerine(ScreenManager):
     #self.cfgtoken = cfgtoken
     #self.cfgevent = cfgevent
     self.applyconfig = False
-
+    self.settings = ""
     self.appexit = appexit
     self.screen = []
     self.cfglist = []
@@ -997,51 +997,44 @@ class Ponerine(ScreenManager):
     self.cam[index].SendMsg('{"msg_id":3}')
     threading.Thread(target=self.DoReadSetting, args=(index,), name="DoReadSetting"+str(index)).start()
     instance.text = "Read Camera Settings"
-
+  
   def DoReadSetting(self, index):
-    for child in self.current_screen.ids.boxCameraSetting.children[:]:
-      if isinstance(child, SettingsWithNoMenu):
-        print "Destory SettingsWithNoMenu"
-        self.destroy_settings()
-      else:
-        print type(child)
-        
     self.current_screen.ids.boxCameraSetting.clear_widgets()
-
     settings = []
     cam = self.cam[index]
-          
     while len(cam.settings) == 0:
       pass
     settings = cam.settings
     cam.settings = []
     if cam.webportopen:
       cam.RenewToken()
-    
-    print json.dumps(cam.cfgdict)
+
     self.BuildConfig(self.config[index], cam.cfgdict)
     self.applyconfig = False
     #debugtxt += "\nCAM %d Settings :\n" %i + settings
     #print "Camera %d" %(index+1), settings
     if cam.webportopen:
       cam.RenewToken()
+      
+    self.BuildSetting(index, self.config[index], settings)
+          
+    self.current_screen.ids.boxCameraSetting.add_widget(self.settings)
+    self.applyconfig = True
+    #print "key:",key,"value:",value
+    #self.current_screen.ids.txtDebug.text = debugtxt
+    
+  def BuildSetting(self, index, config, camsetting):
+    if isinstance(self.settings, SettingsWithNoMenu):
+      return
+      
+    print "start to build setting"
     vstand = ""
-    for item in settings:
+    for item in camsetting:
       for key,value in item.items():
         if key == "video_standard":
           vstand = "_" + value
-          #print "DoSetting",self.config
-          #print "key",key,"value",value
-          #self.config.set("setting",key,value.replace("2304x1296 30P 16:9","* 2304x1296 30P 16:9"))
-          #self.config[index].set('setting',key,value)
-          #cam.SendMsg('{"msg_id":9,"param":"video_resolution"}')
           break
-    #while len(cam.options) == 0:
-      #pass
-    #options = '["* 2304x1296 30P 16:9", ' + json.dumps(cam.options).replace('[','')
-    #options = "" #json.dumps(cam.options)
-    #options = '[]'
-    #print options
+
     jsondata = '['
     c = CameraSetting()
     # Add Video Sections
@@ -1050,32 +1043,57 @@ class Ponerine(ScreenManager):
     jsondata += c.BuildSetting("video_resolution" + vstand) + ","
     jsondata += c.BuildSetting("timelapse_video_resolution" + vstand) + ","
     jsondata += c.BuildSetting("timelapse_video") + ","
+    jsondata += c.BuildSetting("video_quality") + ","
     jsondata += c.BuildSetting("video_stamp") + ","
     jsondata += c.BuildSetting("video_rotate") + ","
     jsondata += c.BuildSetting("loop_record") + ","
     jsondata += c.BuildSetting("emergency_file_backup") + ","
     jsondata += c.BuildSetting("rec_default_mode") + ","
-    jsondata += c.BuildSetting("record_photo_time")
+    jsondata += c.BuildSetting("record_photo_time") + ","
     # Add Photo Sections
+    jsondata += c.BuildSetting("capture_mode") + ","
+    jsondata += c.BuildSetting("photo_size") + ","
+    jsondata += c.BuildSetting("photo_quality") + ","
+    jsondata += c.BuildSetting("photo_stamp") + ","
+    jsondata += c.BuildSetting("precise_cont_time") + ","
+    jsondata += c.BuildSetting("precise_selftime") + ","
+    jsondata += c.BuildSetting("precise_self_running") + ","
+    jsondata += c.BuildSetting("burst_capture_number") + ","
+    jsondata += c.BuildSetting("capture_default_mode") + ","
+    # Add System Sections
+    jsondata += c.BuildSetting("system_mode") + ","
+    jsondata += c.BuildSetting("meter_mode") + ","
+    jsondata += c.BuildSetting("preview_status") + ","
+    jsondata += c.BuildSetting("start_wifi_while_booted") + ","
+    jsondata += c.BuildSetting("auto_low_light") + ","
+    jsondata += c.BuildSetting("auto_power_off") + ","
+    jsondata += c.BuildSetting("buzzer_volume") + ","
+    jsondata += c.BuildSetting("buzzer_ring") + ","
+    jsondata += c.BuildSetting("led_mode") + ","
+    jsondata += c.BuildSetting("osd_enable") + ","
+    jsondata += c.BuildSetting("rc_button_mode") + ","
+    jsondata += c.BuildSetting("video_output_dev_type") + ","
+    jsondata += c.BuildSetting("camera_clock") + ","
+    jsondata += c.BuildSetting("wifi_ssid") + ","
+    jsondata += c.BuildSetting("wifi_password") + ","
+    jsondata += c.BuildSetting("system_default_mode")
     jsondata += ']'
     #print jsondata
     
-    s = SettingsWithNoMenu(size_hint=(1,1))
-    s.add_json_panel('Camera %d Settings' %(index+1), self.config[index], data = jsondata)
-    for child in s.children[0].children[0].children[0].children[:]:
-      print child,type(child)
+    self.settings = SettingsWithNoMenu(size_hint=(1,1))
+    self.settings.add_json_panel('Camera %d Settings' %(index+1), config, data = jsondata)
+    for child in self.settings.children[0].children[0].children[0].children[:]:
+      #print child,type(child)
       if isinstance(child, SettingOptions):
-        pass
-        #child.disabled = True
-      else:
-        pass
-        #print child.text
-          
-    self.current_screen.ids.boxCameraSetting.add_widget(s)
-    self.applyconfig = True
-    #print "key:",key,"value:",value
-    #self.current_screen.ids.txtDebug.text = debugtxt
-  
+        print "SettingOptions", child.key
+        # directly change options
+        #if child.key == "video_resolution":
+          #child.options = ["2304x1296 30P 16:9","2304x1296 29P 16:9", "2304x1296 28P 16:9"]
+      elif isinstance(child, Label):
+        print "title: ", child.text
+        # directly change setting title
+        #child.text = 'Camera 2 Settings'
+    
   def BuildConfig(self, config, camcfgdict):
     if camcfgdict == {}:
       config.setdefaults("setting", {
@@ -1139,21 +1157,16 @@ class Ponerine(ScreenManager):
     config.add_callback(self.ConfigChange)
     
   def ConfigChange(self, section, key, value):
-    print "testconfigchange config", self.config
-    print section,key,value
-    #camtext = self.current_screen.ids.lstCamera.text
-    index = 0 #int(camtext.replace('Read Camera ','').replace(' Settings','')) - 1
-    self.cam[index].ChangeSetting(key,value)
-    self.cam[index].SendMsg('{"msg_id":3}')
-    threading.Thread(target=self.DoReadSetting, args=(index,), name="DoReadSetting"+str(index)).start()
-    #instance.text = "Read Camera Settings"
-    # self.config.set(section,key,value)
-    # token = (section, key)
-    # if token == ('setting', 'video_resolution'):
-      # global cfgtoken
-      # cfgtoken = (section,key,value)
-      # self.cfgevent.set()
-      # print "resolution change: %s %s %s" %(section,key,value)
+    booloptions = ["video_rotate", "emergency_file_backup", "loop_record", "precise_self_running",
+                   "preview_status", "auto_low_light", "buzzer_ring", "osd_enable", "start_wifi_while_booted"]
+    for child in self.settings.children[0].children[0].children[0].children[:]:
+      if isinstance(child, Label):
+        camtext = child.text #Camera 1 Settings
+        break
+    index = int(camtext.replace('Camera ','').replace(' Settings','')) - 1    
+    if key not in ["wifi_ssid", "wifi_password", "camera_clock"]:
+      self.cam[index].ChangeSetting(key, value)
+    
   def CheckDownloadHistory(self, name, date, size):
     if len(self.downloadhistory) > 0:
       for item in self.downloadhistory:
