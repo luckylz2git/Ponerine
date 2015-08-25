@@ -981,6 +981,14 @@ class Ponerine(ScreenManager):
   
   def DoFileTaken(self, index):
     print "DoFileTaken start %d" %index
+    self.cam[index].setok.wait(15)
+    if self.cam[index].setok.isSet() and len(self.cam[index].settings) > 0:
+      debugtxt = self.current_screen.ids.txtDebug.text
+      for item in self.cam[index].settings:
+        for key,value in item.items():
+          if key in ["video_resolution","timelapse_video_resolution","capture_mode"]:
+            debugtxt += "\nCAM %d %s: %s" %(index+1,key,value)
+      self.current_screen.ids.txtDebug.text = debugtxt + "\n"
     while not self.cam[index].quit.isSet():
       self.cam[index].taken.wait(1)
       if self.cam[index].taken.isSet() and self.current_screen.name == "camera":

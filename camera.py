@@ -128,7 +128,7 @@ class Camera():
       self.SendMsg('{"msg_id":258}')
     self.Disconnect()
   
-  def RenewToken():
+  def RenewToken(self):
     self.SendMsg('{"msg_id":258}')
     self.SendMsg('{"msg_id":257}')
     
@@ -347,6 +347,7 @@ class Camera():
     # recording time
     elif data["msg_id"] == 515:
       self.recordtime = self.RecordTime(data["param"])
+      time.sleep(1)
       if self.showtime and self.recording:
         self.SendMsg('{"msg_id":515}')
     # change dir
