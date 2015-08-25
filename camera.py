@@ -54,6 +54,8 @@ class Camera():
     self.dlopen = threading.Event()
     self.setok = threading.Event()
     self.seterror = threading.Event()
+    self.setallok = threading.Event()
+    self.setallerror = threading.Event()
     self.optok = threading.Event()
     self.opterror = threading.Event()
     
@@ -83,6 +85,8 @@ class Camera():
     
     self.setok.clear()
     self.seterror.clear()
+    self.setallok.clear()
+    self.setallerror.clear()
     self.optok.clear()
     self.opterror.clear()
     
@@ -290,7 +294,7 @@ class Camera():
       elif data["msg_id"] == 2:
         self.seterror.set()
       elif data["msg_id"] == 3:
-        self.seterror.set()
+        self.setallerror.set()
       data["msg_id"] = 0
     # get token
     if data["msg_id"] == 257:
@@ -314,7 +318,7 @@ class Camera():
       for item in data["param"]:
         self.cfgdict.update(item)
       self.settings = data["param"]
-      self.setok.set()
+      self.setallok.set()
       #print json.dumps(self.cfgdict,indent=2)
       #self.status["config"] = data["param"]
     # battery status
@@ -476,11 +480,17 @@ class Camera():
     self.SendMsg('{"msg_id":1281,"param":"%s"}'%file)
   
   def ReadAllStatus(self):
-    self.setok.clear()
-    self.seterror.clear()
+    self.setallok.clear()
+    self.setallerror.clear()
     self.SendMsg('{"msg_id":3}')
-    threading.Thread(target=self.ThreadChangeSetting, name="ReadAllStatus").start()
-    
+    threading.Thread(target=self.ThreadReadAllStatus, name="ThreadReadAllStatus").start()
+  
+  def ThreadReadAllStatus(self):
+    self.setallok.wait(60)
+    if not self.setallok.isSet():
+      print "ReadAllStatus error"
+      self.setallerror.set()
+  
   def ReadSetting(self, type=""):
     self.optcount = 0
     self.optok.clear()
@@ -501,8 +511,8 @@ class Camera():
     self.SendMsg('{"msg_id":2,"type":"%s","param":"%s"}' %(type,value))
     threading.Thread(target=self.ThreadChangeSetting, name="ThreadChangeSetting").start()
 
-  def ThreadChangeSetting(self, timeout = 30):
-    self.setok.wait(timeout)
+  def ThreadChangeSetting(self):
+    self.setok.wait(30)
     if not self.setok.isSet():
       print "setting error"
       self.seterror.set()

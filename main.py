@@ -981,8 +981,8 @@ class Ponerine(ScreenManager):
   
   def DoFileTaken(self, index):
     print "DoFileTaken start %d" %index
-    self.cam[index].setok.wait(15)
-    if self.cam[index].setok.isSet() and len(self.cam[index].settings) > 0:
+    self.cam[index].setallok.wait(15)
+    if self.cam[index].setallok.isSet() and len(self.cam[index].settings) > 0:
       debugtxt = self.current_screen.ids.txtDebug.text
       for item in self.cam[index].settings:
         for key,value in item.items():
@@ -1238,11 +1238,11 @@ class Ponerine(ScreenManager):
     if key == "video_standard":
       self.cam[index].ReadAllStatus()
       while True:
-        self.cam[index].setok.wait(1)
-        if self.cam[index].setok.isSet():
+        self.cam[index].setallok.wait(1)
+        if self.cam[index].setallok.isSet():
           title.text = camtext + ' OK-GET'
           break
-        if self.cam[index].seterror.isSet():
+        if self.cam[index].setallerror.isSet():
           #title.text = "DoConfigChange ReadAllStatus Error"
           print "DoConfigChange ReadAllStatus Error"
           #time.sleep(30)
