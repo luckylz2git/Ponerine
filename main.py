@@ -1193,6 +1193,11 @@ class Ponerine(ScreenManager):
   def ConfigChange(self, section, key, value):
     if self.applyconfig:
       threading.Thread(target=self.DoConfigChange, args=(section,key,value,),name="DoConfigChange").start()
+      
+  def DoRefreshTitle(self, title, text):
+    print "DoRefreshTitle"
+    time.sleep(2)
+    title.text = text
     
   def DoConfigChange(self, section, key, value):
     booloptions = ["video_rotate", "emergency_file_backup", "loop_record", "precise_self_running",
@@ -1234,6 +1239,7 @@ class Ponerine(ScreenManager):
           #time.sleep(30)
           title.text = camtext + ' ERROR-SET'
           return
+    
     # NTSC or PAL
     if key == "video_standard":
       self.cam[index].ReadAllStatus()
@@ -1277,6 +1283,7 @@ class Ponerine(ScreenManager):
                 child.options = opt
                 
       self.applyconfig = True
+    threading.Thread(target=self.DoRefreshTitle, args=(title,camtext,),name="DoRefreshTitle").start()
     
   def CheckDownloadHistory(self, name, date, size):
     if len(self.downloadhistory) > 0:
