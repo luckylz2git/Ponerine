@@ -23,7 +23,7 @@ from kivy.uix.listview import ListView, ListItemButton, ListItemLabel, Composite
 from kivy.adapters.models import SelectableDataItem
 
 from kivy.config import ConfigParser
-from kivy.uix.settings import SettingsWithNoMenu,SettingOptions
+from kivy.uix.settings import SettingsWithNoMenu,SettingOptions,SettingBoolean,SettingString
 
 # Camera Object[camera.py]
 from camera import Camera
@@ -1195,7 +1195,6 @@ class Ponerine(ScreenManager):
       threading.Thread(target=self.DoConfigChange, args=(section,key,value,),name="DoConfigChange").start()
     
   def DoConfigChange(self, section, key, value):
-    #title = self.settingtitle.text
     booloptions = ["video_rotate", "emergency_file_backup", "loop_record", "precise_self_running",
                  "preview_status", "auto_low_light", "buzzer_ring", "osd_enable", "start_wifi_while_booted"]
     readonlyopts = ["streaming_status",
@@ -1218,7 +1217,8 @@ class Ponerine(ScreenManager):
                   "camera_clock"]
     for child in self.settings.children[0].children[0].children[0].children[:]:
       if isinstance(child, Label):
-        camtext = child.text #Camera 1 Settings
+        title = child
+        camtext = child.text.replace(' OK','').replace(' ERROR','').replace('-SET','').replace('-GET','') #Camera 1 Settings
         break
     index = int(camtext.replace('Camera ','').replace(' Settings','')) - 1    
     if key not in readonlyopts:
@@ -1226,9 +1226,13 @@ class Ponerine(ScreenManager):
       while True:
         self.cam[index].setok.wait(1)
         if self.cam[index].setok.isSet():
+          title.text = camtext + ' OK-SET'
           break
         if self.cam[index].seterror.isSet():
-          print "ReadAllStatus ChangeSetting Error"
+          #title.text = "DoConfigChange %s %s ChangeSetting Error" %(key,value)
+          print "DoConfigChange %s %s ChangeSetting Error" %(key,value)
+          #time.sleep(30)
+          title.text = camtext + ' ERROR-SET'
           return
     # NTSC or PAL
     if key == "video_standard":
@@ -1236,42 +1240,43 @@ class Ponerine(ScreenManager):
       while True:
         self.cam[index].setok.wait(1)
         if self.cam[index].setok.isSet():
+          title.text = camtext + ' OK-GET'
           break
         if self.cam[index].seterror.isSet():
-          print "ReadAllStatus DoConfigChange Error"
+          #title.text = "DoConfigChange ReadAllStatus Error"
+          print "DoConfigChange ReadAllStatus Error"
+          #time.sleep(30)
+          title.text = camtext + ' ERROR-GET'
           return
       c = CameraSetting()
-      r = c.BuildSetting("video_resolution_" + value)
+      print "video_resolution_%s" %value
+      r = c.BuildSetting("video_resolution_%s"%value)
       opt = []
       for item in json.loads(r)["options"]:
         opt.append(json.dumps(item).replace('"',''))
-      applycfg = self.applyconfig
+      #applycfg = self.applyconfig
       self.applyconfig = False
       ## Solution 1
-      for item in self.cam[index].settings:
-        for itemkey,itemvalue in item.items():
-          self.config[index].set("setting",itemkey,itemvalue)
+      #for item in self.cam[index].settings:
+      #  for itemkey,itemvalue in item.items():
+          #print item,json.dumps(itemkey),json.dumps(itemvalue)
+          #self.config[index].set("setting",itemkey,itemvalue)
           #if itemkey == "video_resolution":
           #  self.config[index].set("setting",itemkey,itemvalue)
           #elif itemkey == "timelapse_video_resolution":
           #  self.config[index].set("setting",itemkey,itemvalue)
       
       ## Solution 2
-      # for child in self.settings.children[0].children[0].children[0].children[:]:
-        # if isinstance(child, SettingOptions):
-          # if child.key == "video_resolution":
-            # child.options = opt
-            # for item in self.cam[index].settings:
-              # for itmkey, itmvalue in item.items():
-                # if itmkey == "video_resolution":
-                  # child.value = itmvalue
-          # elif child.key == "timelapse_video_resolution":
-            # child.options = opt
-            # for item in self.cam[index].settings:
-              # for itmkey, itmvalue in item.items():
-                # if itmkey == "timelapse_video_resolution":
-                  # child.value = itmvalue
-      self.applyconfig = applycfg
+      for child in self.settings.children[0].children[0].children[0].children[:]:
+        if isinstance(child, (SettingOptions,SettingBoolean,SettingString)):
+          for item in self.cam[index].settings:
+            for itmkey, itmvalue in item.items():
+              if child.key == itmkey:
+                child.value = itmvalue
+              if child.key in ["video_resolution","timelapse_video_resolution"]:
+                child.options = opt
+                
+      self.applyconfig = True
     
   def CheckDownloadHistory(self, name, date, size):
     if len(self.downloadhistory) > 0:
