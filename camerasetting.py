@@ -87,12 +87,45 @@ class CameraSetting():
       return self.system_mode(options)
     elif type == "video_output_dev_type":
       return self.video_output_dev_type(options)
+    #=============================
+    # System Readonly
+    #=============================
     elif type == "camera_clock":
       return self.camera_clock(options)
     elif type == "wifi_ssid":
       return self.wifi_ssid(options)
     elif type == "wifi_password":
       return self.wifi_password(options)
+    elif type == "app_status":
+      return self.app_status(options)
+    elif type == "dev_functions":
+      return self.dev_functions(options)
+    elif type == "dual_stream_status":
+      return self.dual_stream_status(options)
+    elif type == "streaming_status":
+      return self.streaming_status(options)
+    elif type == "support_auto_low_light":
+      return self.support_auto_low_light(options)
+    elif type == "piv_enable":
+      return self.piv_enable(options)
+    elif type == "quick_record_time":
+      return self.quick_record_time(options)
+    elif type == "timelapse_photo":
+      return self.timelapse_photo(options)
+    elif type == "precise_cont_capturing":
+      return self.precise_cont_capturing(options)
+    elif type == "precise_self_remain_time":
+      return self.precise_self_remain_time(options)
+    elif type == "sd_card_status":
+      return self.sd_card_status(options)
+    elif type == "sdcard_need_format":
+      return self.sdcard_need_format(options)
+    elif type == "serial_number":
+      return self.serial_number(options)
+    elif type == "hw_version":
+      return self.hw_version(options)
+    elif type == "sw_version":
+      return self.sw_version(options)
     else:
       return ""
       
@@ -788,7 +821,7 @@ class CameraSetting():
         {
         "type": "string",
         "title": "Camera Clock",
-        "desc": "Set camera clock.",
+        "desc": "Readonly now, set camera clock.",
         "section": "setting",
         "key": "camera_clock"
         }
@@ -802,7 +835,7 @@ class CameraSetting():
         {
         "type": "string",
         "title": "WiFi SSID",
-        "desc": "Set camera WiFi SSID.",
+        "desc": "Readonly now, set camera WiFi SSID.",
         "section": "setting",
         "key": "wifi_ssid"
         }
@@ -816,13 +849,222 @@ class CameraSetting():
         {
         "type": "string",
         "title": "WiFi Password",
-        "desc": "Set camera WiFi password.",
+        "desc": "Readonly now, set camera WiFi password.",
         "section": "setting",
         "key": "wifi_password"
         }
         '''
     return r.replace('[options]',options)
+  
+  def app_status(self, options):
+    if options == "":
+      options = '["idle", "vf", "record", "recording", "capture", "precise_cont_capturing", "burst_capturing", "precise_capturing", "operation_done"]'
+    r = '''
+        {
+        "type": "string",
+        "title": "App Status",
+        "desc": "Readonly, Current Camera App Status.",
+        "section": "setting",
+        "key": "app_status"
+        }
+        '''
+    return r.replace('[options]',options)
+    
+  def dev_functions(self, options):
+    if options == "":
+      options = '["2615"]'
+    r = '''
+        {
+        "type": "string",
+        "title": "Dev Function",
+        "desc": "Readonly, Dev Function Number.",
+        "section": "setting",
+        "key": "dev_functions"
+        }
+        '''
+    return r.replace('[options]',options)
+    
+  def dual_stream_status(self, options):
+    if options == "":
+      options = '["on","off"]'
+    r = '''
+        {
+        "type": "string",
+        "title": "Dual Stream Status",
+        "desc": "Readonly, dual stream status.",
+        "section": "setting",
+        "key": "dual_stream_status"
+        }
+        '''
+    return r.replace('[options]',options)
 
+  def streaming_status(self, options):
+    if options == "":
+      options = '["on","off"]'
+    r = '''
+        {
+        "type": "string",
+        "title": "Streaming Status",
+        "desc": "Readonly, streaming status.",
+        "section": "setting",
+        "key": "streaming_status"
+        }
+        '''
+    return r.replace('[options]',options)
+  
+  def support_auto_low_light(self, options):
+    if options == "":
+      options = '["on","off"]'
+    r = '''
+        {
+        "type": "string",
+        "title": "Support Auto Low Light",
+        "desc": "Readonly, support auto low light.",
+        "section": "setting",
+        "key": "support_auto_low_light"
+        }
+        '''
+    return r.replace('[options]',options)
+    
+  def piv_enable(self, options):
+    if options == "":
+      options = '["on","off"]'
+    r = '''
+        {
+        "type": "string",
+        "title": "PIV Enable",
+        "desc": "Readonly, picture in video enable.",
+        "section": "setting",
+        "key": "piv_enable"
+        }
+        '''
+    return r.replace('[options]',options)
+    
+  def quick_record_time(self, options):
+    if options == "":
+      options = '["0","1","2",???]'
+    r = '''
+        {
+        "type": "string",
+        "title": "Quick Record Time",
+        "desc": "Readonly, quick record time.",
+        "section": "setting",
+        "key": "quick_record_time"
+        }
+        '''
+    return r.replace('[options]',options)
+    
+  def timelapse_photo(self, options):
+    if options == "":
+      options = '["off", "2"]'
+    r = '''
+        {
+        "type": "string",
+        "title": "Timelapse Photo",
+        "desc": "Readonly, timelapse photo.",
+        "section": "setting",
+        "key": "timelapse_photo"
+        }
+        '''
+    return r.replace('[options]',options)
+  
+  def precise_cont_capturing(self, options):
+    if options == "":
+      options = '["on", "off"]'
+    r = '''
+        {
+        "type": "string",
+        "title": "Precise Continue Capturing",
+        "desc": "Readonly, precise continue capturing.",
+        "section": "setting",
+        "key": "precise_cont_capturing"
+        }
+        '''
+    return r.replace('[options]',options)
+
+  def precise_self_remain_time(self, options):
+    if options == "":
+      options = '["0","1","2",???]'
+    r = '''
+        {
+        "type": "string",
+        "title": "Precise Self Remain Time",
+        "desc": "Readonly, precise self remain time.",
+        "section": "setting",
+        "key": "precise_self_remain_time"
+        }
+        '''
+    return r.replace('[options]',options)
+
+  def sd_card_status(self, options):
+    if options == "":
+      options = '["insert",???]'
+    r = '''
+        {
+        "type": "string",
+        "title": "SD Card Status",
+        "desc": "Readonly, sd card status.",
+        "section": "setting",
+        "key": "sd_card_status"
+        }
+        '''
+    return r.replace('[options]',options)
+    
+  def sdcard_need_format(self, options):
+    if options == "":
+      options = '["no-need",???]'
+    r = '''
+        {
+        "type": "string",
+        "title": "SD Card Need Format",
+        "desc": "Readonly, sd card need format.",
+        "section": "setting",
+        "key": "sdcard_need_format"
+        }
+        '''
+    return r.replace('[options]',options)
+    
+  def serial_number(self, options):
+    if options == "":
+      options = '[""]'
+    r = '''
+        {
+        "type": "string",
+        "title": "Serial Number",
+        "desc": "Readonly, serial number.",
+        "section": "setting",
+        "key": "serial_number"
+        }
+        '''
+    return r.replace('[options]',options)
+    
+  def hw_version(self, options):
+    if options == "":
+      options = '[""]'
+    r = '''
+        {
+        "type": "string",
+        "title": "Hardware Version",
+        "desc": "Readonly, hardware version.",
+        "section": "setting",
+        "key": "hw_version"
+        }
+        '''
+    return r.replace('[options]',options)
+    
+  def sw_version(self, options):
+    if options == "":
+      options = '[""]'
+    r = '''
+        {
+        "type": "string",
+        "title": "Software Version",
+        "desc": "Readonly, software version.",
+        "section": "setting",
+        "key": "sw_version"
+        }
+        '''
+    return r.replace('[options]',options)
 '''
 ==================
 Start Read Setting

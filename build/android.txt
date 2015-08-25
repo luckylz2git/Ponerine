@@ -1,3 +1,3 @@
-title=Ponerine Debug 0.1.0
+title=Ponerine Debug 0.1.1
 author=chn.luckylz.ponerine
 orientation=portrait

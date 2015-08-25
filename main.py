@@ -432,12 +432,14 @@ class Ponerine(ScreenManager):
       self.Camera()
       i = 0
       for cam in self.cam:
-        time.sleep(1)
+        #time.sleep(1)
         threading.Thread(target=self.DoWifi, args=(cam.wifioff,), name="DoWifi"+str(i)).start()
-        time.sleep(1)
+        #time.sleep(1)
         threading.Thread(target=self.DoFileTaken, args=(i,), name="DoFileTaken"+str(i)).start()
         #time.sleep(1)
         #threading.Thread(target=self.DoConfig, args=(self.cfgevent,i,), name="DoConfig"+str(i)).start()
+        if cam.cfgdict == {}:
+          cam.SendMsg('{"msg_id":3}')
         i +=1
   
   def DoDisconnect(self):
@@ -981,7 +983,7 @@ class Ponerine(ScreenManager):
     print "DoFileTaken start %d" %index
     while not self.cam[index].quit.isSet():
       self.cam[index].taken.wait(1)
-      if self.cam[index].taken.isSet():
+      if self.cam[index].taken.isSet() and self.current_screen.name == "camera":
         debugtxt = self.current_screen.ids.txtDebug.text
         if self.cam[index].filetaken <> "":
           debugtxt += "\nCAM %d : " %(index+1) + self.cam[index].filetaken
@@ -994,7 +996,7 @@ class Ponerine(ScreenManager):
     if camtext == "Read Camera Settings":
       return
     index = int(camtext.replace('Read Camera ','').replace(' Settings','')) - 1
-    self.cam[index].SendMsg('{"msg_id":3}')
+    
     threading.Thread(target=self.DoReadSetting, args=(index,), name="DoReadSetting"+str(index)).start()
     instance.text = "Read Camera Settings"
   
@@ -1002,12 +1004,19 @@ class Ponerine(ScreenManager):
     self.current_screen.ids.boxCameraSetting.clear_widgets()
     settings = []
     cam = self.cam[index]
-    while len(cam.settings) == 0:
-      pass
-    settings = cam.settings
-    cam.settings = []
-    if cam.webportopen:
-      cam.RenewToken()
+    if cam.cfgdict == {}:
+      cam.ReadAllStatus()
+      while True:
+        cam.setok.wait(1)
+        if cam.setok.isSet():
+          break
+        if cam.seterror.isSet():
+          print "DoReadSetting ReadAllStatus Error"
+          return
+      settings = cam.settings
+      cam.settings = []
+      if cam.webportopen:
+        cam.RenewToken()
 
     self.BuildConfig(self.config[index], cam.cfgdict)
     self.applyconfig = False
@@ -1039,6 +1048,7 @@ class Ponerine(ScreenManager):
     c = CameraSetting()
     # Add Video Sections
     jsondata += c.BuildSetting("rec_mode") + ","
+    jsondata += c.BuildSetting("rec_default_mode") + ","
     jsondata += c.BuildSetting("video_standard") + ","
     jsondata += c.BuildSetting("video_resolution" + vstand) + ","
     jsondata += c.BuildSetting("timelapse_video_resolution" + vstand) + ","
@@ -1048,10 +1058,10 @@ class Ponerine(ScreenManager):
     jsondata += c.BuildSetting("video_rotate") + ","
     jsondata += c.BuildSetting("loop_record") + ","
     jsondata += c.BuildSetting("emergency_file_backup") + ","
-    jsondata += c.BuildSetting("rec_default_mode") + ","
     jsondata += c.BuildSetting("record_photo_time") + ","
     # Add Photo Sections
     jsondata += c.BuildSetting("capture_mode") + ","
+    jsondata += c.BuildSetting("capture_default_mode") + ","
     jsondata += c.BuildSetting("photo_size") + ","
     jsondata += c.BuildSetting("photo_quality") + ","
     jsondata += c.BuildSetting("photo_stamp") + ","
@@ -1059,9 +1069,9 @@ class Ponerine(ScreenManager):
     jsondata += c.BuildSetting("precise_selftime") + ","
     jsondata += c.BuildSetting("precise_self_running") + ","
     jsondata += c.BuildSetting("burst_capture_number") + ","
-    jsondata += c.BuildSetting("capture_default_mode") + ","
     # Add System Sections
     jsondata += c.BuildSetting("system_mode") + ","
+    jsondata += c.BuildSetting("system_default_mode") + ","
     jsondata += c.BuildSetting("meter_mode") + ","
     jsondata += c.BuildSetting("preview_status") + ","
     jsondata += c.BuildSetting("start_wifi_while_booted") + ","
@@ -1073,24 +1083,40 @@ class Ponerine(ScreenManager):
     jsondata += c.BuildSetting("osd_enable") + ","
     jsondata += c.BuildSetting("rc_button_mode") + ","
     jsondata += c.BuildSetting("video_output_dev_type") + ","
+    # Add System Readonly
     jsondata += c.BuildSetting("camera_clock") + ","
     jsondata += c.BuildSetting("wifi_ssid") + ","
     jsondata += c.BuildSetting("wifi_password") + ","
-    jsondata += c.BuildSetting("system_default_mode")
+    jsondata += c.BuildSetting("serial_number") + ","
+    jsondata += c.BuildSetting("hw_version") + ","
+    jsondata += c.BuildSetting("sw_version") #+ ","
+    #jsondata += c.BuildSetting("dev_functions") + ","
+    #jsondata += c.BuildSetting("app_status") + ","
+    #jsondata += c.BuildSetting("sd_card_status") + ","
+    #jsondata += c.BuildSetting("sdcard_need_format") + ","
+    #jsondata += c.BuildSetting("streaming_status") + ","
+    #jsondata += c.BuildSetting("dual_stream_status") + ","
+    #jsondata += c.BuildSetting("support_auto_low_light") + ","
+    #jsondata += c.BuildSetting("piv_enable") + ","
+    #jsondata += c.BuildSetting("timelapse_photo") + ","
+    #jsondata += c.BuildSetting("quick_record_time") + ","
+    #jsondata += c.BuildSetting("precise_cont_capturing") + ","
+    #jsondata += c.BuildSetting("precise_self_remain_time")
     jsondata += ']'
     #print jsondata
     
     self.settings = SettingsWithNoMenu(size_hint=(1,1))
     self.settings.add_json_panel('Camera %d Settings' %(index+1), config, data = jsondata)
-    for child in self.settings.children[0].children[0].children[0].children[:]:
+    #for child in self.settings.children[0].children[0].children[0].children[:]:
       #print child,type(child)
-      if isinstance(child, SettingOptions):
-        print "SettingOptions", child.key
+      #if isinstance(child, SettingOptions):
+        #print "SettingOptions", child.key
         # directly change options
         #if child.key == "video_resolution":
           #child.options = ["2304x1296 30P 16:9","2304x1296 29P 16:9", "2304x1296 28P 16:9"]
-      elif isinstance(child, Label):
-        print "title: ", child.text
+      #elif isinstance(child, Label):
+        #print "title: ", child.text
+        #self.settingtitle = child
         # directly change setting title
         #child.text = 'Camera 2 Settings'
     
@@ -1157,33 +1183,88 @@ class Ponerine(ScreenManager):
     config.add_callback(self.ConfigChange)
     
   def ConfigChange(self, section, key, value):
+    if self.applyconfig:
+      threading.Thread(target=self.DoConfigChange, args=(section,key,value,),name="DoConfigChange").start()
     
-    if not self.applyconfig:
-      return
+  def DoConfigChange(self, section, key, value):
+    #title = self.settingtitle.text
     booloptions = ["video_rotate", "emergency_file_backup", "loop_record", "precise_self_running",
-                   "preview_status", "auto_low_light", "buzzer_ring", "osd_enable", "start_wifi_while_booted"]
+                 "preview_status", "auto_low_light", "buzzer_ring", "osd_enable", "start_wifi_while_booted"]
+    readonlyopts = ["streaming_status",
+                  "piv_enable",
+                  "app_status",
+                  "sdcard_need_format",
+                  "precise_cont_capturing",
+                  "timelapse_photo",
+                  "quick_record_time",
+                  "serial_number",
+                  "sd_card_status",
+                  "precise_self_remain_time",
+                  "dual_stream_status",
+                  "sw_version",
+                  "hw_version",
+                  "support_auto_low_light",
+                  "dev_functions",
+                  "wifi_ssid",
+                  "wifi_password",
+                  "camera_clock"]
     for child in self.settings.children[0].children[0].children[0].children[:]:
       if isinstance(child, Label):
         camtext = child.text #Camera 1 Settings
         break
     index = int(camtext.replace('Camera ','').replace(' Settings','')) - 1    
-    if key not in ["wifi_ssid", "wifi_password", "camera_clock"]:
+    if key not in readonlyopts:
       self.cam[index].ChangeSetting(key, value)
+      while True:
+        self.cam[index].setok.wait(1)
+        if self.cam[index].setok.isSet():
+          break
+        if self.cam[index].seterror.isSet():
+          print "ReadAllStatus ChangeSetting Error"
+          return
     # NTSC or PAL
     if key == "video_standard":
+      self.cam[index].ReadAllStatus()
+      while True:
+        self.cam[index].setok.wait(1)
+        if self.cam[index].setok.isSet():
+          break
+        if self.cam[index].seterror.isSet():
+          print "ReadAllStatus DoConfigChange Error"
+          return
       c = CameraSetting()
       r = c.BuildSetting("video_resolution_" + value)
       opt = []
       for item in json.loads(r)["options"]:
         opt.append(json.dumps(item).replace('"',''))
-      #applycfg = self.applyconfig
-      #self.applyconfig = False
-      for child in self.settings.children[0].children[0].children[0].children[:]:
-        if isinstance(child, SettingOptions):
-          if child.key in ["video_resolution", "timelapse_video_resolution"]:
-            child.options = opt
-      #self.applyconfig = applycfg
-
+      applycfg = self.applyconfig
+      self.applyconfig = False
+      ## Solution 1
+      for item in self.cam[index].settings:
+        for itemkey,itemvalue in item.items():
+          self.config[index].set("setting",itemkey,itemvalue)
+          #if itemkey == "video_resolution":
+          #  self.config[index].set("setting",itemkey,itemvalue)
+          #elif itemkey == "timelapse_video_resolution":
+          #  self.config[index].set("setting",itemkey,itemvalue)
+      
+      ## Solution 2
+      # for child in self.settings.children[0].children[0].children[0].children[:]:
+        # if isinstance(child, SettingOptions):
+          # if child.key == "video_resolution":
+            # child.options = opt
+            # for item in self.cam[index].settings:
+              # for itmkey, itmvalue in item.items():
+                # if itmkey == "video_resolution":
+                  # child.value = itmvalue
+          # elif child.key == "timelapse_video_resolution":
+            # child.options = opt
+            # for item in self.cam[index].settings:
+              # for itmkey, itmvalue in item.items():
+                # if itmkey == "timelapse_video_resolution":
+                  # child.value = itmvalue
+      self.applyconfig = applycfg
+    
   def CheckDownloadHistory(self, name, date, size):
     if len(self.downloadhistory) > 0:
       for item in self.downloadhistory:

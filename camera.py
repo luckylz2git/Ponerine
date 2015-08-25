@@ -289,6 +289,8 @@ class Camera():
         self.dlstop.set()
       elif data["msg_id"] == 2:
         self.seterror.set()
+      elif data["msg_id"] == 3:
+        self.seterror.set()
       data["msg_id"] = 0
     # get token
     if data["msg_id"] == 257:
@@ -308,11 +310,12 @@ class Camera():
     elif data["msg_id"] == 3:
       #self.settings = json.dumps(data["param"], indent=0).replace("{\n","{").replace("\n}","}")
       #if self.cfgdict == {}:
-      print "first time msg_id 3"
+      #print "first time msg_id 3"
       for item in data["param"]:
         self.cfgdict.update(item)
       self.settings = data["param"]
-      print json.dumps(self.cfgdict,indent=2)
+      self.setok.set()
+      #print json.dumps(self.cfgdict,indent=2)
       #self.status["config"] = data["param"]
     # battery status
     elif data["msg_id"] == 9:
@@ -471,6 +474,12 @@ class Camera():
     self.dlerror.clear()
     self.SendMsg('{"msg_id":1281,"param":"%s"}'%file)
   
+  def ReadAllStatus(self):
+    self.setok.clear()
+    self.seterror.clear()
+    self.SendMsg('{"msg_id":3}')
+    threading.Thread(target=self.ThreadChangeSetting, name="ReadAllStatus").start()
+    
   def ReadSetting(self, type=""):
     self.optcount = 0
     self.optok.clear()
@@ -491,11 +500,9 @@ class Camera():
     self.SendMsg('{"msg_id":2,"type":"%s","param":"%s"}' %(type,value))
     threading.Thread(target=self.ThreadChangeSetting, name="ThreadChangeSetting").start()
 
-  def ThreadChangeSetting(self):
-    self.setok.wait(15)
-    if self.setok.isSet():
-      print "setting changed"
-    else:
+  def ThreadChangeSetting(self, timeout = 30):
+    self.setok.wait(timeout)
+    if not self.setok.isSet():
       print "setting error"
       self.seterror.set()
     
