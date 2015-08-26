@@ -1144,11 +1144,11 @@ class Ponerine(ScreenManager):
   def BuildConfig(self, config, camcfgdict):
     # this is hacking function
     config.setdefaults("radiation",{
-      "hack_wifi_mode": "",
-      "hack_video_resolution": "",
-      "hack_timelapse_video_resolution": "",
-      "hack_video_bitrate": "",
-      "hack_raw_photo": ""
+      "hack_wifi_mode": "Camera Default",
+      "hack_video_resolution": "Camera Default",
+      "hack_timelapse_video_resolution": "Camera Default",
+      "hack_video_bitrate": "Camera Default",
+      "hack_raw_photo": "Camera Default"
       })
     if camcfgdict == {}:      
       config.setdefaults("setting", {

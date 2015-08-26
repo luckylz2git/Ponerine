@@ -1177,7 +1177,6 @@ class CameraSetting():
       options = '''
           [
           "RAW+JPG Pictures", 
-          "RAW Pictures Only", 
           "Camera Default"
           ]
           '''
@@ -1194,6 +1193,13 @@ class CameraSetting():
     return r.replace('[options]',options)
 
 '''
+============================
+Resolution Addr on FW 1.2.10
+============================
+Video
+writeb 0xC06CE446 0x02
+Timelapse
+writeb 0xC06CE4D9 0x02
 ============================
 Bitrate Address on FW 1.2.10
 ============================
@@ -1214,6 +1220,16 @@ Bitrate Values
 40Mbps: 0x4220
 45Mbps: 0x4234
 50Mbps: 0x4248
+==============
+RAW+JPG Photos
+==============
+t app test debug_dump 14
+debug_dump [skip]: 
+0x0 default
+0x1 skip dump_raw
+0x2 skip_dump_yuv
+0x4 skip_dump_header
+0x8 skip_dump_idsp_cfg
 '''
 
 '''
