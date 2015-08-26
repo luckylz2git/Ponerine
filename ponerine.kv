@@ -310,3 +310,42 @@
           on_release:
             root.apply = False
             root.dismiss()
+
+<RebootPopup>:
+  auto_dismiss: False
+  #title: 'Reboot'
+  BoxLayout:
+    orientation: 'vertical'
+    spacing: 5
+    
+    #Widget:
+      #size_hint: 1, None
+      #size: root.width, root.width/50
+    Label:
+      text: "Camera %d needs reboot to make settings effective .\nDo you want to reboot now ?" %(root.index+1)
+      font_size: root.width/25
+    AnchorLayout:
+      anchor_x: 'center'
+      anchor_y: 'bottom'
+      orientation: 'horizontal'
+      size_hint: 1, 1
+      GridLayout:
+        cols: 2
+        size_hint: None, None
+        size: root.width*0.8, root.width*0.15+root.width/20
+        padding: 0,0,0,root.width/20
+        spacing: root.width/20
+        # Apply Button
+        Button:
+          text: 'Reboot'
+          size_hint: 1, 1
+          on_release:
+            root.apply = True
+            root.dismiss()
+        # Cancel Button
+        Button:
+          text: 'Cancel'
+          size_hint: 1, 1
+          on_release:
+            root.apply = False
+            root.dismiss()

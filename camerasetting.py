@@ -126,6 +126,19 @@ class CameraSetting():
       return self.hw_version(options)
     elif type == "sw_version":
       return self.sw_version(options)
+    #=============================
+    # Radiation Setting
+    #=============================
+    elif type == "hack_wifi_mode":
+      return self.hack_wifi_mode(options)
+    elif type == "hack_video_resolution":
+      return self.hack_video_resolution(options)
+    elif type == "hack_timelapse_video_resolution":
+      return self.hack_timelapse_video_resolution(options)
+    elif type == "hack_video_bitrate":
+      return self.hack_video_bitrate(options)
+    elif type == "hack_raw_photo":
+      return self.hack_raw_photo(options)
     else:
       return ""
       
@@ -835,7 +848,7 @@ class CameraSetting():
         {
         "type": "string",
         "title": "WiFi SSID",
-        "desc": "Readonly now, set camera WiFi SSID.",
+        "desc": "Set camera WiFi SSID, need reboot camera.",
         "section": "setting",
         "key": "wifi_ssid"
         }
@@ -849,7 +862,7 @@ class CameraSetting():
         {
         "type": "string",
         "title": "WiFi Password",
-        "desc": "Readonly now, set camera WiFi password.",
+        "desc": "Set camera WiFi password, need reboot camera.",
         "section": "setting",
         "key": "wifi_password"
         }
@@ -1065,6 +1078,144 @@ class CameraSetting():
         }
         '''
     return r.replace('[options]',options)
+  
+  def hack_wifi_mode(self, options):
+    if options == "":
+      options = '["Station Mode", "Camera Default"]'
+    r = '''
+        {
+        "type": "options",
+        "title": "WiFi Mode",
+        "desc": "Switch camera wifi between default(AP Mode) and Station Mode.",
+        "section": "radiation",
+        "key": "hack_wifi_mode",
+        "options": [options]
+        }
+        '''
+    return r.replace('[options]',options)
+    
+  def hack_video_resolution(self, options):
+    if options == "":
+      options = '''
+          [
+          "2304x1296 30/25P 16:9", 
+          "1920x1080 60/50P 16:9", 
+          "1920x1080 30/25P 16:9", 
+          "1920x1080 48P 16:9", 
+          "1920x1080 24P 16:9", 
+          "1280x720 120/100P 16:9", 
+          "848x480 240/200P 16:9", 
+          "Camera Default"
+          ]
+          '''
+    r = '''
+        {
+        "type": "options",
+        "title": "High Video Resolution",
+        "desc": "Experience high video resolution, faster SD card is needed.",
+        "section": "radiation",
+        "key": "hack_video_resolution",
+        "options": [options]
+        }
+        '''
+    return r.replace('[options]',options)
+  
+  def hack_timelapse_video_resolution(self, options):
+    if options == "":
+      options = '''
+          [
+          "2304x1296 30/25P 16:9", 
+          "1920x1080 60/50P 16:9", 
+          "1920x1080 30/25P 16:9", 
+          "1920x1080 48P 16:9", 
+          "1920x1080 24P 16:9", 
+          "1280x720 120/100P 16:9", 
+          "848x480 240/200P 16:9", 
+          "Camera Default"
+          ]
+          '''
+    r = '''
+        {
+        "type": "options",
+        "title": "High Video Resolution",
+        "desc": "Experience high timelapse video resolution, faster SD card is needed.",
+        "section": "radiation",
+        "key": "hack_timelapse_video_resolution",
+        "options": [options]
+        }
+        '''
+    return r.replace('[options]',options)
+
+  def hack_video_bitrate(self, options):
+    if options == "":
+      options = '''
+          [
+          "20M bps", 
+          "25M bps", 
+          "30M bps", 
+          "35M bps", 
+          "40M bps", 
+          "45M bps", 
+          "50M bps", 
+          "Camera Default"
+          ]
+          '''
+    r = '''
+        {
+        "type": "options",
+        "title": "High Video Bitrate",
+        "desc": "Experience high video bitrate, faster SD card is needed.",
+        "section": "radiation",
+        "key": "hack_video_bitrate",
+        "options": [options]
+        }
+        '''
+    return r.replace('[options]',options)
+    
+  def hack_raw_photo(self, options):
+    if options == "":
+      options = '''
+          [
+          "RAW+JPG Pictures", 
+          "RAW Pictures Only", 
+          "Camera Default"
+          ]
+          '''
+    r = '''
+        {
+        "type": "options",
+        "title": "RAW Photos",
+        "desc": "Capture photo in RAW format, faster SD card is needed.",
+        "section": "radiation",
+        "key": "hack_raw_photo",
+        "options": [options]
+        }
+        '''
+    return r.replace('[options]',options)
+
+'''
+============================
+Bitrate Address on FW 1.2.10
+============================
+2304x1296 30/25P 16:9   C05C3016
+1920x1080 60/50P 16:9   C05C3046
+1920x1080 30/25P 16:9   C05C30D6
+1920x1080 48P 16:9      C05C35B6
+1920x1080 24P 16:9      C05C35E6
+1280x720 120/100P 16:9  C05C3976
+848x480 240/200P 16:9   C05C3A06
+==============
+Bitrate Values
+==============
+20Mbps: 0x41A0
+25Mbps: 0x41C8
+30Mbps: 0x41F0
+35Mbps: 0x420C
+40Mbps: 0x4220
+45Mbps: 0x4234
+50Mbps: 0x4248
+'''
+
 '''
 ==================
 Start Read Setting

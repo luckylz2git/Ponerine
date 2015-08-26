@@ -44,7 +44,7 @@ Builder.load_file('data/radiationscreen.kv')
 
 #print "Clock.max_iteration", Clock.max_iteration
 Clock.max_iteration = 100
-__version__='0.1.1'
+__version__='0.1.2'
 
 class ConnectScreen(Screen):
   pass
@@ -68,9 +68,11 @@ class ConfigPopup(Popup):
 class DeletePopup(Popup):
   apply = BooleanProperty()
 
+class RebootPopup(Popup):
+  apply = BooleanProperty()
+  index = NumericProperty()
+
 class Ponerine(ScreenManager):
-  
-  #def __init__(self, config, cfgevent, appexit):
   def __init__(self, appexit):
     super(Ponerine, self).__init__()
     
@@ -320,6 +322,17 @@ class Ponerine(ScreenManager):
   
   def Radiation(self):
     self.switch_to(self.screen[4],direction = "left")
+  
+  def RebootPopupOpen(self, index):
+    self.rebootpop = RebootPopup(title='Reboot Confirmation', size_hint=(0.8, 0.35), size=self.size)
+    self.rebootpop.bind(on_dismiss=self.RebootPopupApply)
+    self.rebootpop.apply = False
+    self.rebootpop.index = index
+    self.rebootpop.open()
+    
+  def RebootPopupApply(self, popup):
+    if popup.apply:
+      self.cam[popup.index].Reboot()
   
   def DeletePopupOpen(self):
     self.deletepop = DeletePopup(title='Delete Confirmation', size_hint=(0.8, 0.35), size=self.size)
@@ -972,12 +985,12 @@ class Ponerine(ScreenManager):
     print "DoWifi wait start"
     wifioff.wait()
     self.transition = SlideTransition(direction = "right")
-    wifioff.clear()
     self.stopdetect.clear()
     self.switch_to(self.screen[0],direction="right")
     self.current_screen.ids.btnConnect.text = ""
     self.DetectCam(45)
-    print "DoWifi wait stop"
+    time.sleep(15)
+    wifioff.clear()
   
   def DoFileTaken(self, index):
     print "DoFileTaken start %d" %index
@@ -1129,7 +1142,15 @@ class Ponerine(ScreenManager):
         #child.text = 'Camera 2 Settings'
     
   def BuildConfig(self, config, camcfgdict):
-    if camcfgdict == {}:
+    # this is hacking function
+    config.setdefaults("radiation",{
+      "hack_wifi_mode": "",
+      "hack_video_resolution": "",
+      "hack_timelapse_video_resolution": "",
+      "hack_video_bitrate": "",
+      "hack_raw_photo": ""
+      })
+    if camcfgdict == {}:      
       config.setdefaults("setting", {
         "camera_clock": "",
         "video_standard": "",
@@ -1191,7 +1212,7 @@ class Ponerine(ScreenManager):
     config.add_callback(self.ConfigChange)
     
   def ConfigChange(self, section, key, value):
-    if self.applyconfig:
+    if self.applyconfig and section == "setting":
       threading.Thread(target=self.DoConfigChange, args=(section,key,value,),name="DoConfigChange").start()
       
   def DoRefreshTitle(self, title, text):
@@ -1217,8 +1238,6 @@ class Ponerine(ScreenManager):
                   "hw_version",
                   "support_auto_low_light",
                   "dev_functions",
-                  "wifi_ssid",
-                  "wifi_password",
                   "camera_clock"]
     for child in self.settings.children[0].children[0].children[0].children[:]:
       if isinstance(child, Label):
@@ -1283,6 +1302,10 @@ class Ponerine(ScreenManager):
                 child.options = opt
                 
       self.applyconfig = True
+    # Set WiFi SSID or Password
+    elif key in ["wifi_ssid", "wifi_password"]:
+      self.RebootPopupOpen(index)
+
     threading.Thread(target=self.DoRefreshTitle, args=(title,camtext,),name="DoRefreshTitle").start()
     
   def CheckDownloadHistory(self, name, date, size):

@@ -157,12 +157,14 @@ class Camera():
       #print "wait for token from camera"
       while not self.link:
         if self.quit.isSet():
-          break
+          return
       #self.SendMsg('{"msg_id":259,"param":"none_force"}')
       #print "start sending loop"
       while self.socketopen == 0:
         if self.quit.isSet():
-          break
+          return
+        if self.wifioff.isSet():
+          return
         if self.msgbusy == 0:
           data = json.loads(self.qsend.get())
           allowsendout = True
@@ -375,6 +377,8 @@ class Camera():
       self.dlstart.set()
       
   def RecvMsg(self):
+    if self.wifioff.isSet():
+      return
     try:
       if self.socketopen == 0:
         ready = select.select([self.srv], [], [])
@@ -399,10 +403,13 @@ class Camera():
     #print "ThreadRecv Starts\n"
     while self.socketopen: 
       if self.quit.isSet():
-        break
+        return
     while self.socketopen == 0:
+      if self.wifioff.isSet():
+        print "quick ThreadRecv"
+        return
       if self.quit.isSet():
-        break
+        return
       self.RecvMsg()
 
   def ConnectData(self):
