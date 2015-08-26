@@ -2,10 +2,10 @@
 #:import kivy kivy
 #:import Factory kivy.factory.Factory
 
-# class RadiationScreen(Screen):
+# class InjectionScreen(Screen):
   # pass
 
-<RadiationScreen>:
+<InjectionScreen>:
 #Screen:
   BoxLayout:
     orientation: 'vertical'
@@ -48,16 +48,20 @@
         disabled: True
         background_disabled_normal: 'image/radiation-1.png'
         #background_down: 'image/radiation-1.png'
-    TextInput:
-      id: txtInfo
+    BoxLayout:
+      id: boxInjectSetting
       size_hint: 1, 8
-      text: "Start Advance Screen"
-      font_size: int(root.width/50)
-      foreground_color: [1,1,0,1]
-      background_color: [0,0,0,1]
-      readonly: True
-    Button:
+    GridLayout:
+      cols: 2
       size_hint: 1, 1
-      text: 'Apply Settings'
-      font_size: int(root.width/20)
-      #on_release: root.manager.ReadSetting()
+      Spinner:
+        id: lstCamera
+        size_hint: 1, 1
+        text: "Camera Injection"
+        values: ()
+        on_text: root.manager.InjectCamera(self)
+      Button:
+        id: btnApplySetting
+        size_hint: 1, 1
+        text: "Apply Injection"
+        on_release: root.manager.InjectApply()
