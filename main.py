@@ -40,7 +40,7 @@ Builder.load_file('data/connectscreen.kv')
 Builder.load_file('data/filemanagerscreen.kv')
 Builder.load_file('data/camerascreen.kv')
 Builder.load_file('data/settingscreen.kv')
-Builder.load_file('data/radiationscreen.kv')
+Builder.load_file('data/injectionscreen.kv')
 
 #print "Clock.max_iteration", Clock.max_iteration
 Clock.max_iteration = 100
@@ -58,7 +58,7 @@ class CameraScreen(Screen):
 class SettingScreen(Screen):
   pass
   
-class RadiationScreen(Screen):
+class InjectionScreen(Screen):
   pass
 
 class ConfigPopup(Popup):
@@ -82,7 +82,8 @@ class Ponerine(ScreenManager):
     #self.cfgtoken = cfgtoken
     #self.cfgevent = cfgevent
     self.applyconfig = False
-    self.settings = ""
+    self.settings = "" #SettingsWithNoMenu
+    self.injectsetting = "" #SettingsWithNoMenu
     self.appexit = appexit
     self.screen = []
     self.cfglist = []
@@ -280,7 +281,7 @@ class Ponerine(ScreenManager):
     threading.Thread(target=self.DoDisconnect, name="DoDisconnect").start()
 
   def FileManager(self):
-    if self.current_screen.name in ("camera","setting","radiation"):
+    if self.current_screen.name in ("camera","setting","injection"):
       dirct = "right"
     else:
       dirct = "left"
@@ -301,28 +302,69 @@ class Ponerine(ScreenManager):
       self.current_screen.ids.lstCamera.text = camlist[0]
     
   def Camera(self):
-    if self.current_screen.name in ("setting","radiation"):
+    if self.current_screen.name in ("setting","injection"):
       dirct = "right"
     else:
       dirct = "left"
     self.switch_to(self.screen[2],direction = dirct)
 
   def Setting(self):
-    if self.current_screen.name in ("radiation"):
+    if self.current_screen.name in ("injection"):
       dirct = "right"
     else:
       dirct = "left"
     self.switch_to(self.screen[3],direction = dirct)
     camlist = []
     for i in range(len(self.cam)):
-      camlist.append('Read Camera %d Settings'%(i+1))
+      camlist.append('Camera %d Setting'%(i+1))
     if len(camlist) > 0:
       self.current_screen.ids.lstCamera.values = camlist
       self.current_screen.ids.lstCamera.text = camlist[0]
   
-  def Radiation(self):
+  def Injection(self):
     self.switch_to(self.screen[4],direction = "left")
+    camlist = []
+    for i in range(len(self.cam)):
+      camlist.append('Camera %d Injection'%(i+1))
+    if len(camlist) > 0:
+      self.current_screen.ids.lstCamera.values = camlist
+      self.current_screen.ids.lstCamera.text = camlist[0]
   
+  def InjectCamera(self, instance):
+    camtext = instance.text
+    if camtext == "Camera Injection":
+      return
+    index = int(camtext.replace('Camera ','').replace(' Injection','')) - 1
+    
+    threading.Thread(target=self.DoInjection, args=(index,), name="DoInjection"+str(index)).start()
+    instance.text = "Camera Injection"
+  
+  def InjectApply(self):
+    pass
+  
+  def DoInjection(self, index):
+    self.BuildConfig("injection", self.config[index], {})
+    self.applyconfig = False
+    self.BuildInjection(index, self.config[index])
+    self.current_screen.ids.boxInjectSetting.clear_widgets()
+    self.current_screen.ids.boxInjectSetting.add_widget(self.injectsetting)
+    self.applyconfig = True
+  
+  def BuildInjection(self, index, config):
+    if isinstance(self.injectsetting, SettingsWithNoMenu):
+      return
+    else:
+      jsondata = '['
+      c = CameraSetting()
+      jsondata += c.BuildSetting("hack_wifi_mode") + ","
+      jsondata += c.BuildSetting("hack_video_resolution") + ","
+      jsondata += c.BuildSetting("hack_timelapse_video_resolution") + ","
+      jsondata += c.BuildSetting("hack_video_bitrate") + ","
+      jsondata += c.BuildSetting("hack_raw_photo")
+      jsondata += ']'
+      self.injectsetting = SettingsWithNoMenu(size_hint=(1,1))
+      self.injectsetting.add_json_panel('Camera %d Injection, needs reboot' %(index+1), config, data = jsondata)
+    
   def RebootPopupOpen(self, index):
     self.rebootpop = RebootPopup(title='Reboot Confirmation', size_hint=(0.8, 0.35), size=self.size)
     self.rebootpop.bind(on_dismiss=self.RebootPopupApply)
@@ -1014,12 +1056,12 @@ class Ponerine(ScreenManager):
 
   def ReadSetting(self, instance):
     camtext = instance.text
-    if camtext == "Read Camera Settings":
+    if camtext == "Camera Setting":
       return
-    index = int(camtext.replace('Read Camera ','').replace(' Settings','')) - 1
+    index = int(camtext.replace('Camera ','').replace(' Setting','')) - 1
     
     threading.Thread(target=self.DoReadSetting, args=(index,), name="DoReadSetting"+str(index)).start()
-    instance.text = "Read Camera Settings"
+    instance.text = "Camera Setting"
   
   def DoReadSetting(self, index):
     self.current_screen.ids.boxCameraSetting.clear_widgets()
@@ -1039,7 +1081,7 @@ class Ponerine(ScreenManager):
       if cam.webportopen:
         cam.RenewToken()
 
-    self.BuildConfig(self.config[index], cam.cfgdict)
+    self.BuildConfig("setting", self.config[index], cam.cfgdict)
     self.applyconfig = False
     #debugtxt += "\nCAM %d Settings :\n" %i + settings
     #print "Camera %d" %(index+1), settings
@@ -1141,78 +1183,80 @@ class Ponerine(ScreenManager):
         # directly change setting title
         #child.text = 'Camera 2 Settings'
     
-  def BuildConfig(self, config, camcfgdict):
+  def BuildConfig(self, section, config, camcfgdict):
     # this is hacking function
-    config.setdefaults("radiation",{
-      "hack_wifi_mode": "Camera Default",
-      "hack_video_resolution": "Camera Default",
-      "hack_timelapse_video_resolution": "Camera Default",
-      "hack_video_bitrate": "Camera Default",
-      "hack_raw_photo": "Camera Default"
-      })
-    if camcfgdict == {}:      
-      config.setdefaults("setting", {
-        "camera_clock": "",
-        "video_standard": "",
-        "app_status": "",
-        "video_resolution": "",
-        "video_stamp": "",
-        "video_quality": "",
-        "timelapse_video": "",
-        "capture_mode": "",
-        "photo_size": "",
-        "photo_stamp": "",
-        "photo_quality": "",
-        "timelapse_photo": "",
-        "preview_status": "",
-        "buzzer_volume": "",
-        "buzzer_ring": "",
-        "capture_default_mode": "",
-        "precise_cont_time": "",
-        "burst_capture_number": "",
-        "wifi_ssid": "",
-        "wifi_password": "",
-        "led_mode": "",
-        "meter_mode": "",
-        "sd_card_status": "",
-        "video_output_dev_type": "",
-        "sw_version": "",
-        "hw_version": "",
-        "dual_stream_status": "",
-        "streaming_status": "",
-        "precise_cont_capturing": "",
-        "piv_enable": "",
-        "auto_low_light": "",
-        "loop_record": "",
-        "warp_enable": "",
-        "support_auto_low_light": "",
-        "precise_selftime": "",
-        "precise_self_running": "",
-        "auto_power_off": "",
-        "serial_number": "",
-        "system_mode": "",
-        "system_default_mode": "",
-        "start_wifi_while_booted": "",
-        "quick_record_time": "",
-        "precise_self_remain_time": "",
-        "sdcard_need_format": "",
-        "video_rotate": "",
-        "emergency_file_backup": "",
-        "osd_enable": "",
-        "rec_default_mode": "",
-        "rec_mode": "",
-        "record_photo_time": "",
-        "dev_functions": "",
-        "rc_button_mode": "",
-        "timelapse_video_duration": "",
-        "timelapse_video_resolution": ""
+    if section == "injection":
+      config.setdefaults(section,{
+        "hack_wifi_mode": "Camera Default",
+        "hack_video_resolution": "Camera Default",
+        "hack_timelapse_video_resolution": "Camera Default",
+        "hack_video_bitrate": "Camera Default",
+        "hack_raw_photo": "Camera Default"
         })
-    else:
-      config.setdefaults("setting", camcfgdict)
+    elif section == "setting":
+      if camcfgdict <> {}:
+        config.setdefaults(section, camcfgdict)
+      else:      
+        config.setdefaults(section, {
+          "camera_clock": "",
+          "video_standard": "",
+          "app_status": "",
+          "video_resolution": "",
+          "video_stamp": "",
+          "video_quality": "",
+          "timelapse_video": "",
+          "capture_mode": "",
+          "photo_size": "",
+          "photo_stamp": "",
+          "photo_quality": "",
+          "timelapse_photo": "",
+          "preview_status": "",
+          "buzzer_volume": "",
+          "buzzer_ring": "",
+          "capture_default_mode": "",
+          "precise_cont_time": "",
+          "burst_capture_number": "",
+          "wifi_ssid": "",
+          "wifi_password": "",
+          "led_mode": "",
+          "meter_mode": "",
+          "sd_card_status": "",
+          "video_output_dev_type": "",
+          "sw_version": "",
+          "hw_version": "",
+          "dual_stream_status": "",
+          "streaming_status": "",
+          "precise_cont_capturing": "",
+          "piv_enable": "",
+          "auto_low_light": "",
+          "loop_record": "",
+          "warp_enable": "",
+          "support_auto_low_light": "",
+          "precise_selftime": "",
+          "precise_self_running": "",
+          "auto_power_off": "",
+          "serial_number": "",
+          "system_mode": "",
+          "system_default_mode": "",
+          "start_wifi_while_booted": "",
+          "quick_record_time": "",
+          "precise_self_remain_time": "",
+          "sdcard_need_format": "",
+          "video_rotate": "",
+          "emergency_file_backup": "",
+          "osd_enable": "",
+          "rec_default_mode": "",
+          "rec_mode": "",
+          "record_photo_time": "",
+          "dev_functions": "",
+          "rc_button_mode": "",
+          "timelapse_video_duration": "",
+          "timelapse_video_resolution": ""
+          })
     config.add_callback(self.ConfigChange)
     
   def ConfigChange(self, section, key, value):
-    if self.applyconfig and section == "setting":
+    if self.applyconfig and section == "setting" and isinstance(self.settings, SettingsWithNoMenu):
       threading.Thread(target=self.DoConfigChange, args=(section,key,value,),name="DoConfigChange").start()
       
   def DoRefreshTitle(self, title, text):
@@ -1460,7 +1504,7 @@ class PonerineApp(App):
     #ponerine.add_widget(SettingScreen)
     #ponerine.current = 'connect'
     #ponerine.DetectCam()
-    ponerine.screen = [ConnectScreen(name="connect"),FileManagerScreen(name="filemanager"),CameraScreen(name="camera"),SettingScreen(name="setting"),RadiationScreen(name="radiation")]
+    ponerine.screen = [ConnectScreen(name="connect"),FileManagerScreen(name="filemanager"),CameraScreen(name="camera"),SettingScreen(name="setting"),InjectionScreen(name="injection")]
     ponerine.switch_to(ponerine.screen[0])
     ponerine.DetectCam()
     return ponerine
