@@ -48,7 +48,7 @@
         id: btnRadiation
         background_normal: 'image/radiation-2.png'
         background_down: 'image/radiation-1.png'
-        on_release: root.manager.Radiation()
+        on_release: root.manager.Injection()
     BoxLayout:
       id: boxCameraSetting
       size_hint: 1, 8
@@ -63,7 +63,7 @@
     Spinner:
       id: lstCamera
       size_hint: 1, 1
-      text: "Read Camera Settings"
+      text: "Camera Setting"
       values: ()
       on_text: root.manager.ReadSetting(self)
     # Button:
