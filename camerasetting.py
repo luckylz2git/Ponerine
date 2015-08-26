@@ -127,7 +127,7 @@ class CameraSetting():
     elif type == "sw_version":
       return self.sw_version(options)
     #=============================
-    # Radiation Setting
+    # Injection Setting
     #=============================
     elif type == "hack_wifi_mode":
       return self.hack_wifi_mode(options)
@@ -1081,13 +1081,13 @@ class CameraSetting():
   
   def hack_wifi_mode(self, options):
     if options == "":
-      options = '["Station Mode", "Camera Default"]'
+      options = '["Camera Default", "Station Mode"]'
     r = '''
         {
         "type": "options",
         "title": "WiFi Mode",
         "desc": "Switch camera wifi between default(AP Mode) and Station Mode.",
-        "section": "radiation",
+        "section": "injection",
         "key": "hack_wifi_mode",
         "options": [options]
         }
@@ -1098,14 +1098,14 @@ class CameraSetting():
     if options == "":
       options = '''
           [
+          "Camera Default",
           "2304x1296 30/25P 16:9", 
           "1920x1080 60/50P 16:9", 
           "1920x1080 30/25P 16:9", 
           "1920x1080 48P 16:9", 
           "1920x1080 24P 16:9", 
           "1280x720 120/100P 16:9", 
-          "848x480 240/200P 16:9", 
-          "Camera Default"
+          "848x480 240/200P 16:9"
           ]
           '''
     r = '''
@@ -1113,7 +1113,7 @@ class CameraSetting():
         "type": "options",
         "title": "High Video Resolution",
         "desc": "Experience high video resolution, faster SD card is needed.",
-        "section": "radiation",
+        "section": "injection",
         "key": "hack_video_resolution",
         "options": [options]
         }
@@ -1124,22 +1124,22 @@ class CameraSetting():
     if options == "":
       options = '''
           [
+          "Camera Default",
           "2304x1296 30/25P 16:9", 
           "1920x1080 60/50P 16:9", 
           "1920x1080 30/25P 16:9", 
           "1920x1080 48P 16:9", 
           "1920x1080 24P 16:9", 
           "1280x720 120/100P 16:9", 
-          "848x480 240/200P 16:9", 
-          "Camera Default"
+          "848x480 240/200P 16:9"
           ]
           '''
     r = '''
         {
         "type": "options",
-        "title": "High Video Resolution",
+        "title": "High Timelapse Video Resolution",
         "desc": "Experience high timelapse video resolution, faster SD card is needed.",
-        "section": "radiation",
+        "section": "injection",
         "key": "hack_timelapse_video_resolution",
         "options": [options]
         }
@@ -1150,14 +1150,14 @@ class CameraSetting():
     if options == "":
       options = '''
           [
+          "Camera Default",
           "20M bps", 
           "25M bps", 
           "30M bps", 
           "35M bps", 
           "40M bps", 
           "45M bps", 
-          "50M bps", 
-          "Camera Default"
+          "50M bps"
           ]
           '''
     r = '''
@@ -1165,7 +1165,7 @@ class CameraSetting():
         "type": "options",
         "title": "High Video Bitrate",
         "desc": "Experience high video bitrate, faster SD card is needed.",
-        "section": "radiation",
+        "section": "injection",
         "key": "hack_video_bitrate",
         "options": [options]
         }
@@ -1174,18 +1174,13 @@ class CameraSetting():
     
   def hack_raw_photo(self, options):
     if options == "":
-      options = '''
-          [
-          "RAW+JPG Pictures", 
-          "Camera Default"
-          ]
-          '''
+      options = '["Camera Default", "RAW+JPG Pictures"]'
     r = '''
         {
         "type": "options",
         "title": "RAW Photos",
         "desc": "Capture photo in RAW format, faster SD card is needed.",
-        "section": "radiation",
+        "section": "injection",
         "key": "hack_raw_photo",
         "options": [options]
         }
