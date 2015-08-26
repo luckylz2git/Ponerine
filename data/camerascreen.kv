@@ -52,10 +52,10 @@
         id: btnRadiation
         background_normal: 'image/radiation-2.png'
         background_down: 'image/radiation-1.png'
-        on_release: root.manager.Radiation()
+        on_release: root.manager.Injection()
     TextInput:
       id: txtDebug
-      size_hint: 1, 0.75
+      size_hint: 1, 7.5
       #text: "Camera Screen Debug Log :\nButton btnWifi W: %d H: %d\nGridlayout W: %d H: %d" %(btnWifi.width, btnWifi.height, layTitle.width, layTitle.height)
       text: "Camera Screen Debug Log :\n"
       font_size: int(root.width/50)
@@ -64,7 +64,7 @@
       readonly: True
     GridLayout:
       cols: 2
-      size_hint: 1, 0.25
+      size_hint: 1, 1.5
       Label:
         id: lblCam1
         size_hint: 1, 0.5
@@ -80,13 +80,13 @@
         color: 1,0,0,0.8
         font_size: int(root.width/30)
       Button:
-        size_hint: 1, 2
+        size_hint: 1, 1
         id: btnPhoto
         text: 'Take Photo'
         font_size: int(root.width/20)
         on_release: root.manager.Photo()
       Button:
-        size_hint: 1, 2
+        size_hint: 1, 1
         id: btnRecord
         text: 'Start Record'
         font_size: int(root.width/20)
