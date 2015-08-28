@@ -61,7 +61,8 @@
         values: ()
         on_text: root.manager.InjectCamera(self)
       Button:
-        id: btnApplySetting
+        id: btnInjectApply
         size_hint: 1, 1
         text: "Apply Injection"
+        disabled: True
         on_release: root.manager.InjectApply()
