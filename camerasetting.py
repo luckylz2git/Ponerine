@@ -131,6 +131,8 @@ class CameraSetting():
     #=============================
     elif type == "hack_wifi_mode":
       return self.hack_wifi_mode(options)
+    elif type == "enable_info_display":
+      return self.enable_info_display(options)
     elif type == "hack_video_resolution":
       return self.hack_video_resolution(options)
     elif type == "hack_timelapse_video_resolution":
@@ -1102,6 +1104,8 @@ class CameraSetting():
           "2304x1296 30/25P 16:9", 
           "1920x1080 60/50P 16:9", 
           "1920x1080 30/25P 16:9", 
+          "1600x1200 60/50P 4:3", 
+          "1600x1200 30/25P 4:3", 
           "1920x1080 48P 16:9", 
           "1920x1080 24P 16:9", 
           "1280x720 120/100P 16:9", 
@@ -1128,6 +1132,8 @@ class CameraSetting():
           "2304x1296 30/25P 16:9", 
           "1920x1080 60/50P 16:9", 
           "1920x1080 30/25P 16:9", 
+          "1600x1200 60/50P 4:3", 
+          "1600x1200 30/25P 4:3", 
           "1920x1080 48P 16:9", 
           "1920x1080 24P 16:9", 
           "1280x720 120/100P 16:9", 
@@ -1186,8 +1192,44 @@ class CameraSetting():
         }
         '''
     return r.replace('[options]',options)
+  
+  def enable_info_display(self, options):
+    if options == "":
+      options = '["Camera Default", "Enabled Telnet"]'
+    r = '''
+        {
+        "type": "options",
+        "title": "Enabled Telnet",
+        "desc": "Enabled camera telnet function.",
+        "section": "injection",
+        "key": "enable_info_display",
+        "options": [options]
+        }
+        '''
+    return r.replace('[options]',options)
 
 '''
+============================
+Resolution Addr on FW 1.2.12
+============================
+Video
+writeb 0xC06CC426 0x02
+Timelapse
+writeb 0xC06CC4B9 0x02
+============================
+Bitrate Address on FW 1.2.12
+============================
+2304x1296 30/25P 16:9   C05C1EB2
+1920x1080 60/50P 16:9   C05C1EE2
+1920x1080 30/25P 16:9   C05C1F72
+1600x1200 60/50P 4:3    C05C2092
+1600x1200 30/25P 4:3    C05C20C2
+1920x1080 48P 16:9      C05C2452
+1920x1080 24P 16:9      C05C2482
+1280x720 120/100P 16:9  C05C2812
+848x480 240/200P 16:9   C05C28B2
+
+
 ============================
 Resolution Addr on FW 1.2.10
 ============================

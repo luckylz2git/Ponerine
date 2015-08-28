@@ -22,7 +22,7 @@ from kivy.adapters.dictadapter import DictAdapter
 from kivy.uix.listview import ListView, ListItemButton, ListItemLabel, CompositeListItem
 from kivy.adapters.models import SelectableDataItem
 
-from kivy.config import ConfigParser
+from kivy.config import Config,ConfigParser
 from kivy.uix.settings import SettingsWithNoMenu,SettingOptions,SettingBoolean,SettingString
 
 # Camera Object[camera.py]
@@ -262,11 +262,13 @@ class Ponerine(ScreenManager):
       self.cam = []
       self.config = []
       print "ip list" ,len(self.cfglist), self.cfglist
+      i = 0
       for cfg in self.cfglist:
         print "ip list %s" %cfg["ip"]
         if cfg["ip"] <> "":
           self.cam.append(Camera(cfg["ip"]))
-          self.config.append(ConfigParser())
+          self.config.append(ConfigParser(name='cam%d'%i))
+          i += 1
       if len(self.cam) > 0:
         self.tconn= threading.Thread(target=self.DoConnect)
         self.tconn.setName('DoConnect')
@@ -357,13 +359,14 @@ class Ponerine(ScreenManager):
       jsondata = '['
       c = CameraSetting()
       jsondata += c.BuildSetting("hack_wifi_mode") + ","
+      jsondata += c.BuildSetting("enable_info_display") + ","
       jsondata += c.BuildSetting("hack_video_resolution") + ","
       jsondata += c.BuildSetting("hack_timelapse_video_resolution") + ","
       jsondata += c.BuildSetting("hack_video_bitrate") + ","
       jsondata += c.BuildSetting("hack_raw_photo")
       jsondata += ']'
       self.injectsetting = SettingsWithNoMenu(size_hint=(1,1))
-      self.injectsetting.add_json_panel('Camera %d Injection, needs reboot' %(index+1), config, data = jsondata)
+      self.injectsetting.add_json_panel('Camera %d Injection, needs reboot.' %(index+1), config, data = jsondata)
     
   def RebootPopupOpen(self, index):
     self.rebootpop = RebootPopup(title='Reboot Confirmation', size_hint=(0.8, 0.35), size=self.size)
@@ -1188,6 +1191,7 @@ class Ponerine(ScreenManager):
     if section == "injection":
       config.setdefaults(section,{
         "hack_wifi_mode": "Camera Default",
+        "enable_info_display": "Camera Default",
         "hack_video_resolution": "Camera Default",
         "hack_timelapse_video_resolution": "Camera Default",
         "hack_video_bitrate": "Camera Default",
@@ -1256,9 +1260,35 @@ class Ponerine(ScreenManager):
     config.add_callback(self.ConfigChange)
     
   def ConfigChange(self, section, key, value):
-    if self.applyconfig and section == "setting" and isinstance(self.settings, SettingsWithNoMenu):
+    if not self.applyconfig:
+      return
+    if section == "setting" and isinstance(self.settings, SettingsWithNoMenu):
       threading.Thread(target=self.DoConfigChange, args=(section,key,value,),name="DoConfigChange").start()
+    elif section == "injection" and isinstance(self.injectsetting, SettingsWithNoMenu):
+      threading.Thread(target=self.DoInjectChange, args=(section,key,value,),name="DoInjectChange").start()
       
+  def DoInjectChange(self, section, key, value):
+    for child in self.injectsetting.children[0].children[0].children[0].children[:]:
+      if isinstance(child, Label):
+        camtext = child.text #Camera 1 Injection, needs reboot.
+        break
+    index = int(camtext.replace('Camera ','').replace(' Injection, needs reboot.','')) - 1
+    print "DoInjectChange", index, key, value
+    if key == "hack_wifi_mode":
+      pass
+    elif key == "enable_info_display":
+      pass
+    elif key == "hack_video_resolution":
+      pass
+    elif key == "hack_video_resolution":
+      pass
+    elif key == "hack_timelapse_video_resolution":
+      pass
+    elif key == "hack_video_bitrate":
+      pass
+    elif key == "hack_raw_photo":
+      pass
+
   def DoRefreshTitle(self, title, text):
     print "DoRefreshTitle"
     time.sleep(2)
@@ -1288,7 +1318,7 @@ class Ponerine(ScreenManager):
         title = child
         camtext = child.text.replace(' OK','').replace(' ERROR','').replace('-SET','').replace('-GET','') #Camera 1 Settings
         break
-    index = int(camtext.replace('Camera ','').replace(' Settings','')) - 1    
+    index = int(camtext.replace('Camera ','').replace(' Settings','')) - 1
     if key not in readonlyopts:
       self.cam[index].ChangeSetting(key, value)
       while True:
