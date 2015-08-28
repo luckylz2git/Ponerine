@@ -96,6 +96,9 @@ class CameraSetting():
       return self.wifi_ssid(options)
     elif type == "wifi_password":
       return self.wifi_password(options)
+    # new in fw 1.2.12
+    elif type == "save_log":
+      return self.save_log(options)
     elif type == "app_status":
       return self.app_status(options)
     elif type == "dev_functions":
@@ -870,7 +873,22 @@ class CameraSetting():
         }
         '''
     return r.replace('[options]',options)
-  
+    
+  def save_log(self, options):
+    if options == "":
+      options = '["on","off"]'
+    r = '''
+        {
+        "type": "bool",
+        "title": "Save Firmware Log",
+        "desc": "Save log to /tmp/fuse_a, new in fw-1.2.12.",
+        "section": "setting",
+        "key": "save_log",
+        "values": ["off","on"]
+        }
+        '''
+    return r.replace('[options]',options)
+    
   def app_status(self, options):
     if options == "":
       options = '["idle", "vf", "record", "recording", "capture", "precise_cont_capturing", "burst_capturing", "precise_capturing", "operation_done"]'
