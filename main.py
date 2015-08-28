@@ -261,13 +261,15 @@ class Ponerine(ScreenManager):
     if self.current_screen.ids.btnConnect.text == "" or self.current_screen.ids.btnConnect.text == "Error":
       self.cam = []
       self.config = []
+      self.injectlist = []
       print "ip list" ,len(self.cfglist), self.cfglist
       i = 0
       for cfg in self.cfglist:
         print "ip list %s" %cfg["ip"]
         if cfg["ip"] <> "":
           self.cam.append(Camera(cfg["ip"]))
-          self.config.append(ConfigParser(name='cam%d'%i))
+          self.config.append(ConfigParser())
+          self.injectlist.append({})
           i += 1
       if len(self.cam) > 0:
         self.tconn= threading.Thread(target=self.DoConnect)
@@ -340,10 +342,73 @@ class Ponerine(ScreenManager):
     
     threading.Thread(target=self.DoInjection, args=(index,), name="DoInjection"+str(index)).start()
     instance.text = "Camera Injection"
-  
+    
   def InjectApply(self):
-    pass
+    for child in self.injectsetting.children[0].children[0].children[0].children[:]:
+      if isinstance(child, Label):
+        camtext = child.text #Camera 1 Injection, needs reboot.
+        break
+    index = int(camtext.replace('Camera ','').replace(' Injection, needs reboot.','')) - 1
+    if self.injectlist[index] <> {}:
+      threading.Thread(target=self.DoInjectApply, args=(index,), name="DoInjectApply"+str(index)).start()
   
+  def DoInjectApply(self, index):
+    print self.injectlist[index]
+    for key, value in self.injectlist[index].items():
+      if key == "enable_info_display":
+        self.EnabledTelnet(index, value)
+  
+  def EnabledTelnet(self, index, value):
+    print "Run EnabledTelnet"
+    cam = self.cam[index]
+    cam.RefreshFile("/tmp/fuse_d")
+    while True:
+      cam.lsdir.wait(1)
+      if cam.lsdir.isSet():
+        #print "break first"
+        break
+    find = False
+    
+    if len(cam.listing) > 0:
+      print "search for enable_info_display.script"
+      for item in cam.listing:
+        print "item",item
+        if item["name"] == "enable_info_display.script":
+          find = True
+          print "found enable_info_display.script"
+          break
+    else:
+      print "list error"
+      return
+    if value == "on" and find == False:
+      print "add file"
+      cam.dlstart.clear()
+      cam.dlerror.clear()
+      cam.SendMsg('{"msg_id":1286,"param":"enable_info_display.script","md5sum":"d41d8cd98f00b204e9800998ecf8427e","offset":0,"size":0}')
+      while True:
+        if cam.dlerror.isSet():
+          print "EnabledTelnet Error"
+          break
+        cam.dlstart.wait(5)
+        if cam.dlstart.isSet():
+          self.injectlist[index] = {}
+          self.current_screen.ids.btnInjectApply.disabled = True
+          self.RebootPopupOpen(index)
+          break
+    elif value == "off" and find == True:
+      print "delete file"
+      cam.dlstop.clear()
+      cam.dlerror.clear()
+      cam.StartDelete("enable_info_display.script")
+      cam.dlstop.wait(30)
+      if cam.dlerror.isSet():
+        print "EnabledTelnet Error"
+      else:
+        print "EnabledTelnet Success"
+        self.injectlist[index] = {}
+        self.current_screen.ids.btnInjectApply.disabled = True
+        self.RebootPopupOpen(index)
+      
   def DoInjection(self, index):
     self.BuildConfig("injection", self.config[index], {})
     self.applyconfig = False
@@ -1155,7 +1220,8 @@ class Ponerine(ScreenManager):
     jsondata += c.BuildSetting("wifi_password") + ","
     jsondata += c.BuildSetting("serial_number") + ","
     jsondata += c.BuildSetting("hw_version") + ","
-    jsondata += c.BuildSetting("sw_version") #+ ","
+    jsondata += c.BuildSetting("sw_version") + ","
+    jsondata += c.BuildSetting("save_log")
     #jsondata += c.BuildSetting("dev_functions") + ","
     #jsondata += c.BuildSetting("app_status") + ","
     #jsondata += c.BuildSetting("sd_card_status") + ","
@@ -1255,7 +1321,8 @@ class Ponerine(ScreenManager):
           "dev_functions": "",
           "rc_button_mode": "",
           "timelapse_video_duration": "",
-          "timelapse_video_resolution": ""
+          "timelapse_video_resolution": "",
+          "save_log": ""
           })
     config.add_callback(self.ConfigChange)
     
@@ -1274,20 +1341,15 @@ class Ponerine(ScreenManager):
         break
     index = int(camtext.replace('Camera ','').replace(' Injection, needs reboot.','')) - 1
     print "DoInjectChange", index, key, value
-    if key == "hack_wifi_mode":
-      pass
-    elif key == "enable_info_display":
-      pass
-    elif key == "hack_video_resolution":
-      pass
-    elif key == "hack_video_resolution":
-      pass
-    elif key == "hack_timelapse_video_resolution":
-      pass
-    elif key == "hack_video_bitrate":
-      pass
-    elif key == "hack_raw_photo":
-      pass
+    data = {}
+    if value == "Camera Default":
+      data[key] = "off"
+    elif key in ("hack_wifi_mode", "enable_info_display", "hack_raw_photo"):
+      data[key] = "on"
+    else:
+      data[key] = value
+    self.injectlist[index].update(data)
+    self.current_screen.ids.btnInjectApply.disabled = False
 
   def DoRefreshTitle(self, title, text):
     print "DoRefreshTitle"
