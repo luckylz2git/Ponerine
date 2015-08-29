@@ -254,10 +254,10 @@ class Ponerine(ScreenManager):
           self.current_screen.ids.btnCam2.background_normal = 'image/camera_add_normal.png'
           self.current_screen.ids.btnCam2.background_down = 'image/camera_add_down.png'
       i += 1
-      
+    
   def Connect(self):
     #print self.current_screen.ids.btnConnect.background_normal
-    self.stopdetect.set()
+    self.stopdetect.set()    
     if self.current_screen.ids.btnConnect.text == "" or self.current_screen.ids.btnConnect.text == "Error":
       self.cam = []
       self.config = []
@@ -349,37 +349,186 @@ class Ponerine(ScreenManager):
         camtext = child.text #Camera 1 Injection, needs reboot.
         break
     index = int(camtext.replace('Camera ','').replace(' Injection, needs reboot.','')) - 1
+    self.current_screen.ids.btnInjectApply.disabled = True
     if self.injectlist[index] <> {}:
       threading.Thread(target=self.DoInjectApply, args=(index,), name="DoInjectApply"+str(index)).start()
   
   def DoInjectApply(self, index):
+    hastelnet = False
+    valuetelnet = ""
+    hashack = False
+    hackstatus = 0
     print self.injectlist[index]
     for key, value in self.injectlist[index].items():
+      print "DoInjectApply",key,value
       if key == "enable_info_display":
-        self.EnabledTelnet(index, value)
-  
-  def EnabledTelnet(self, index, value):
-    print "Run EnabledTelnet"
+        hastelnet = True
+        valuetelnet = value
+      elif key <> "hack_wifi_mode":
+        hashack = True
+    if hashack or hastelnet:
+      hackstatus = self.ReadHackStatus(index)
+    if hashack:
+      hashack = self.BuildAutoexec(index, hackstatus in [10,11])
+    if hastelnet:
+      hastelnet = self.EnabledTelnet(index, valuetelnet, hackstatus in [1,11])
+    if hashack or hastelnet:
+      self.injectlist[index] = {}
+      self.RebootPopupOpen(index)
+      
+  def ReadHackStatus(self, index):
+    r = 0
     cam = self.cam[index]
     cam.RefreshFile("/tmp/fuse_d")
+    hastelnet = False
+    hashack = False
     while True:
       cam.lsdir.wait(1)
       if cam.lsdir.isSet():
         #print "break first"
         break
-    find = False
     
     if len(cam.listing) > 0:
       print "search for enable_info_display.script"
       for item in cam.listing:
         print "item",item
         if item["name"] == "enable_info_display.script":
-          find = True
-          print "found enable_info_display.script"
-          break
-    else:
-      print "list error"
-      return
+          r += 1
+        elif item["name"] == "autoexec.ash":
+          r += 10
+    return r
+    
+  def BuildAutoexec(self, index, find):
+    print "BuildAutoexec for Cam %d" %index
+    vraddr = "0xC06CC426"  #vidoe resolution
+    vridx = -1
+    tvraddr = "0xC06CC4B9" #timelapse vidoe resolution maybe wrong
+    tvridx = -1
+    video = ["0x02","0x03","0x09","0x0C","0x0D","0x20","0x21","0x34","0x37"]
+    braddr = ["0xC05C1EB2", "0xC05C1EE2", "0xC05C1F72", "0xC05C2092", "0xC05C20C2", "0xC05C2452", "0xC05C2482", "0xC05C2812", "0xC05C28B2"]
+    bridx = -1
+    bitrate = ["0x41A0","0x41C8","0x41F0","0x420C","0x4220","0x4234","0x4248"]
+    hashack = False
+    vrcomment = ""
+    tvrcomment = ""
+    brcomment = ""
+    rawcomment = ""
+    print "BuildAutoexec",self.injectlist[index]
+    for key, value in self.injectlist[index].items():
+      print "loop",key,value
+      if key <> "enable_info_display" and value <> "Camera Default":
+        if key == "hack_video_resolution":
+          vrcomment = value
+          if value == "2304x1296 30/25P 16:9":    #0x02
+            vridx = 0
+          elif value == "1920x1080 60/50P 16:9":  #0x03
+            vridx = 1
+          elif value == "1920x1080 30/25P 16:9":  #0x09
+            vridx = 2
+          elif value == "1600x1200 60/50P 4:3":   #0x0C
+            vridx = 3
+          elif value == "1600x1200 30/25P 4:3":   #0x0D
+            vridx = 4
+          elif value == "1920x1080 48P 16:9":     #0x20
+            vridx = 5
+          elif value == "1920x1080 24P 16:9":     #0x21
+            vridx = 6
+          elif value == "1280x720 120/100P 16:9": #0x34
+            vridx = 7
+          elif value == "848x480 240/200P 16:9":  #0x37
+            vridx = 8
+        elif key == "hack_video_bitrate":
+          brcomment = value
+          if value == "20M bps":
+            bridx = 0
+          elif value == "25M bps":
+            bridx = 1
+          elif value == "30M bps":
+            bridx = 2
+          elif value == "35M bps":
+            bridx = 3
+          elif value == "40M bps":
+            bridx = 4
+          elif value == "45M bps":
+            bridx = 5
+          elif value == "50M bps":
+            bridx = 6
+        elif key == "hack_raw_photo":
+          if value == "on":
+            rawcomment = "\n\n# Set RAW + JPG Photo\nt app test debug_dump 14"
+        elif key == "hack_wifi_mode":
+          pass
+        elif key == "hack_timelapse_video_resolution":
+          tvrcomment = value
+          if value == "2304x1296 30/25P 16:9":    #0x02
+            tvridx = 0
+          elif value == "1920x1080 60/50P 16:9":  #0x03
+            tvridx = 1
+          elif value == "1920x1080 30/25P 16:9":  #0x09
+            tvridx = 2
+          elif value == "1600x1200 60/50P 4:3":   #0x0C
+            tvridx = 3
+          elif value == "1600x1200 30/25P 4:3":   #0x0D
+            tvridx = 4
+          elif value == "1920x1080 48P 16:9":     #0x20
+            tvridx = 5
+          elif value == "1920x1080 24P 16:9":     #0x21
+            tvridx = 6
+          elif value == "1280x720 120/100P 16:9": #0x34
+            tvridx = 7
+          elif value == "848x480 240/200P 16:9":  #0x37
+            tvridx = 8
+    buildstr = "# Autoexec.ash Injected By Ponerine %s" %__version__
+    buildstr += "\n\nsleep 5"
+    if vridx >= 0:
+      hashack = True
+      buildstr += "\n\n# Set Video Resolution %s" %vrcomment
+      buildstr += "\nwriteb %s %s" %(vraddr, video[vridx])
+      if bridx >= 0:
+        buildstr += "\n\n# Set Bitrate %s" %brcomment
+        buildstr += "\nwritew %s %s" %(braddr[vridx], bitrate[bridx])
+    if tvridx >= 0:
+      hashack = True
+      buildstr += "\n\n# Set Timelapse Video Resolution %s" %tvrcomment
+      buildstr += "\nwriteb %s %s" %(tvraddr, video[tvridx])
+      if bridx >= 0:
+        buildstr += "\n\n# Set Bitrate %s" %brcomment
+        buildstr += "\nwritew %s %s" %(braddr[tvridx], bitrate[bridx])
+    if rawcomment <> "":
+      hashack = True
+      buildstr += rawcomment
+      #buildstr += "\nt app test debug_dump 14"
+    cam = self.cam[index]
+    if hashack and find:
+      cam.dlstop.clear()
+      cam.dlerror.clear()
+      cam.StartDelete("autoexec.ash")
+      cam.dlstop.wait(30)
+      if cam.dlerror.isSet():
+        print "Remove autoexec.ash Error"
+        return False
+    if hashack:
+      buildstr += "\n\n# End of Script\n"
+      print buildstr
+      ashfile = __file__.replace(basename(__file__), "data/autoexec.ash")
+      try:
+        with open(ashfile,'w') as file:
+          file.write(buildstr)
+      except StandardError:
+        print "Remove autoexec.ash Error"
+        return False
+
+      cam.StartUpload(ashfile)
+      cam.dlstop.wait()
+      if cam.dlerror.isSet():
+        return False
+      else:
+        return True
+      #self.injectlist[index] = {}
+      #self.RebootPopupOpen(index)
+    
+  def EnabledTelnet(self, index, value, find):
+    cam = self.cam[index]
     if value == "on" and find == False:
       print "add file"
       cam.dlstart.clear()
@@ -388,13 +537,12 @@ class Ponerine(ScreenManager):
       while True:
         if cam.dlerror.isSet():
           print "EnabledTelnet Error"
-          break
+          return False
         cam.dlstart.wait(5)
         if cam.dlstart.isSet():
-          self.injectlist[index] = {}
-          self.current_screen.ids.btnInjectApply.disabled = True
-          self.RebootPopupOpen(index)
-          break
+          #self.injectlist[index] = {}
+          #self.RebootPopupOpen(index)
+          return True
     elif value == "off" and find == True:
       print "delete file"
       cam.dlstop.clear()
@@ -403,11 +551,13 @@ class Ponerine(ScreenManager):
       cam.dlstop.wait(30)
       if cam.dlerror.isSet():
         print "EnabledTelnet Error"
+        return False
       else:
         print "EnabledTelnet Success"
-        self.injectlist[index] = {}
-        self.current_screen.ids.btnInjectApply.disabled = True
-        self.RebootPopupOpen(index)
+        #self.injectlist[index] = {}
+        #self.current_screen.ids.btnInjectApply.disabled = True
+        #self.RebootPopupOpen(index)
+        return True
       
   def DoInjection(self, index):
     self.BuildConfig("injection", self.config[index], {})
@@ -1104,7 +1254,7 @@ class Ponerine(ScreenManager):
   
   def DoFileTaken(self, index):
     print "DoFileTaken start %d" %index
-    self.cam[index].setallok.wait(15)
+    self.cam[index].setallok.wait(30)
     if self.cam[index].setallok.isSet() and len(self.cam[index].settings) > 0:
       debugtxt = self.current_screen.ids.txtDebug.text
       for item in self.cam[index].settings:
