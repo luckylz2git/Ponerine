@@ -178,7 +178,7 @@ class Camera():
             self.srv.send(json.dumps(data))
             #{"token":1,"msg_id":2,"type": "dev_reboot","param":"on"}
             if data["msg_id"] == 2 and data["type"] == "dev_reboot" and data["param"] == "on":
-              time.sleep(5)
+              time.sleep(1)
               self.wifioff.set()
 
   def JsonHandle(self, data):
@@ -806,6 +806,7 @@ class Camera():
           break
         elif i > 6:
           self.dlerror.set()
+          self.dlstop.set()
           print "upload timeout"
           break
       Datasrv.close()
@@ -861,12 +862,12 @@ class Camera():
     threading.Thread(target=self.ThreadRefreshFile, args=(dir,), name="ThreadRefreshFile").start()
 
   def ThreadRefreshFile(self, dir):
-    if not self.webportopen:
+    if not self.webportopen and dir == "/var/www/DCIM":
       self.SendMsg('{"msg_id":259,"param":"none_force"}')
       t1 = time.time()
       while not self.webportopen:
         t2 = time.time()
-        if t2-t1 > 15.0:
+        if t2-t1 > 30.0:
           self.lsdir.set()
           return
       
