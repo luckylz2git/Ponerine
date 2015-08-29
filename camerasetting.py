@@ -166,6 +166,7 @@ class CameraSetting():
     if options == "":
       options = '''
           [
+          "2304x1296 30P 16:9", 
           "1920x1080 60P 16:9", 
           "1920x1080 30P 16:9", 
           "1920x1080 48P 16:9", 
@@ -182,7 +183,7 @@ class CameraSetting():
         {
         "type": "options",
         "title": "Video Resolution",
-        "desc": "Set video resolution, with * is experimental resolution.",
+        "desc": "Set video resolution.",
         "section": "setting",
         "key": "video_resolution",
         "options": [options]
@@ -194,6 +195,7 @@ class CameraSetting():
     if options == "":
       options = '''
           [
+          "2304x1296 30P 16:9", 
           "1920x1080 60P 16:9", 
           "1920x1080 30P 16:9", 
           "1920x1080 48P 16:9", 
@@ -210,7 +212,7 @@ class CameraSetting():
         {
         "type": "options",
         "title": "Video Resolution",
-        "desc": "Set video resolution, with * is experimental resolution.",
+        "desc": "Set video resolution.",
         "section": "setting",
         "key": "video_resolution",
         "options": [options]
@@ -222,6 +224,7 @@ class CameraSetting():
     if options == "":
       options = '''
           [
+          "2304x1296 25P 16:9", 
           "1920x1080 50P 16:9", 
           "1920x1080 25P 16:9", 
           "1920x1080 48P 16:9", 
@@ -238,7 +241,7 @@ class CameraSetting():
         {
         "type": "options",
         "title": "Video Resolution",
-        "desc": "Set video resolution, with * is experimental resolution.",
+        "desc": "Set video resolution.",
         "section": "setting",
         "key": "video_resolution",
         "options": [options]
@@ -250,6 +253,7 @@ class CameraSetting():
     if options == "":
       options = '''
           [
+          "2304x1296 30P 16:9", 
           "1920x1080 60P 16:9", 
           "1920x1080 30P 16:9", 
           "1920x1080 48P 16:9", 
@@ -266,7 +270,7 @@ class CameraSetting():
         {
         "type": "options",
         "title": "Timelapse Video Resolution",
-        "desc": "Set timelapse video resolution, with * is experimental resolution.",
+        "desc": "Set timelapse video resolution.",
         "section": "setting",
         "key": "timelapse_video_resolution",
         "options": [options]
@@ -278,6 +282,7 @@ class CameraSetting():
     if options == "":
       options = '''
           [
+          "2304x1296 30P 16:9", 
           "1920x1080 60P 16:9", 
           "1920x1080 30P 16:9", 
           "1920x1080 48P 16:9", 
@@ -294,7 +299,7 @@ class CameraSetting():
         {
         "type": "options",
         "title": "Timelapse Video Resolution",
-        "desc": "Set timelapse video resolution, with * is experimental resolution.",
+        "desc": "Set timelapse video resolution.",
         "section": "setting",
         "key": "timelapse_video_resolution",
         "options": [options]
@@ -306,6 +311,7 @@ class CameraSetting():
     if options == "":
       options = '''
           [
+          "2304x1296 25P 16:9", 
           "1920x1080 50P 16:9", 
           "1920x1080 25P 16:9", 
           "1920x1080 48P 16:9", 
@@ -322,7 +328,7 @@ class CameraSetting():
         {
         "type": "options",
         "title": "Timelapse Video Resolution",
-        "desc": "Set timelapse video resolution, with * is experimental resolution.",
+        "desc": "Set timelapse video resolution.",
         "section": "setting",
         "key": "timelapse_video_resolution",
         "options": [options]
