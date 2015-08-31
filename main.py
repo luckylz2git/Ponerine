@@ -364,7 +364,7 @@ class Ponerine(ScreenManager):
       if key == "enable_info_display":
         hastelnet = True
         valuetelnet = value
-      elif key <> "hack_wifi_mode":
+      else:
         hashack = True
     if hashack or hastelnet:
       hackstatus = self.ReadHackStatus(index)
@@ -413,9 +413,10 @@ class Ponerine(ScreenManager):
     tvrcomment = ""
     brcomment = ""
     rawcomment = ""
-    print "BuildAutoexec",self.injectlist[index]
+    haswifihack = False
+    #print "BuildAutoexec",self.injectlist[index]
     for key, value in self.injectlist[index].items():
-      print "loop",key,value
+      #print "loop",key,value
       if key <> "enable_info_display" and value <> "Camera Default":
         if key == "hack_video_resolution":
           vrcomment = value
@@ -457,7 +458,7 @@ class Ponerine(ScreenManager):
           if value == "on":
             rawcomment = "\n\n# Set RAW + JPG Photo\nt app test debug_dump 14"
         elif key == "hack_wifi_mode":
-          pass
+          haswifihack = True
         elif key == "hack_timelapse_video_resolution":
           tvrcomment = value
           if value == "2304x1296 30/25P 16:9":    #0x02
@@ -478,28 +479,85 @@ class Ponerine(ScreenManager):
             tvridx = 7
           elif value == "848x480 240/200P 16:9":  #0x37
             tvridx = 8
-    buildstr = "# Autoexec.ash Injected By Ponerine %s" %__version__
-    buildstr += "\n\nsleep 5"
+            
+    if haswifihack:
+      stamodestr = "# Autoexec.ash Injected By Ponerine %s" %__version__
+      stamodestr += "\n# Wifi Station Mode\n\nsleep 5\nlu_util exec 'rm /tmp/fuse_a/custom/wifi.log'"
+      
+      apmodestr = "# Autoexec.ash Injected By Ponerine %s" %__version__
+      apmodestr += "\n# Wifi AP Mode\n\nsleep 5\nlu_util exec 'rm /tmp/fuse_a/custom/wifi.log'"
+      
+      installstr = "# Autoexec.ash Injected By Ponerine %s" %__version__
+      installstr += "\n# Wifi Mode Install.ash\n\nsleep 5\nlu_util exec 'if [ ! -d /tmp/fuse_a/custom ]; then mkdir /tmp/fuse_a/custom; fi'"
+    else:
+      buildstr = "# Autoexec.ash Injected By Ponerine %s" %__version__
+      buildstr += "\n\nsleep 5"
     if vridx >= 0:
       hashack = True
-      buildstr += "\n\n# Set Video Resolution %s" %vrcomment
-      buildstr += "\nwriteb %s %s" %(vraddr, video[vridx])
-      if bridx >= 0:
-        buildstr += "\n\n# Set Bitrate %s" %brcomment
-        buildstr += "\nwritew %s %s" %(braddr[vridx], bitrate[bridx])
+      if haswifihack:
+        stamodestr += "\n\n# Set Video Resolution %s" %vrcomment
+        stamodestr += "\nwriteb %s %s" %(vraddr, video[vridx])
+        apmodestr += "\n\n# Set Video Resolution %s" %vrcomment
+        apmodestr += "\nwriteb %s %s" %(vraddr, video[vridx])
+        if bridx >= 0:
+          stamodestr += "\n\n# Set Bitrate %s" %brcomment
+          stamodestr += "\nwritew %s %s" %(braddr[vridx], bitrate[bridx])
+          apmodestr += "\n\n# Set Bitrate %s" %brcomment
+          apmodestr += "\nwritew %s %s" %(braddr[vridx], bitrate[bridx])
+      else:
+        buildstr += "\n\n# Set Video Resolution %s" %vrcomment
+        buildstr += "\nwriteb %s %s" %(vraddr, video[vridx])
+        if bridx >= 0:
+          buildstr += "\n\n# Set Bitrate %s" %brcomment
+          buildstr += "\nwritew %s %s" %(braddr[vridx], bitrate[bridx])
     if tvridx >= 0:
       hashack = True
-      buildstr += "\n\n# Set Timelapse Video Resolution %s" %tvrcomment
-      buildstr += "\nwriteb %s %s" %(tvraddr, video[tvridx])
-      if bridx >= 0:
-        buildstr += "\n\n# Set Bitrate %s" %brcomment
-        buildstr += "\nwritew %s %s" %(braddr[tvridx], bitrate[bridx])
+      if haswifihack:
+        stamodestr += "\n\n# Set Timelapse Video Resolution %s" %tvrcomment
+        stamodestr += "\nwriteb %s %s" %(tvraddr, video[tvridx])
+        apmodestr += "\n\n# Set Timelapse Video Resolution %s" %tvrcomment
+        apmodestr += "\nwriteb %s %s" %(tvraddr, video[tvridx])
+        if bridx >= 0:
+          stamodestr += "\n\n# Set Bitrate %s" %brcomment
+          stamodestr += "\nwritew %s %s" %(braddr[tvridx], bitrate[bridx])
+          apmodestr += "\n\n# Set Bitrate %s" %brcomment
+          apmodestr += "\nwritew %s %s" %(braddr[tvridx], bitrate[bridx])
+      else:
+        buildstr += "\n\n# Set Timelapse Video Resolution %s" %tvrcomment
+        buildstr += "\nwriteb %s %s" %(tvraddr, video[tvridx])
+        if bridx >= 0:
+          buildstr += "\n\n# Set Bitrate %s" %brcomment
+          buildstr += "\nwritew %s %s" %(braddr[tvridx], bitrate[bridx])
     if rawcomment <> "":
       hashack = True
-      buildstr += rawcomment
+      if haswifihack:
+        stamodestr += rawcomment
+        apmodestr += rawcomment
+      else:
+        buildstr += rawcomment
       #buildstr += "\nt app test debug_dump 14"
     cam = self.cam[index]
-    if hashack and find:
+    if haswifihack:
+      stamodestr += "\nsleep 25\nsleep 1\nt pwm 1 enable\nsleep 1\nt pwm 1 disable\nsleep 1"
+      stamodestr += "\nlu_util exec '/tmp/fuse_a/custom/wifi.sh station'"
+      stamodestr += "\nt pwm 1 enable\nsleep 1\nt pwm 1 disable\nsleep 1"
+      stamodestr += "\nwhile true\ndo\n  sleep 9\n  lu_util exec '/tmp/fuse_a/custom/wifi.sh station'\ndone"
+      stamodestr += "\n\n# End of Script\n"
+      
+      apmodestr += "\nsleep 1\nt pwm 1 enable\nsleep 1\nt pwm 1 disable\nsleep 1\nt pwm 1 enable\nsleep 1\nt pwm 1 disable\nsleep 1\nt pwm 1 enable\nsleep 1\nt pwm 1 disable\nsleep 1"
+      apmodestr += "\nwhile true\ndo\n  lu_util exec '/tmp/fuse_a/custom/wifi.sh ap'\n  sleep 9\ndone"
+      apmodestr += "\n\n# End of Script\n"
+      
+      installstr += "\nsleep 1\nlu_util exec 'mv -f /tmp/fuse_d/wifi.sh /tmp/fuse_a/custom/wifi.sh'"
+      installstr += "\nsleep 1\nlu_util exec 'mv -f /tmp/fuse_d/apmode.ash /tmp/fuse_a/custom/apmode.ash'"
+      installstr += "\nsleep 1\nlu_util exec 'mv -f /tmp/fuse_d/wpa_supplicant.conf /tmp/fuse_a/custom/wpa_supplicant.conf'"
+      installstr += "\nsleep 1\nlu_util exec 'cp -f /tmp/fuse_d/stamode.ash /tmp/fuse_a/custom/stamode.ash'"
+      installstr += "\nsleep 1\nlu_util exec 'mv -f /tmp/fuse_d/stamode.ash /tmp/fuse_d/autoexec.ash'"
+      installstr += "\nsleep 1\nt pwm 1 enable\nsleep 2\nt pwm 1 disable"
+      installstr += "\nsleep 1\nreboot yes"
+      installstr += "\n\n# End of Script\n"
+      
+    if (hashack or haswifihack) and find:
       cam.dlstop.clear()
       cam.dlerror.clear()
       cam.StartDelete("autoexec.ash")
@@ -507,7 +565,101 @@ class Ponerine(ScreenManager):
       if cam.dlerror.isSet():
         print "Remove autoexec.ash Error"
         return False
-    if hashack:
+    
+    # hack within wifi mode
+    if haswifihack:
+      shellstr = '#!/bin/sh\nGATE="%s"\nIPAD="%s"\n# IPAD="DHCP"\n' %(self.cfglist[index]["gateway"],self.cfglist[index]["stationip"])
+      shellsh = __file__.replace(basename(__file__), "data/wifishell.sh")
+      try:
+        with open(shellsh) as file:
+          shellstr += file.read()
+      except StandardError:
+        print "Read shell.sh Error"
+        return False
+      
+      wifish = __file__.replace(basename(__file__), "data/wifi.sh")
+      try:
+        with open(wifish,'w') as file:
+          file.write(shellstr)
+      except StandardError:
+        print "Create wifi.sh Error"
+        return False
+      
+      if self.cfglist[index]["password"] == "":
+        wpastr = 'ctrl_interface=/var/run/wpa_supplicant\nnetwork={'
+        wpastr += '\nssid="%s"\nkey_mgmt=NONE\n}\n' %self.cfglist[index]["ssid"]
+      else:
+        wpastr = 'ctrl_interface=/var/run/wpa_supplicant\nnetwork={'
+        wpastr += '\nssid="%s"\nkey_mgmt=WPA-PSK\nproto=WPA2 WPA' %self.cfglist[index]["ssid"]
+        wpastr += '\npairwise=CCMP TKIP\npsk="%s"\n}\n' %self.cfglist[index]["password"]
+      wpafile = __file__.replace(basename(__file__), "data/wpa_supplicant.conf")
+      try:
+        with open(wpafile,'w') as file:
+          file.write(wpastr)
+      except StandardError:
+        print "Create wpa_supplicant.conf Error"
+        return False
+
+      stafile = __file__.replace(basename(__file__), "data/stamode.ash")
+      try:
+        with open(stafile,'w') as file:
+          file.write(stamodestr)
+      except StandardError:
+        print "Create stamode.ash Error"
+        return False
+        
+      apfile = __file__.replace(basename(__file__), "data/apmode.ash")
+      try:
+        with open(apfile,'w') as file:
+          file.write(apmodestr)
+      except StandardError:
+        print "Create apmode.ash Error"
+        return False
+        
+      ashfile = __file__.replace(basename(__file__), "data/autoexec.ash")
+      try:
+        with open(ashfile,'w') as file:
+          file.write(installstr)
+      except StandardError:
+        print "Create install.ash Error"
+        return False
+      
+      cam.StartUpload(wifish)
+      cam.dlstop.wait()
+      if cam.dlerror.isSet():
+        print "StartUpload wifi.sh Error"
+        return False
+      time.sleep(1)
+      cam.StartUpload(wpafile)
+      cam.dlstop.wait()
+      if cam.dlerror.isSet():
+        print "StartUpload wpa_supplicant.conf Error"
+        return False
+      time.sleep(1)
+      cam.StartUpload(stafile)
+      cam.dlstop.wait()
+      if cam.dlerror.isSet():
+        print "StartUpload stamode.ash Error"
+        return False
+      time.sleep(1)
+      cam.StartUpload(apfile)
+      cam.dlstop.wait()
+      if cam.dlerror.isSet():
+        print "StartUpload apmode.ash Error"
+        return False
+      time.sleep(1)
+      cam.StartUpload(ashfile)
+      cam.dlstop.wait()
+      if cam.dlerror.isSet():
+        print "StartUpload install.ash Error"
+        return False
+      else:
+        time.sleep(1)
+        return True
+      
+    # hack without wifi mode
+    elif hashack:
+      buildstr += "\n\nsleep 1\nt pwm 1 enable\nsleep 1\nt pwm 1 disable\nsleep 1\nt pwm 1 enable\nsleep 1\nt pwm 1 disable"
       buildstr += "\n\n# End of Script\n"
       print buildstr
       ashfile = __file__.replace(basename(__file__), "data/autoexec.ash")
@@ -515,17 +667,16 @@ class Ponerine(ScreenManager):
         with open(ashfile,'w') as file:
           file.write(buildstr)
       except StandardError:
-        print "Remove autoexec.ash Error"
+        print "Create autoexec.ash Error"
         return False
-
+      
       cam.StartUpload(ashfile)
       cam.dlstop.wait()
       if cam.dlerror.isSet():
         return False
       else:
+        time.sleep(1)
         return True
-      #self.injectlist[index] = {}
-      #self.RebootPopupOpen(index)
     
   def EnabledTelnet(self, index, value, find):
     cam = self.cam[index]
