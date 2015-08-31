@@ -1344,7 +1344,7 @@ class Ponerine(ScreenManager):
       for cam in self.cam:
         recording = recording and cam.recording
         rectime.append(cam.recordtime)
-      print "Record Time: ", rectime
+      print recording, "Record Time: ", rectime
       if len(rectime) > 1:
         self.current_screen.ids.lblCam1.text = "CAM 1 [ " + rectime[0] + " ]"
         self.current_screen.ids.lblCam2.text = "CAM 2 [ " + rectime[1] + " ]"
