@@ -364,7 +364,7 @@ class Ponerine(ScreenManager):
       if key == "enable_info_display":
         hastelnet = True
         valuetelnet = value
-      else:
+      elif key <> "hack_timelapse_video_resolution":
         hashack = True
     if hashack or hastelnet:
       hackstatus = self.ReadHackStatus(index)
@@ -579,7 +579,7 @@ class Ponerine(ScreenManager):
       
       wifish = __file__.replace(basename(__file__), "data/wifi.sh")
       try:
-        with open(wifish,'w') as file:
+        with open(wifish,'wb') as file:
           file.write(shellstr)
       except StandardError:
         print "Create wifi.sh Error"
@@ -594,7 +594,7 @@ class Ponerine(ScreenManager):
         wpastr += '\npairwise=CCMP TKIP\npsk="%s"\n}\n' %self.cfglist[index]["password"]
       wpafile = __file__.replace(basename(__file__), "data/wpa_supplicant.conf")
       try:
-        with open(wpafile,'w') as file:
+        with open(wpafile,'wb') as file:
           file.write(wpastr)
       except StandardError:
         print "Create wpa_supplicant.conf Error"
@@ -602,7 +602,7 @@ class Ponerine(ScreenManager):
 
       stafile = __file__.replace(basename(__file__), "data/stamode.ash")
       try:
-        with open(stafile,'w') as file:
+        with open(stafile,'wb') as file:
           file.write(stamodestr)
       except StandardError:
         print "Create stamode.ash Error"
@@ -610,7 +610,7 @@ class Ponerine(ScreenManager):
         
       apfile = __file__.replace(basename(__file__), "data/apmode.ash")
       try:
-        with open(apfile,'w') as file:
+        with open(apfile,'wb') as file:
           file.write(apmodestr)
       except StandardError:
         print "Create apmode.ash Error"
@@ -618,7 +618,7 @@ class Ponerine(ScreenManager):
         
       ashfile = __file__.replace(basename(__file__), "data/autoexec.ash")
       try:
-        with open(ashfile,'w') as file:
+        with open(ashfile,'wb') as file:
           file.write(installstr)
       except StandardError:
         print "Create install.ash Error"
@@ -664,7 +664,7 @@ class Ponerine(ScreenManager):
       print buildstr
       ashfile = __file__.replace(basename(__file__), "data/autoexec.ash")
       try:
-        with open(ashfile,'w') as file:
+        with open(ashfile,'wb') as file:
           file.write(buildstr)
       except StandardError:
         print "Create autoexec.ash Error"
@@ -727,7 +727,7 @@ class Ponerine(ScreenManager):
       jsondata += c.BuildSetting("hack_wifi_mode") + ","
       jsondata += c.BuildSetting("enable_info_display") + ","
       jsondata += c.BuildSetting("hack_video_resolution") + ","
-      jsondata += c.BuildSetting("hack_timelapse_video_resolution") + ","
+      #jsondata += c.BuildSetting("hack_timelapse_video_resolution") + ","
       jsondata += c.BuildSetting("hack_video_bitrate") + ","
       jsondata += c.BuildSetting("hack_raw_photo")
       jsondata += ']'

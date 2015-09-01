@@ -1,5 +1,4 @@
 
-# need change CrLf to Lf
 #wpa_supplicant.conf
 WPAS=/tmp/fuse_a/custom/wpa_supplicant.conf
 
