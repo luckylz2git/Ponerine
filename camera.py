@@ -244,6 +244,7 @@ class Camera():
         self.cambusy = False
         self.recording = True
         if self.showtime:
+          time.sleep(1)
           self.SendMsg('{"msg_id":515}')
       elif data["type"] == "piv_complete":
         self.cambusy = False
@@ -476,6 +477,7 @@ class Camera():
 
   def StartRecord(self, showtime=True):
     self.showtime = showtime
+    self.recordtime = self.RecordTime(0)
     self.SendMsg('{"msg_id":513}')
 
   def StopRecord(self):

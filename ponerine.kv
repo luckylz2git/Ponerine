@@ -349,3 +349,19 @@
           on_release:
             root.apply = False
             root.dismiss()
+
+<ProgressPopup>:
+  auto_dismiss: False
+  #title: 'Reboot'
+  BoxLayout:
+    orientation: 'vertical'
+    spacing: 5
+    
+    #Widget:
+      #size_hint: 1, None
+      #size: root.width, root.width/50
+    Label:
+      id: txtProgress
+      text: "Camera %d Injecting ..." %(root.index+1)
+      font_size: root.width/25
+            

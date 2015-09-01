@@ -72,6 +72,9 @@ class RebootPopup(Popup):
   apply = BooleanProperty()
   index = NumericProperty()
 
+class ProgressPopup(Popup):
+  index = NumericProperty()
+  
 class Ponerine(ScreenManager):
   def __init__(self, appexit):
     super(Ponerine, self).__init__()
@@ -354,6 +357,7 @@ class Ponerine(ScreenManager):
       threading.Thread(target=self.DoInjectApply, args=(index,), name="DoInjectApply"+str(index)).start()
   
   def DoInjectApply(self, index):
+    opened = False
     hastelnet = False
     valuetelnet = ""
     hashack = False
@@ -367,11 +371,20 @@ class Ponerine(ScreenManager):
       elif key <> "hack_timelapse_video_resolution":
         hashack = True
     if hashack or hastelnet:
+      self.ProgressPopupOpen(index)
+      opened = True
       hackstatus = self.ReadHackStatus(index)
     if hashack:
       hashack = self.BuildAutoexec(index, hackstatus in [10,11])
     if hastelnet:
+      if hashack:
+        self.ReadHackStatus(index)
       hastelnet = self.EnabledTelnet(index, valuetelnet, hackstatus in [1,11])
+      time.sleep(1)
+    if opened:
+      if self.progresstext.text.endswith("Error"):
+        time.sleep(5)
+      self.progresspop.dismiss()
     if hashack or hastelnet:
       self.injectlist[index] = {}
       self.RebootPopupOpen(index)
@@ -379,6 +392,7 @@ class Ponerine(ScreenManager):
   def ReadHackStatus(self, index):
     r = 0
     cam = self.cam[index]
+    self.progresstext.text = "Refresh folder /tmp/fuse_d"
     cam.RefreshFile("/tmp/fuse_d")
     hastelnet = False
     hashack = False
@@ -390,16 +404,20 @@ class Ponerine(ScreenManager):
     
     if len(cam.listing) > 0:
       print "search for enable_info_display.script"
+      self.progresstext.text = "Refresh folder /tmp/fuse_d %d" %(len(cam.listing))
       for item in cam.listing:
         print "item",item
         if item["name"] == "enable_info_display.script":
           r += 1
         elif item["name"] == "autoexec.ash":
           r += 10
+    else:
+      self.progresstext.text = "Refresh folder /tmp/fuse_d 0"
     return r
     
   def BuildAutoexec(self, index, find):
     print "BuildAutoexec for Cam %d" %index
+    self.progresstext.text = "Building autoexec.ash"
     vraddr = "0xC06CC426"  #vidoe resolution
     vridx = -1
     tvraddr = "0xC06CC4B9" #timelapse vidoe resolution maybe wrong
@@ -558,13 +576,16 @@ class Ponerine(ScreenManager):
       installstr += "\n\n# End of Script\n"
       
     if (hashack or haswifihack) and find:
+      self.progresstext.text = "Deleting old autoexec.ash"
       cam.dlstop.clear()
       cam.dlerror.clear()
       cam.StartDelete("autoexec.ash")
       cam.dlstop.wait(30)
       if cam.dlerror.isSet():
         print "Remove autoexec.ash Error"
+        self.progresstext.text = "Delete old autoexec.ash Error"
         return False
+      self.ReadHackStatus(index)
     
     # hack within wifi mode
     if haswifihack:
@@ -574,7 +595,8 @@ class Ponerine(ScreenManager):
         with open(shellsh) as file:
           shellstr += file.read()
       except StandardError:
-        print "Read shell.sh Error"
+        print "Read wifishell.sh Error"
+        self.progresstext.text = "Read wifishell.sh Error"
         return False
       
       wifish = __file__.replace(basename(__file__), "data/wifi.sh")
@@ -583,6 +605,7 @@ class Ponerine(ScreenManager):
           file.write(shellstr)
       except StandardError:
         print "Create wifi.sh Error"
+        self.progresstext.text = "Write wifi.sh Error"
         return False
       
       if self.cfglist[index]["password"] == "":
@@ -598,6 +621,7 @@ class Ponerine(ScreenManager):
           file.write(wpastr)
       except StandardError:
         print "Create wpa_supplicant.conf Error"
+        self.progresstext.text = "Write wpa_supplicant.conf Error"
         return False
 
       stafile = __file__.replace(basename(__file__), "data/stamode.ash")
@@ -606,6 +630,7 @@ class Ponerine(ScreenManager):
           file.write(stamodestr)
       except StandardError:
         print "Create stamode.ash Error"
+        self.progresstext.text = "Write stamode.ash Error"
         return False
         
       apfile = __file__.replace(basename(__file__), "data/apmode.ash")
@@ -614,6 +639,7 @@ class Ponerine(ScreenManager):
           file.write(apmodestr)
       except StandardError:
         print "Create apmode.ash Error"
+        self.progresstext.text = "Write apmode.ash Error"
         return False
         
       ashfile = __file__.replace(basename(__file__), "data/autoexec.ash")
@@ -622,39 +648,51 @@ class Ponerine(ScreenManager):
           file.write(installstr)
       except StandardError:
         print "Create install.ash Error"
+        self.progresstext.text = "Write install.ash Error"
         return False
       
+      self.progresstext.text = "Uploading wifi.sh"
       cam.StartUpload(wifish)
       cam.dlstop.wait()
       if cam.dlerror.isSet():
         print "StartUpload wifi.sh Error"
+        self.progresstext.text = "Upload wifi.sh Error"
         return False
+      self.progresstext.text = "Uploading wpa_supplicant.conf"
       time.sleep(1)
       cam.StartUpload(wpafile)
       cam.dlstop.wait()
       if cam.dlerror.isSet():
         print "StartUpload wpa_supplicant.conf Error"
+        self.progresstext.text = "Upload wpa_supplicant.conf Error"
         return False
+      self.progresstext.text = "Uploading stamode.ash"
       time.sleep(1)
       cam.StartUpload(stafile)
       cam.dlstop.wait()
       if cam.dlerror.isSet():
         print "StartUpload stamode.ash Error"
+        self.progresstext.text = "Upload stamode.ash Error"
         return False
+      self.progresstext.text = "Uploading apmode.ash"
       time.sleep(1)
       cam.StartUpload(apfile)
       cam.dlstop.wait()
       if cam.dlerror.isSet():
         print "StartUpload apmode.ash Error"
+        self.progresstext.text = "Upload apmode.ash Error"
         return False
+      self.progresstext.text = "Uploading install.ash"
       time.sleep(1)
       cam.StartUpload(ashfile)
       cam.dlstop.wait()
       if cam.dlerror.isSet():
         print "StartUpload install.ash Error"
+        self.progresstext.text = "Upload install.ash Error"
         return False
       else:
         time.sleep(1)
+        self.progresstext.text = "Upload install.ash Complete"
         return True
       
     # hack without wifi mode
@@ -668,19 +706,23 @@ class Ponerine(ScreenManager):
           file.write(buildstr)
       except StandardError:
         print "Create autoexec.ash Error"
+        self.progresstext.text = "Write autoexec.ash Error"
         return False
-      
+      self.progresstext.text = "Uploading autoexec.ash"
       cam.StartUpload(ashfile)
       cam.dlstop.wait()
       if cam.dlerror.isSet():
+        self.progresstext.text = "Upload autoexec.ash Error"
         return False
       else:
         time.sleep(1)
+        self.progresstext.text = "Upload autoexec.ash Complete"
         return True
     
   def EnabledTelnet(self, index, value, find):
     cam = self.cam[index]
     if value == "on" and find == False:
+      self.progresstext.text = "Enabling telnet"
       print "add file"
       cam.dlstart.clear()
       cam.dlerror.clear()
@@ -688,13 +730,20 @@ class Ponerine(ScreenManager):
       while True:
         if cam.dlerror.isSet():
           print "EnabledTelnet Error"
+          self.progresstext.text = "Enable telnet Error"
           return False
         cam.dlstart.wait(5)
         if cam.dlstart.isSet():
           #self.injectlist[index] = {}
           #self.RebootPopupOpen(index)
+          self.progresstext.text = "Enable telnet Complete"
           return True
+    elif value == "on" and find == True:
+      self.progresstext.text = "Already enable telnet"
+    elif value == "off" and find == False:
+      self.progresstext.text = "Already disable telnet"
     elif value == "off" and find == True:
+      self.progresstext.text = "Disabling telnet"
       print "delete file"
       cam.dlstop.clear()
       cam.dlerror.clear()
@@ -702,12 +751,14 @@ class Ponerine(ScreenManager):
       cam.dlstop.wait(30)
       if cam.dlerror.isSet():
         print "EnabledTelnet Error"
+        self.progresstext.text = "Disable telnet Error"
         return False
       else:
         print "EnabledTelnet Success"
         #self.injectlist[index] = {}
         #self.current_screen.ids.btnInjectApply.disabled = True
         #self.RebootPopupOpen(index)
+        self.progresstext.text = "Disable telnet Complete"
         return True
       
   def DoInjection(self, index):
@@ -734,6 +785,12 @@ class Ponerine(ScreenManager):
       self.injectsetting = SettingsWithNoMenu(size_hint=(1,1))
       self.injectsetting.add_json_panel('Camera %d Injection, needs reboot.' %(index+1), config, data = jsondata)
     
+  def ProgressPopupOpen(self, index):
+    self.progresspop = ProgressPopup(title='Camera %d Injection' %(index+1), size_hint=(0.8, 0.35), size=self.size)
+    self.progresspop.index = index
+    self.progresstext = self.progresspop.ids.txtProgress
+    self.progresspop.open()
+  
   def RebootPopupOpen(self, index):
     self.rebootpop = RebootPopup(title='Reboot Confirmation', size_hint=(0.8, 0.35), size=self.size)
     self.rebootpop.bind(on_dismiss=self.RebootPopupApply)
