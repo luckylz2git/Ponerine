@@ -132,9 +132,10 @@ class Camera():
       self.SendMsg('{"msg_id":258}')
     self.Disconnect()
   
-  def RenewToken(self):
-    self.SendMsg('{"msg_id":258}')
-    self.SendMsg('{"msg_id":257}')
+  def StopViewfinder(self):
+    self.SendMsg('{"msg_id":260}')
+    #self.SendMsg('{"msg_id":258}')
+    #self.SendMsg('{"msg_id":257}')
     
   def SendMsg(self, msg):
     self.qsend.put(msg)
@@ -257,8 +258,12 @@ class Camera():
       elif data["type"] == "put_file_complete":
         self.dlcomplete.set()
       elif data["type"] == "vf_start":
-        print "webport open"
-        self.webportopen = True
+        self.vfstart = True
+        print "settings readonly"
+        #self.webportopen = True
+      elif data["type"] == "vf_stop":
+        self.vfstart = False
+        print "settings settable"
 
   '''
   normal rval = 0
@@ -308,9 +313,12 @@ class Camera():
       self.token = 0
       #self.link = False
       #self.UnlinkCamera()
-    # open webport
+    # vf start
     elif data["msg_id"] == 259:
       self.webportopen = True
+    # vf stop
+    elif data["msg_id"] == 260:
+      pass
     elif data["msg_id"] == 2:
       self.setok.set()
     # all config information
@@ -561,7 +569,8 @@ class Camera():
         
   def ThreadWebDownload(self, file, destdir):
     if not self.webportopen:
-      self.SendMsg('{"msg_id":259,"param":"none_force"}')
+      #self.SendMsg('{"msg_id":259,"param":"none_force"}')
+      self.SendMsg('{"msg_id":259}')
       t1 = time.time()
       while not self.webportopen:
         t2 = time.time()
@@ -865,7 +874,8 @@ class Camera():
 
   def ThreadRefreshFile(self, dir):
     if not self.webportopen and dir == "/var/www/DCIM":
-      self.SendMsg('{"msg_id":259,"param":"none_force"}')
+      #self.SendMsg('{"msg_id":259,"param":"none_force"}')
+      self.SendMsg('{"msg_id":259}')
       t1 = time.time()
       while not self.webportopen:
         t2 = time.time()

@@ -1504,15 +1504,13 @@ class Ponerine(ScreenManager):
           return
       settings = cam.settings
       cam.settings = []
-      if cam.webportopen:
-        cam.RenewToken()
+      cam.StopViewfinder()
 
     self.BuildConfig("setting", self.config[index], cam.cfgdict)
     self.applyconfig = False
     #debugtxt += "\nCAM %d Settings :\n" %i + settings
     #print "Camera %d" %(index+1), settings
-    if cam.webportopen:
-      cam.RenewToken()
+    cam.StopViewfinder()
       
     self.BuildSetting(index, self.config[index], settings)
           
