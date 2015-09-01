@@ -1413,4 +1413,4 @@ Read All Options
 {"rc_button_mode": "mode_shutter"}, 
 {"timelapse_video_duration": "10s"}, 
 {"timelapse_video_resolution": "2304x1296 30P 16:9"}]
-'''
+''' 

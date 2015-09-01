@@ -1,6 +1,6 @@
 from Queue import Queue
 import json, socket, threading, time, select, os, urllib2, hashlib
-from os.path import basename #, getsize
+from os.path import basename #, getsize 
 
 class Camera():
   def __init__(self, ip="192.168.42.1", port=7878, dataport=8787, webport=80):
