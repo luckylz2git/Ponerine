@@ -118,22 +118,19 @@ class Camera():
                    "support_auto_low_light",
                    "sw_version",
                    "timelapse_photo"]
-    threading.Thread(target=self.ThreadSend, name="ThreadSend").start()
+    threading.Thread(target=self.ThreadSend, name="ThreadSend%s" %self.ip).start()
 #     self.tsend= threading.Thread(target=self.ThreadSend)
 #     self.tsend.setDaemon(True)
 #     self.tsend.setName('ThreadSend')
 #     self.tsend.start()
-    threading.Thread(target=self.ThreadRecv, name="ThreadRecv").start()
+    threading.Thread(target=self.ThreadRecv, name="ThreadRecv%s" %self.ip).start()
 #     self.trecv= threading.Thread(target=self.ThreadRecv)
 #     self.trecv.setDaemon(True)
 #     self.trecv.setName('ThreadRecv')
 #     self.trecv.start()
 
   def UnlinkCamera(self):
-    if self.link:
-      self.SendMsg('{"msg_id":258}')
-    else:
-      self.Disconnect()
+    threading.Thread(target=self.Disconnect, name="Disconnect%s" %self.ip).start()
   
   def StartViewfinder(self):
     self.SendMsg('{"msg_id":259}')
@@ -318,7 +315,7 @@ class Camera():
     elif data["msg_id"] == 258:
       self.token = 0
       self.link = False
-      self.UnlinkCamera()
+      #self.Disconnect()
     # vf start
     elif data["msg_id"] == 259:
       self.webportopen = True
@@ -462,8 +459,23 @@ class Camera():
       self.srv.setblocking(0)
 
   def Disconnect(self):
+    if self.link:
+      self.SendMsg('{"msg_id":258}')
+      t1 = time.time()
+      while self.link:
+        t2 = time.time()
+        if (t2 - t1) >= 12.0:
+          self.link = False
+          break
     if self.socketopen == 0:
       self.socketopen = -1
+      for thread in threading.enumerate():
+        if thread.isAlive() and thread.name in ("ThreadSend%s" %self.ip,"ThreadRecv%s" %self.ip):
+          print "Camera.Disconnect: %s" %thread.name
+          try:
+            thread._Thread__stop()
+          except:
+            pass
       try:
         self.srv.close()
       except:

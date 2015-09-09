@@ -97,7 +97,22 @@ class MPonerine(ScreenManager):
       else:
         btn.color = (0,0,0,0.5)
   
-  def DetectCam(self):
+  def DetectCam(self, timewait = 1):
+    self.btnphoto.disabled = True
+    self.btnphoto.text = "BUZZER"
+    self.btnphoto.background_disabled_normal = 'image/mcamera_noip.png'
+    self.btnphoto.disabled_color = (0,0,0,0.5)
+    
+    self.btnconnect.disabled = False
+    self.btnconnect.text = "CONNECT"
+    self.btnconnect.background_normal = 'image/mcamera_normal.png'
+    self.btnconnect.color = (0,0,0,1)
+    
+    self.btnrecord.disabled = True
+    self.btnrecord.text = "RECORD"
+    self.btnrecord.background_disabled_normal = 'image/mcamera_noip.png'
+    self.btnrecord.disabled_color = (0,0,0,0.5)
+    
     for i in range(self.cameras):
       btn = self.btncameras[i]
       btn.disabled = False
@@ -285,11 +300,13 @@ class MPonerine(ScreenManager):
         btn.background_disabled_normal = 'image/mcamera_disconnect.png'
         print "Fail to connect camera %d" %number
         return
-    # Listen Start Record Command
-    threading.Thread(target=self.DoStartRecord, args=(index,), name="DoStartRecord%d" %index).start()
-    #print 'image/mcamera_connect.png'
     self.linked += 1
     self.btnconnect.text = 'CAM %d / %d' %(self.linked, len(self.cam))
+    # Listen Start Record Command
+    threading.Thread(target=self.DoStartRecord, args=(index,), name="DoStartRecord%d" %index).start()
+    threading.Thread(target=self.DoWifi, args=(index,), name="DoWifi%d" %index).start()
+    #print 'image/mcamera_connect.png'
+    
     #cam.StartViewfinder()
     print "Linked Camera %d" %number
     # if self.linked == len(self.cam):
@@ -311,23 +328,29 @@ class MPonerine(ScreenManager):
         # i += 1
       # self.btnconnect.disabled = False
     cam.SendMsg('{"msg_id":2,"type":"buzzer_volume", "param":"mute"}')
+    time.sleep(1)
+    btn.background_disabled_normal = 'image/mcamera_connect.png'
     #threading.Thread(target=self.DoWifi, args=(cam.wifioff,), name="DoWifi"+str(i)).start()
     #threading.Thread(target=self.DoFileTaken, args=(i,), name="DoFileTaken"+str(i)).start()
     
-  def DoDisconnect(self):
+  def DoDisconnect(self, timewait = 1):
     try:
       for cam in self.cam:
         if cam.link:
           cam.UnlinkCamera()
-          cam.quit.wait(10)
+          cam.quit.wait(15)
     except:
       pass
     self.connect.clear()
-    self.stopdetect.clear()    
-    self.DetectCam()
-    self.btnconnect.disabled = False
-    self.btnconnect.text = "CONNECT"
-    self.btnconnect.background_normal = 'image/mcamera_normal.png'
+    self.stopdetect.clear()
+    for thread in threading.enumerate():
+      if thread.isAlive() and (thread.name[0:13] == "DoStartRecord" or thread.name[0:13] == "DoWifi"):
+        print "main.py.DoDisconnect %s" %thread.name
+        try:
+          thread._Thread__stop()
+        except:
+          pass
+    self.DetectCam(timewait)
     
   def DoStartRecord(self, index):
     retry = False
@@ -335,7 +358,7 @@ class MPonerine(ScreenManager):
       self.recordstart.wait()
       cam = self.cam[index]
       cam.StartRecord(False)
-      cam.recording.wait(15)
+      cam.recording.wait(10)
       if cam.recording.isSet():
         retry = False
         print "\nDoStartRecord", index
@@ -346,8 +369,9 @@ class MPonerine(ScreenManager):
         self.btnrecord.text = 'CAM %d / %d' %(self.linked, len(self.cam))
         threading.Thread(target=self.DoStopRecord, args=(index,), name="DoStopRecord%d" %index).start()
         if self.linked == len(self.cam):
+          time.sleep(1)
           self.cam[self.firstcam].SendMsg('{"msg_id":2,"type":"buzzer_ring", "param":"on"}')
-          time.sleep(1.5)
+          time.sleep(1.25)
           self.cam[self.firstcam].SendMsg('{"msg_id":2,"type":"buzzer_ring", "param":"off"}')
           threading.Thread(target=self.ButtonText, args=(self.btnrecord,"STOP",1,), name="ButtonText").start()
           threading.Thread(target=self.DoShowRecord, name="DoShowRecord").start()
@@ -428,7 +452,7 @@ class MPonerine(ScreenManager):
       btn.text == "STOPPING"
       btn.disabled = True
       self.cam[self.firstcam].SendMsg('{"msg_id":2,"type":"buzzer_ring", "param":"on"}')
-      time.sleep(1.5)
+      time.sleep(1.25)
       self.cam[self.firstcam].SendMsg('{"msg_id":2,"type":"buzzer_ring", "param":"off"}')
       self.recordstop.set()
       self.recordstart.clear()
@@ -565,15 +589,11 @@ class MPonerine(ScreenManager):
     self.current_screen.ids.btnRecord.state = "normal"
     self.current_screen.ids.btnRecord.text = "Start Record"
   
-  def DoWifi(self, wifioff):
-    print "DoWifi wait start"
+  def DoWifi(self, index):
+    print "DoWifi Start %d" %index
+    wifioff = self.cam[index].wifioff
     wifioff.wait()
-    self.transition = SlideTransition(direction = "right")
-    self.stopdetect.clear()
-    self.switch_to(self.screen[0],direction="right")
-    self.current_screen.ids.btnConnect.text = ""
-    self.DetectCam(45)
-    time.sleep(15)
+    threading.Thread(target=self.DoDisconnect, args=(45,), name="DoDisconnect%d" %index).start()
     wifioff.clear()
   
   def DoFileTaken(self, index):
@@ -673,6 +693,8 @@ class MPonerineApp(App):
     self.appexit.set()
     for thread in threading.enumerate():
       if thread.isAlive():
+        print "thread.isAlive name", thread.name
+      
         try:
           thread._Thread__stop()
         except:
