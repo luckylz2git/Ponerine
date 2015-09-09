@@ -1,0 +1,299 @@
+#:kivy 1.9.0
+#:import kivy kivy
+#:import Factory kivy.factory.Factory 
+
+<CamerasPopup>:
+  auto_dismiss: False
+  #title: 'Camera Connection Config'
+  BoxLayout:
+    orientation: 'vertical'
+    spacing: 5
+    
+    Widget:
+      size_hint: 1, None
+      size: root.width, root.width/20
+    
+    #Camera Count
+    GridLayout:
+      #disabled: (False if optWifiMode.active else True) if optEnabled.active else True
+      size_hint: 1, None
+      height: root.width/13 + root.width/50
+      padding: 0,0,0,root.width/50
+      spacing: root.width/35
+      cols: 3
+      Label:
+        text: 'Camera Count : '
+        size_hint: 0.4, 1
+        text_size: self.size
+        font_size: root.width/25
+        halign: 'right'
+        valign: 'middle'
+      TextInput:
+        id: txtCameras
+        multiline: False
+        text: root.cameras
+        size_hint: 0.4, 1
+        font_size: root.width/25
+        padding: root.width/60, root.width/70, 0, 0
+      Label:
+        size_hint: 0.2, 1
+    
+    AnchorLayout:
+      anchor_x: 'center'
+      anchor_y: 'bottom'
+      orientation: 'horizontal'
+      size_hint: 1, 1
+      GridLayout:
+        cols: 2
+        size_hint: None, None
+        size: root.width*0.8, root.width*0.15+root.width/20
+        padding: 0,0,0,root.width/20
+        spacing: root.width/20
+        # Apply Button
+        Button:
+          text: 'Apply'
+          size_hint: 1, 1
+          on_release:
+            root.apply = True
+            root.cameras = txtCameras.text
+            root.dismiss()
+        # Cancel Button
+        Button:
+          text: 'Cancel'
+          size_hint: 1, 1
+          on_release:
+            root.apply = False
+            root.dismiss()
+
+<ConfigPopup>:
+  auto_dismiss: False
+  #title: 'Camera Connection Config'
+  BoxLayout:
+    orientation: 'vertical'
+    spacing: 5
+    
+    Widget:
+      size_hint: 1, None
+      size: root.width, root.width/20
+    
+    # Camera Enabled
+    GridLayout:
+      size_hint: 1, None
+      height: root.width/13 + root.width/50
+      padding: 0,0,0,root.width/50
+      spacing: root.width/35
+      cols: 3
+      Label:
+        text: 'Camera Enabled : '
+        size_hint: 0.4, 1
+        text_size: self.size
+        font_size: root.width/25
+        halign: 'right'
+        valign: 'middle'
+      Switch:
+        id: optEnabled
+        active: root.cfg["enabled"] == 1
+        size_hint: 0.25, 1
+        #text_size: self.size
+        #font_size: root.width/50
+      Label:
+        size_hint: 0.35, 1
+    
+    #Camera No.
+    GridLayout:
+      #disabled: (False if optWifiMode.active else True) if optEnabled.active else True
+      size_hint: 1, None
+      height: root.width/13 + root.width/50
+      padding: 0,0,0,root.width/50
+      spacing: root.width/35
+      cols: 3
+      Label:
+        text: 'Camera No. : '
+        size_hint: 0.4, 1
+        text_size: self.size
+        font_size: root.width/25
+        halign: 'right'
+        valign: 'middle'
+      TextInput:
+        id: txtCameraNo
+        multiline: False
+        text: root.cfg["camera"]
+        size_hint: 0.4, 1
+        font_size: root.width/25
+        padding: root.width/60, root.width/70, 0, 0
+      Label:
+        size_hint: 0.2, 1
+    
+    #Camera IP Address
+    GridLayout:
+      #disabled: (True if optWifiMode.active else False) if optEnabled.active else True
+      size_hint: 1, None
+      height: root.width/13 + root.width/50
+      padding: 0,0,0,root.width/50
+      spacing: root.width/35
+      cols: 3
+      Label:
+        text: 'Camera IP : '
+        size_hint: 0.4, 1
+        text_size: self.size
+        font_size: root.width/25
+        halign: 'right'
+        valign: 'middle'
+      TextInput:
+        id: txtCameraIP
+        multiline: False
+        text: root.cfg["ip"]
+        size_hint: 0.4, 1
+        font_size: root.width/25
+        padding: root.width/60, root.width/70, 0, 0
+      Label:
+        size_hint: 0.2, 1
+    
+    #Camera Name
+    GridLayout:
+      #disabled: (False if optWifiMode.active else True) if optEnabled.active else True
+      size_hint: 1, None
+      height: root.width/13 + root.width/50
+      padding: 0,0,0,root.width/50
+      spacing: root.width/35
+      cols: 3
+      Label:
+        text: 'Camera Name : ' 
+        size_hint: 0.4, 1
+        text_size: self.size
+        font_size: root.width/25
+        halign: 'right'
+        valign: 'middle'
+      TextInput:
+        id: txtCameraName
+        multiline: False
+        text: root.cfg["name"]
+        size_hint: 0.4, 1
+        font_size: root.width/25
+        padding: root.width/60, root.width/70, 0, 0
+      Label:
+        size_hint: 0.2, 1
+    
+    AnchorLayout:
+      anchor_x: 'center'
+      anchor_y: 'bottom'
+      orientation: 'horizontal'
+      size_hint: 1, 1
+      GridLayout:
+        cols: 2
+        size_hint: None, None
+        size: root.width*0.8, root.width*0.15+root.width/20
+        padding: 0,0,0,root.width/20
+        spacing: root.width/20
+        # Apply Button
+        Button:
+          text: 'Apply'
+          size_hint: 1, 1
+          on_release:
+            root.apply = True
+            root.cfg["camera"] = txtCameraNo.text
+            root.cfg["ip"] = txtCameraIP.text
+            root.cfg["name"] = txtCameraName.text
+            root.cfg["enabled"] = 1 if optEnabled.active else 0
+            root.dismiss()
+        # Cancel Button
+        Button:
+          text: 'Cancel'
+          size_hint: 1, 1
+          on_release:
+            root.apply = False
+            root.dismiss()
+
+<DeletePopup>:
+  auto_dismiss: False
+  #title: 'File Delete Confirmation'
+  BoxLayout:
+    orientation: 'vertical'
+    spacing: 5
+    
+    #Widget:
+      #size_hint: 1, None
+      #size: root.width, root.width/50
+    Label:
+      text: "Do you really want to delete files in camera ?"
+      font_size: root.width/25
+    AnchorLayout:
+      anchor_x: 'center'
+      anchor_y: 'bottom'
+      orientation: 'horizontal'
+      size_hint: 1, 1
+      GridLayout:
+        cols: 2
+        size_hint: None, None
+        size: root.width*0.8, root.width*0.15+root.width/20
+        padding: 0,0,0,root.width/20
+        spacing: root.width/20
+        # Apply Button
+        Button:
+          text: 'Delete'
+          size_hint: 1, 1
+          on_release:
+            root.apply = True
+            root.dismiss()
+        # Cancel Button
+        Button:
+          text: 'Cancel'
+          size_hint: 1, 1
+          on_release:
+            root.apply = False
+            root.dismiss()
+
+<RebootPopup>:
+  auto_dismiss: False
+  #title: 'Reboot'
+  BoxLayout:
+    orientation: 'vertical'
+    spacing: 5
+    
+    #Widget:
+      #size_hint: 1, None
+      #size: root.width, root.width/50
+    Label:
+      text: "Camera %d needs reboot to make settings effective .\nDo you want to reboot now ?" %(root.index+1)
+      font_size: root.width/25
+    AnchorLayout:
+      anchor_x: 'center'
+      anchor_y: 'bottom'
+      orientation: 'horizontal'
+      size_hint: 1, 1
+      GridLayout:
+        cols: 2
+        size_hint: None, None
+        size: root.width*0.8, root.width*0.15+root.width/20
+        padding: 0,0,0,root.width/20
+        spacing: root.width/20
+        # Apply Button
+        Button:
+          text: 'Reboot'
+          size_hint: 1, 1
+          on_release:
+            root.apply = True
+            root.dismiss()
+        # Cancel Button
+        Button:
+          text: 'Cancel'
+          size_hint: 1, 1
+          on_release:
+            root.apply = False
+            root.dismiss()
+
+<ProgressPopup>:
+  auto_dismiss: False
+  #title: 'Reboot'
+  BoxLayout:
+    orientation: 'vertical'
+    spacing: 5
+    
+    #Widget:
+      #size_hint: 1, None
+      #size: root.width, root.width/50
+    Label:
+      id: txtProgress
+      text: "Camera %d Injecting ..." %(root.index+1)
+      font_size: root.width/25
+            

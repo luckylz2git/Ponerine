@@ -1,0 +1,3 @@
+title=M.Ponerine Debug 0.0.1
+author=chn.luckylz.ponerinem
+orientation=portrait

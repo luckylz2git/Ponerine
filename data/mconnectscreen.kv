@@ -1,0 +1,243 @@
+#:kivy 1.9.0
+#:import kivy kivy
+#:import Factory kivy.factory.Factory 
+
+# class MConnectScreen(Screen):
+  # pass
+
+<MConnectScreen>:
+#Screen:
+  #set back ground color
+  AnchorLayout:
+    id: achConnect
+    anchor_x: 'left'
+    anchor_y: 'top'
+    #size_hint: None, None
+    #size: root.width, root.height
+    canvas:
+      Color: 
+        rgba: 0.9,0.9,0.9,1
+      Rectangle:
+        size: self.size
+        pos: self.pos
+        #source: 'image/background.png'
+    #title & logo
+    GridLayout:
+      canvas:
+        Color: 
+          rgba: 0.8,0.8,0.8,1
+        Rectangle:
+          size: self.size
+          pos: self.pos
+      size_hint: None, None
+      size: root.width, root.width/15 + root.width/20
+      #padding: left,top,right,bottom
+      padding: root.width/40, root.width/40, root.width/20, root.width/40
+      spacing: root.width/40
+      cols: 3
+      Button:
+        id: btnLogo
+        #text: "W: %d" %self.width mac: 34x34
+        size_hint: None, None
+        size: root.width/15, root.width/15
+        background_disabled_normal: 'image/ponerine.png' #'image/xuetanlogow.png' 
+        state: 'normal'
+        disabled: True
+      Label:
+        text_size: self.size
+        halign: 'left'
+        valign: 'middle'
+        color: 0,0,0,1
+        #font_size: root.width/40
+        text: 'M.Ponerine %s for XiaoYi Sports Camera' %app.version
+#       Button:
+#         id: btnCameras
+#         size_hint: None, None
+#         size: root.width/15, root.width/15
+#         background_normal: 'image/msetting-2.png'
+#         background_down: 'image/msetting-.png'
+#         on_release: root.manager.CamerasPopupOpen()
+    # camera icon
+    GridLayout:
+      id: grdCameraIcons
+      size_hint: None, None
+      size: root.width, (root.width - root.width/12*4)/3*4 + root.width/6 + root.width/25*3
+      spacing: root.width/12, root.width/25
+      padding: root.width/12, root.width/6, root.width/12, 0
+      cols: 3
+      #TextInput:
+        #text: "W: %d H: %d" %(root.width, (root.width - root.width/12*4)/3*2 + root.width/6 + root.width/25*1)
+      Button:
+        color: 0,0,0,1
+        disabled_color: 0,0,0,0.5
+        #text: "CAM1\nFront" #"1 W:%d H:%d" %(self.width, self.height) #"W: %d H: %d" %(btnLogo.width, btnLogo.height) #"Button W: %d H: %d" %(self.width, self.height)
+        #text: "CAM%s\n%s" %(root.manager.cfglist[0]["camera"], root.manager.cfglist[0]["name"])
+        id: btnCam0
+        text_size: self.size
+        halign: 'center'
+        valign: 'middle'
+        background_normal: 'image/mcamera_normal.png'
+        background_down: 'image/mcamera_down.png'
+        background_disabled_normal: 'image/mcamera_noip.png'
+        on_release: root.manager.ConfigPopupOpen(0)
+      Button:
+        color: 0,0,0,1
+        disabled_color: 0,0,0,0.5
+        #text: "CAM1\nFront" #"1 W:%d H:%d" %(self.width, self.height) #"W: %d H: %d" %(btnLogo.width, btnLogo.height) #"Button W: %d H: %d" %(self.width, self.height)
+        #text: "CAM%s\n%s" %(root.manager.cfglist[1]["camera"], root.manager.cfglist[1]["name"])
+        id: btnCam1
+        text_size: self.size
+        halign: 'center'
+        valign: 'middle'
+        background_normal: 'image/mcamera_normal.png'
+        background_down: 'image/mcamera_down.png'
+        background_disabled_normal: 'image/mcamera_noip.png'
+        on_release: root.manager.ConfigPopupOpen(1)
+      Button:
+        color: 0,0,0,1
+        disabled_color: 0,0,0,0.5
+        #text: "CAM1\nFront" #"1 W:%d H:%d" %(self.width, self.height) #"W: %d H: %d" %(btnLogo.width, btnLogo.height) #"Button W: %d H: %d" %(self.width, self.height)
+        #text: "CAM%s\n%s" %(root.manager.cfglist[2]["camera"], root.manager.cfglist[2]["name"])
+        id: btnCam2
+        text_size: self.size
+        halign: 'center'
+        valign: 'middle'
+        background_normal: 'image/mcamera_normal.png'
+        background_down: 'image/mcamera_down.png'
+        background_disabled_normal: 'image/mcamera_noip.png'
+        on_release: root.manager.ConfigPopupOpen(2)
+      Button:
+        color: 0,0,0,1
+        disabled_color: 0,0,0,0.5
+        #text: "CAM1\nFront" #"1 W:%d H:%d" %(self.width, self.height) #"W: %d H: %d" %(btnLogo.width, btnLogo.height) #"Button W: %d H: %d" %(self.width, self.height)
+        #text: "CAM%s\n%s" %(root.manager.cfglist[3]["camera"], root.manager.cfglist[3]["name"])
+        id: btnCam3
+        text_size: self.size
+        halign: 'center'
+        valign: 'middle'
+        background_normal: 'image/mcamera_normal.png'
+        background_down: 'image/mcamera_down.png'
+        background_disabled_normal: 'image/mcamera_noip.png'
+        on_release: root.manager.ConfigPopupOpen(3)
+      Button:
+        color: 0,0,0,1
+        disabled_color: 0,0,0,0.5
+        #text: "CAM1\nFront" #"1 W:%d H:%d" %(self.width, self.height) #"W: %d H: %d" %(btnLogo.width, btnLogo.height) #"Button W: %d H: %d" %(self.width, self.height)
+        #text: "CAM%s\n%s" %(root.manager.cfglist[4]["camera"], root.manager.cfglist[4]["name"])
+        id: btnCam4
+        text_size: self.size
+        halign: 'center'
+        valign: 'middle'
+        background_normal: 'image/mcamera_normal.png'
+        background_down: 'image/mcamera_down.png'
+        background_disabled_normal: 'image/mcamera_noip.png'
+        on_release: root.manager.ConfigPopupOpen(4)
+      Button:
+        color: 0,0,0,1
+        disabled_color: 0,0,0,0.5
+        #text: "CAM1\nFront" #"1 W:%d H:%d" %(self.width, self.height) #"W: %d H: %d" %(btnLogo.width, btnLogo.height) #"Button W: %d H: %d" %(self.width, self.height)
+        #text: "CAM%s\n%s" %(root.manager.cfglist[5]["camera"], root.manager.cfglist[5]["name"])
+        id: btnCam5
+        text_size: self.size
+        halign: 'center'
+        valign: 'middle'
+        background_normal: 'image/mcamera_normal.png'
+        background_down: 'image/mcamera_down.png'
+        background_disabled_normal: 'image/mcamera_noip.png'
+        on_release: root.manager.ConfigPopupOpen(5)
+      Button:
+        color: 0,0,0,1
+        disabled_color: 0,0,0,0.5
+        #text: "CAM1\nFront" #"1 W:%d H:%d" %(self.width, self.height) #"W: %d H: %d" %(btnLogo.width, btnLogo.height) #"Button W: %d H: %d" %(self.width, self.height)
+        #text: "CAM%s\n%s" %(root.manager.cfglist[6]["camera"], root.manager.cfglist[6]["name"])
+        id: btnCam6
+        text_size: self.size
+        halign: 'center'
+        valign: 'middle'
+        background_normal: 'image/mcamera_normal.png'
+        background_down: 'image/mcamera_down.png'
+        background_disabled_normal: 'image/mcamera_noip.png'
+        on_release: root.manager.ConfigPopupOpen(6)
+      Button:
+        color: 0,0,0,1
+        disabled_color: 0,0,0,0.5
+        #text: "CAM1\nFront" #"1 W:%d H:%d" %(self.width, self.height) #"W: %d H: %d" %(btnLogo.width, btnLogo.height) #"Button W: %d H: %d" %(self.width, self.height)
+        #text: "CAM%s\n%s" %(root.manager.cfglist[7]["camera"], root.manager.cfglist[7]["name"])
+        id: btnCam7
+        text_size: self.size
+        halign: 'center'
+        valign: 'middle'
+        background_normal: 'image/mcamera_normal.png'
+        background_down: 'image/mcamera_down.png'
+        background_disabled_normal: 'image/mcamera_noip.png'
+        on_release: root.manager.ConfigPopupOpen(7)
+      Button:
+        color: 0,0,0,1
+        disabled_color: 0,0,0,0.5
+        #text: "CAM1\nFront" #"1 W:%d H:%d" %(self.width, self.height) #"W: %d H: %d" %(btnLogo.width, btnLogo.height) #"Button W: %d H: %d" %(self.width, self.height)
+        #text: "CAM%s\n%s" %(root.manager.cfglist[8]["camera"], root.manager.cfglist[8]["name"])
+        id: btnCam8
+        text_size: self.size
+        halign: 'center'
+        valign: 'middle'
+        background_normal: 'image/mcamera_normal.png'
+        background_down: 'image/mcamera_down.png'
+        background_disabled_normal: 'image/mcamera_noip.png'
+        on_release: root.manager.ConfigPopupOpen(8)
+      Button:
+        color: 0,0,0,1
+        disabled_color: 0,0,0,0.5
+        disabled: True
+        text: "BUZZER" #"PHOTO"
+        id: btnphoto
+        text_size: self.size
+        halign: 'center'
+        valign: 'middle'
+        background_normal: 'image/mcamera_normal.png'
+        background_down: 'image/mcamera_down.png'
+        background_disabled_normal: 'image/mcamera_noip.png'
+        on_release: root.manager.Buzzer() #Photo()
+      Button:
+        color: 0,0,0,1
+        disabled_color: 0,0,0,0.5
+        text: "CONNECT"
+        id: btnconnect
+        text_size: self.size
+        halign: 'center'
+        valign: 'middle'
+        background_normal: 'image/mcamera_normal.png'
+        background_down: 'image/mcamera_down.png'
+        background_disabled_normal: 'image/mcamera_noip.png'
+        on_release: root.manager.Connect()
+      Button:
+        color: 0,0,0,1
+        disabled_color: 0,0,0,0.5
+        disabled: True
+        text: "RECORD"
+        id: btnrecord
+        text_size: self.size
+        halign: 'center'
+        valign: 'middle'
+        background_normal: 'image/mcamera_normal.png'
+        background_down: 'image/mcamera_down.png'
+        background_disabled_normal: 'image/mcamera_noip.png'
+        on_release: root.manager.Record()
+    # connect icon
+#     AnchorLayout:
+#       anchor_x: 'center'
+#       anchor_y: 'bottom'
+#       size_hint: None, None
+#       size: root.width, root.height * 0.95
+#       #padding: 0,0,0,root.width/10
+#       Button:
+#         id: btnConnect
+#         background_normal: 'image/connect_normal.png'
+#         background_down: 'image/connect_down.png'
+#         background_disabled_normal: 'image/connect_down.png'
+#         background_disabled_down: 'image/connect_down.png'
+#         size_hint: None, None
+#         size: root.width/4, root.width/4
+#         text: ''
+#         color: 1,0,0,1
+#         font_size: int(root.width/40)
+#         on_release: root.manager.Connect()
