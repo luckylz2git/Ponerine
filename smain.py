@@ -44,7 +44,7 @@ Builder.load_file('data/injectionscreen.kv')
 
 #print "Clock.max_iteration", Clock.max_iteration
 Clock.max_iteration = 100
-__version__='0.1.2'
+__version__='0.1.3'
 
 class ConnectScreen(Screen):
   pass
@@ -1399,7 +1399,7 @@ class Ponerine(ScreenManager):
       time.sleep(0.8)
       rectime = []
       for cam in self.cam:
-        recording = recording and cam.recording
+        recording = recording and cam.recording.isSet()
         rectime.append(cam.recordtime)
       print recording, "Record Time: ", rectime
       if len(rectime) > 1:

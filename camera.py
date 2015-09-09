@@ -22,7 +22,7 @@ class Camera():
     self.showtime = True
     self.status = {}
     self.filetaken = ""
-    self.recording = False
+    #self.recording = False
     self.recordtime = "00:00:00"
     self.settings = []
     self.cfgdict = {}
@@ -44,6 +44,7 @@ class Camera():
                    "sw_version",
                    "timelapse_photo"]
     self.taken = threading.Event()
+    self.recording = threading.Event()
     self.quit = threading.Event()
     self.wifioff = threading.Event()
     self.lsdir = threading.Event()
@@ -97,7 +98,8 @@ class Camera():
     self.showtime = True
     self.status = {}
     self.filetaken = ""
-    self.recording = False
+    #self.recording = False
+    self.recording.clear()
     self.recordtime = "00:00:00"
     self.settings = []
     self.settable = {}
@@ -130,8 +132,12 @@ class Camera():
   def UnlinkCamera(self):
     if self.link:
       self.SendMsg('{"msg_id":258}')
-    self.Disconnect()
+    else:
+      self.Disconnect()
   
+  def StartViewfinder(self):
+    self.SendMsg('{"msg_id":259}')
+    
   def StopViewfinder(self):
     self.SendMsg('{"msg_id":260}')
     #self.SendMsg('{"msg_id":258}')
@@ -169,7 +175,7 @@ class Camera():
         if self.msgbusy == 0:
           data = json.loads(self.qsend.get())
           allowsendout = True
-          if data["msg_id"] == 515 and not self.recording:
+          if data["msg_id"] == 515 and not self.recording.isSet():
             allowsendout = False
           if allowsendout:
             data["token"] = self.token
@@ -243,7 +249,7 @@ class Camera():
       print data
       if data["type"] == "start_video_record":
         self.cambusy = False
-        self.recording = True
+        self.recording.set()
         if self.showtime:
           time.sleep(1)
           self.SendMsg('{"msg_id":515}')
@@ -311,8 +317,8 @@ class Camera():
     # drop token
     elif data["msg_id"] == 258:
       self.token = 0
-      #self.link = False
-      #self.UnlinkCamera()
+      self.link = False
+      self.UnlinkCamera()
     # vf start
     elif data["msg_id"] == 259:
       self.webportopen = True
@@ -357,13 +363,13 @@ class Camera():
       self.cambusy = True
     # stop record
     elif data["msg_id"] == 514:
-      self.recording = False
+      self.recording.clear()
       self.cambusy = True
     # recording time
     elif data["msg_id"] == 515:
       self.recordtime = self.RecordTime(data["param"])
       time.sleep(1)
-      if self.showtime and self.recording:
+      if self.showtime and self.recording.isSet():
         self.SendMsg('{"msg_id":515}')
     # change dir
     elif data["msg_id"] == 1283:
