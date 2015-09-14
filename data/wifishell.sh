@@ -37,7 +37,7 @@ wait_wlan0()
 	n=0
 	ifconfig wlan0
 	waitagain=$?
-	while [ $n -ne 6 ] && [ $waitagain -ne 0 ]; do
+	while [ $n -ne 3 ] && [ $waitagain -ne 0 ]; do
 		n=$(($n + 1))
 		echo $n
 		sleep 1
@@ -59,7 +59,7 @@ wifi_station()
   driver=nl80211
 
   /usr/bin/wpa_supplicant -D${driver} -iwlan0 -c${WPAS} -B
-  sleep 5
+  sleep 1
   if [ "${IPAD}" == "DHCP" ]; then
     udhcpc -i wlan0 -A 2 -b -t 30
   else
@@ -75,7 +75,7 @@ stamode()
   if [ $WIFI -eq 1 ]; then
     if [ -f $LOGS ]; then
       CTRL=`cat $LOGS`
-      if [ $CTRL -eq 6 ]; then
+      if [ $CTRL -eq 3 ]; then
         echo "1" > $LOGS
         WIFI=$(ping -W 10 -c 1 $GATE | grep received | awk '{print $4}')
         if [ -n ${WIFI} ]; then

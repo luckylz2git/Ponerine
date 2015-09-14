@@ -3,7 +3,7 @@ import json, socket, threading, time, select, os, urllib2, hashlib
 from os.path import basename #, getsize 
 
 class Camera():
-  def __init__(self, ip="192.168.42.1", port=7878, dataport=8787, webport=80):
+  def __init__(self, ip="192.168.42.1", port=7878, dataport=8787, webport=80, preview=False):
     self.ip = ip
     self.port = port
     self.dataport = dataport
@@ -22,6 +22,9 @@ class Camera():
     self.showtime = True
     self.status = {}
     self.filetaken = ""
+    self.dirtaken = ""
+    self.preview = preview
+    print "self.preview",preview
     #self.recording = False
     self.recordtime = "00:00:00"
     self.settings = []
@@ -98,6 +101,7 @@ class Camera():
     self.showtime = True
     self.status = {}
     self.filetaken = ""
+    self.dirtaken = ""
     #self.recording = False
     self.recording.clear()
     self.recordtime = "00:00:00"
@@ -118,27 +122,30 @@ class Camera():
                    "support_auto_low_light",
                    "sw_version",
                    "timelapse_photo"]
-    threading.Thread(target=self.ThreadSend, name="ThreadSend%s" %self.ip).start()
+    threading.Thread(target=self.ThreadSend, name="ThreadSend").start()
 #     self.tsend= threading.Thread(target=self.ThreadSend)
 #     self.tsend.setDaemon(True)
 #     self.tsend.setName('ThreadSend')
 #     self.tsend.start()
-    threading.Thread(target=self.ThreadRecv, name="ThreadRecv%s" %self.ip).start()
+    threading.Thread(target=self.ThreadRecv, name="ThreadRecv").start()
 #     self.trecv= threading.Thread(target=self.ThreadRecv)
 #     self.trecv.setDaemon(True)
 #     self.trecv.setName('ThreadRecv')
 #     self.trecv.start()
 
   def UnlinkCamera(self):
-    threading.Thread(target=self.Disconnect, name="Disconnect%s" %self.ip).start()
+    if self.link:
+      self.SendMsg('{"msg_id":258}')
+    else:
+      self.Disconnect()
   
   def StartViewfinder(self):
-    self.SendMsg('{"msg_id":259}')
+    self.SendMsg('{"msg_id":259,"param":"none_force"}')
+    #self.SendMsg('{"msg_id":259}')
     
   def StopViewfinder(self):
+    #self.SendMsg('{"msg_id":260,"param":"none_force"}')
     self.SendMsg('{"msg_id":260}')
-    #self.SendMsg('{"msg_id":258}')
-    #self.SendMsg('{"msg_id":257}')
     
   def SendMsg(self, msg):
     self.qsend.put(msg)
@@ -216,14 +223,20 @@ class Camera():
       elif data["type"] == "photo_taken":
         self.cambusy = False
         self.status[data["type"]] = data["param"]
-        self.filetaken = data["param"].replace("/tmp/fuse_d/DCIM","")
-        #print self.filetaken
+        arr = data["param"].split("/")
+        if len(arr) == 6:
+          self.filetaken = arr[5]
+          self.dirtaken = arr[4]
+        print self.dirtaken, self.filetaken
         self.taken.set()
       elif data["type"] == "video_record_complete":
         self.cambusy = False
         self.status[data["type"]] = data["param"]
-        self.filetaken = data["param"].replace("/tmp/fuse_d/DCIM","")
-        print self.filetaken
+        arr = data["param"].split("/")
+        if len(arr) == 6:
+          self.filetaken = arr[5]
+          self.dirtaken = arr[4]
+        print self.dirtaken, self.filetaken
         self.taken.set()
       elif data["type"] == "get_file_complete":
         self.dlcomplete.set()
@@ -253,6 +266,7 @@ class Camera():
       elif data["type"] == "piv_complete":
         self.cambusy = False
         self.filetaken = "piv_complete"
+        self.dirtaken = ""
         self.taken.set()
       elif data["type"] == "wifi_will_shutdown":
         self.wifioff.set()
@@ -286,7 +300,7 @@ class Camera():
       self.SendMsg('{"msg_id":%d}' %data["msg_id"])
     # allow next msg send out
     if self.msgbusy == data["msg_id"] and data["msg_id"] <> 258:
-        self.msgbusy = 0
+      self.msgbusy = 0
     # error rval < 0, clear msg_id
     if data["rval"] < 0:
       if data["msg_id"] == 1283:
@@ -315,7 +329,7 @@ class Camera():
     elif data["msg_id"] == 258:
       self.token = 0
       self.link = False
-      #self.Disconnect()
+      self.UnlinkCamera()
     # vf start
     elif data["msg_id"] == 259:
       self.webportopen = True
@@ -344,18 +358,22 @@ class Camera():
       if self.optcount == 0:
         print "read all options"
         self.optok.set()
-    elif data["msg_id"] == 13:
+    elif data["msg_id"] == 13 and data.has_key("param"):
       self.status["battery"] = data["param"]
-      if data["type"] == "batterty":
+      if data["type"] == "battery":
         self.status["adapter_status"] = "0"
-      else:
+      else: #adapter
         self.status["adapter_status"] = "1"
       print "camera status:\n", json.dumps(self.status, indent=2)
     # take photo
     elif data["msg_id"] == 769:
+      self.filetaken = ""
+      self.dirtaken = ""
       self.cambusy = True
     # start record
     elif data["msg_id"] == 513:
+      self.filetaken = ""
+      self.dirtaken = ""
       self.recordtime = self.RecordTime(0)
       self.cambusy = True
     # stop record
@@ -459,23 +477,8 @@ class Camera():
       self.srv.setblocking(0)
 
   def Disconnect(self):
-    if self.link:
-      self.SendMsg('{"msg_id":258}')
-      t1 = time.time()
-      while self.link:
-        t2 = time.time()
-        if (t2 - t1) >= 12.0:
-          self.link = False
-          break
     if self.socketopen == 0:
       self.socketopen = -1
-      for thread in threading.enumerate():
-        if thread.isAlive() and thread.name in ("ThreadSend%s" %self.ip,"ThreadRecv%s" %self.ip):
-          print "Camera.Disconnect: %s" %thread.name
-          try:
-            thread._Thread__stop()
-          except:
-            pass
       try:
         self.srv.close()
       except:
@@ -540,17 +543,31 @@ class Camera():
             self.SendMsg('{"msg_id":9,"param":"%s"}'%key)
             #time.sleep(5)
   
-  def ChangeSetting(self, type, value):
+  def ChangeSetting(self, type, value, retry=True):
     self.setok.clear()
     self.seterror.clear()
     self.SendMsg('{"msg_id":2,"type":"%s","param":"%s"}' %(type,value))
-    threading.Thread(target=self.ThreadChangeSetting, name="ThreadChangeSetting").start()
+    threading.Thread(target=self.ThreadChangeSetting, args=(type,value,retry,), name="ThreadChangeSetting").start()
 
-  def ThreadChangeSetting(self):
-    self.setok.wait(30)
-    if not self.setok.isSet():
-      print "setting error"
-      self.seterror.set()
+  def ThreadChangeSetting(self, type, value, retry=True):
+    i = 0
+    while True:
+      self.setok.wait(1)
+      if self.setok.isSet():
+        return
+      elif self.seterror.isSet():
+        if type == "buzzer_ring" and retry:
+          self.msgbusy = 0
+          self.ChangeSetting("buzzer_ring", "off", False)
+          self.ChangeSetting(type, value, False)
+        return
+      elif i > 15: # timeout
+        self.seterror.set()
+        return
+      i += 1
+  
+  def CheckBatteryState(self):
+    self.SendMsg('{"msg_id":13}')
     
   #size can be 0
   def StartDownload(self, file, size=0, offset=0):
