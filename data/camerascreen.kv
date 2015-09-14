@@ -63,8 +63,8 @@
       background_color: [0,0,0,1]
       readonly: True
     GridLayout:
-      cols: 2
-      size_hint: 1, 1.5
+      cols: 3
+      size_hint: 1, 2
       Label:
         id: lblCam1
         size_hint: 1, 0.5
@@ -72,6 +72,8 @@
         text: "CAM 1 [ --:--:-- ]"
         color: 1,0,0,0.8
         font_size: int(root.width/30)
+      Label:
+        text: ""
       Label:
         size_hint: 1, 0.5
         id: lblCam2
@@ -83,11 +85,17 @@
         size_hint: 1, 1
         id: btnPhoto
         text: 'Take Photo'
-        font_size: int(root.width/20)
+        font_size: int(root.width/25)
         on_release: root.manager.Photo()
+      Button:
+        size_hint: 1, 1
+        id: btnPreview
+        text: 'Preview On'
+        font_size: int(root.width/25)
+        on_release: root.manager.Preview()
       Button:
         size_hint: 1, 1
         id: btnRecord
         text: 'Start Record'
-        font_size: int(root.width/20)
+        font_size: int(root.width/25)
         on_release: root.manager.Record()

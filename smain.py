@@ -836,6 +836,12 @@ class Ponerine(ScreenManager):
     self.tphoto= threading.Thread(target=self.DoPhoto)
     self.tphoto.setName('DoPhoto')
     self.tphoto.start()
+  
+  def Preview(self):
+    for cam in self.cam:
+      cam.StartViewfinder()
+      time.sleep(1)
+      cam.msgbusy = 0
     
   def Record(self):
     if self.current_screen.ids.btnRecord.text == "Start Record":
