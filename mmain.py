@@ -379,6 +379,7 @@ class MPonerine(ScreenManager):
             cam.ChangeSetting("buzzer_volume","low")
             setok.wait(5)
             cam.msgbusy = 0
+          time.sleep(1)
           cam.UnlinkCamera()
           cam.quit.wait(5)
     except:
@@ -418,7 +419,7 @@ class MPonerine(ScreenManager):
         if self.linked == len(self.cam):
           self.trec = time.time()
           if self.buzzeronstart:
-            threading.Thread(target=self.DoBuzzerRing, name="DoBuzzerRing").start()
+            threading.Thread(target=self.DoBuzzerRing, args=(3,), name="DoBuzzerRing").start()
           self.btnconctrl[1]["text"] = "STOP"
           #threading.Thread(target=self.ButtonText, args=(self.btnrecord,"STOP",1,), name="ButtonText").start()
           threading.Thread(target=self.DoShowRecord, name="DoShowRecord").start()
@@ -446,7 +447,7 @@ class MPonerine(ScreenManager):
         self.btnconctrl[1]["disabled_color"] = "0,0,0,1"
         self.btnconctrl[1]["text"] = "STOP"
         self.RefreshConnectControl(1)
-        self.Record() #STOP
+        self.Record(self.btnrecord) #STOP
         self.recordstop.wait()
       else:
         retry = True
@@ -498,12 +499,15 @@ class MPonerine(ScreenManager):
     cam = self.cam[index]
     cam.taken.clear()
     if cam.recording.isSet():
+      #if self.buzzeronstop:
+      #  cam.msgbusy = 0
       cam.StopRecord()
     print "DoStopRecord", index
     print cam.filetaken
     stopfirst = self.linked
     self.linked += 1
     if stopfirst == 0: #show last record time
+      self.firstcam = index
       self.recordtime = self.Second2Time(time.time() - self.trec)
       self.lblrecordtime.text = self.recordtime
     self.btnrecord.text = 'CAM %d / %d' %(self.linked, len(self.cam))
@@ -523,20 +527,20 @@ class MPonerine(ScreenManager):
   def Buzzer(self, btnbuzzer):
     threading.Thread(target=self.DoBuzzerRing, name="DoBuzzerRing").start()
     
-  def DoBuzzerRing(self):
+  def DoBuzzerRing(self, timewait = 0):
+    print "self.firstcam",self.firstcam
     cam = self.cam[self.firstcam]
     setok = cam.setok
     seterror = cam.seterror
-    t1 = time.time()
+    if timewait <> 0:
+      time.sleep(timewait)
     cam.ChangeSetting("buzzer_ring","on")
     setok.wait(5)
     if setok.isSet():
-      t2 = time.time()
+      t1 = time.time()
       while True:
-        if (t2 - t1) >= 1.25:
+        if (time.time() - t1) >= 2.0:
           break
-        else:
-          t2 = time.time()
     #cam.msgbusy = 0
     cam.ChangeSetting("buzzer_ring","off")
             
@@ -554,8 +558,8 @@ class MPonerine(ScreenManager):
     if btnrecord.text == "RECORD":
       self.linked = 0
       self.firstcam = 0
-      self.recordstart.set()
       self.recordstop.clear()
+      self.recordstart.set()
       btnrecord.text == "STARTING"
       btnrecord.disabled = True
       self.btnconctrl[1]["text"] = 'STARTING'
@@ -566,8 +570,8 @@ class MPonerine(ScreenManager):
       self.btnconctrl[1]["text"] = 'STOPPING'
       if self.buzzeronstop:
         self.DoBuzzerRing()
-      self.recordstop.set()
       self.recordstart.clear()
+      self.recordstop.set()
     self.btnconctrl[1]["disabled"] = 'True'
     self.RefreshConnectControl()
 
@@ -694,9 +698,11 @@ class MPonerine(ScreenManager):
   
   def DoFileTaken(self, index, number):
     cam = self.cam[index]
+    time.sleep(1)
     cam.CheckBatteryState()
     # Mute Camera
     setok = cam.setok
+    time.sleep(1)
     cam.ChangeSetting("buzzer_volume","mute")
     setok.wait(5)
     self.msgbusy = 0

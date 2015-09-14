@@ -543,23 +543,19 @@ class Camera():
             self.SendMsg('{"msg_id":9,"param":"%s"}'%key)
             #time.sleep(5)
   
-  def ChangeSetting(self, type, value, retry=True):
+  def ChangeSetting(self, type, value):
     self.setok.clear()
     self.seterror.clear()
     self.SendMsg('{"msg_id":2,"type":"%s","param":"%s"}' %(type,value))
-    threading.Thread(target=self.ThreadChangeSetting, args=(type,value,retry,), name="ThreadChangeSetting").start()
+    threading.Thread(target=self.ThreadChangeSetting, args=(type,value,), name="ThreadChangeSetting").start()
 
-  def ThreadChangeSetting(self, type, value, retry=True):
+  def ThreadChangeSetting(self, type, value):
     i = 0
     while True:
       self.setok.wait(1)
       if self.setok.isSet():
         return
       elif self.seterror.isSet():
-        if type == "buzzer_ring" and retry:
-          self.msgbusy = 0
-          self.ChangeSetting("buzzer_ring", "off", False)
-          self.ChangeSetting(type, value, False)
         return
       elif i > 15: # timeout
         self.seterror.set()
