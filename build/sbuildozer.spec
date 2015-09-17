@@ -31,7 +31,7 @@ source.include_exts = py,png,jpg,kv,atlas,sh
 # version.filename = %(source.dir)s/main.py
 
 # (str) Application versioning (method 2)
-version = 0.1.3
+version = 0.1.4
 
 # (list) Application requirements
 # comma seperated e.g. requirements = sqlite3,kivy

@@ -261,7 +261,7 @@ class Camera():
         self.cambusy = False
         self.recording.set()
         if self.showtime:
-          time.sleep(1)
+          time.sleep(3)
           self.SendMsg('{"msg_id":515}')
       elif data["type"] == "piv_complete":
         self.cambusy = False

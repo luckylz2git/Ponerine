@@ -44,7 +44,7 @@ Builder.load_file('data/injectionscreen.kv')
 
 #print "Clock.max_iteration", Clock.max_iteration
 Clock.max_iteration = 100
-__version__='0.1.3'
+__version__='0.1.4'
 
 class ConnectScreen(Screen):
   pass
@@ -356,7 +356,7 @@ class Ponerine(ScreenManager):
     if self.injectlist[index] <> {}:
       threading.Thread(target=self.DoInjectApply, args=(index,), name="DoInjectApply"+str(index)).start()
   
-  def DoInjectApply(self, index):
+  def DoInjectApplyOld(self, index):
     opened = False
     hastelnet = False
     valuetelnet = ""
@@ -386,6 +386,29 @@ class Ponerine(ScreenManager):
         time.sleep(5)
       self.progresspop.dismiss()
     if hashack or hastelnet:
+      self.injectlist[index] = {}
+      self.RebootPopupOpen(index)
+
+  def DoInjectApply(self, index):
+    opened = False
+    hashack = False
+    hackstatus = 0
+    print self.injectlist[index]
+    for key, value in self.injectlist[index].items():
+      print "DoInjectApply",key,value
+      if key <> "hack_timelapse_video_resolution":
+        hashack = True
+    if hashack:
+      self.ProgressPopupOpen(index)
+      opened = True
+      hackstatus = self.ReadHackStatus(index)
+    if hashack:
+      hashack = self.BuildAutoexec(index, hackstatus in [10,11])
+    if opened:
+      if self.progresstext.text.endswith("Error"):
+        time.sleep(5)
+      self.progresspop.dismiss()
+    if hashack:
       self.injectlist[index] = {}
       self.RebootPopupOpen(index)
       
@@ -432,10 +455,13 @@ class Ponerine(ScreenManager):
     brcomment = ""
     rawcomment = ""
     haswifihack = False
+    hastelnet = False
     #print "BuildAutoexec",self.injectlist[index]
     for key, value in self.injectlist[index].items():
       #print "loop",key,value
-      if key <> "enable_info_display" and value <> "Camera Default":
+      if value <> "Camera Default":
+        if key == "enable_info_display":
+          hastelnet = True
         if key == "hack_video_resolution":
           vrcomment = value
           if value == "2304x1296 30/25P 16:9":    #0x02
@@ -505,11 +531,17 @@ class Ponerine(ScreenManager):
       apmodestr = "# Autoexec.ash Injected By Ponerine %s" %__version__
       apmodestr += "\n# Wifi AP Mode\n\nsleep 5\nlu_util exec 'rm /tmp/fuse_a/custom/wifi.log'"
       
+      if hastelnet:
+        stamodestr += "\nlu_util exec telnetd -l/bin/sh"
+        apmodestr += "\nlu_util exec telnetd -l/bin/sh"
+      
       installstr = "# Autoexec.ash Injected By Ponerine %s" %__version__
       installstr += "\n# Wifi Mode Install.ash\n\nsleep 5\nlu_util exec 'if [ ! -d /tmp/fuse_a/custom ]; then mkdir /tmp/fuse_a/custom; fi'"
     else:
       buildstr = "# Autoexec.ash Injected By Ponerine %s" %__version__
       buildstr += "\n\nsleep 5"
+      if hastelnet:
+        buildstr += "\nlu_util exec telnetd -l/bin/sh"
     if vridx >= 0:
       hashack = True
       if haswifihack:
@@ -575,7 +607,7 @@ class Ponerine(ScreenManager):
       installstr += "\nsleep 1\nreboot yes"
       installstr += "\n\n# End of Script\n"
       
-    if (hashack or haswifihack) and find:
+    if (hashack or haswifihack or hastelnet) and find:
       self.progresstext.text = "Deleting old autoexec.ash"
       cam.dlstop.clear()
       cam.dlerror.clear()
@@ -696,7 +728,7 @@ class Ponerine(ScreenManager):
         return True
       
     # hack without wifi mode
-    elif hashack:
+    elif hashack or hastelnet:
       buildstr += "\n\nsleep 1\nt pwm 1 enable\nsleep 1\nt pwm 1 disable\nsleep 1\nt pwm 1 enable\nsleep 1\nt pwm 1 disable"
       buildstr += "\n\n# End of Script\n"
       print buildstr
@@ -1399,10 +1431,10 @@ class Ponerine(ScreenManager):
         self.current_screen.ids.btnRecord.text = "Starting Record %s" %("." * i)
     #self.current_screen.ids.btnRecord.state = "normal"
     self.current_screen.ids.btnRecord.text = "Stop Record"
-    time.sleep(1)
+    self.cam[0].recording.wait(10)
     recording = True
     while recording:
-      time.sleep(0.8)
+      time.sleep(1)
       rectime = []
       for cam in self.cam:
         recording = recording and cam.recording.isSet()
