@@ -83,22 +83,25 @@
       # camera icon
       GridLayout:
         size_hint: None, None
-        size: root.width, root.width/6 + root.width/20 + (root.width - root.width/12*4)/3
+        size: root.width, root.width/6 + root.width/12 + (root.width - root.width/12*4)/3
         spacing: root.width/12, 0
         padding: root.width/12, root.width/6, root.width/12, 0
         cols: 3
         Label:
           size_hint: 1, None
-          height: root.width/20
+          height: root.width/12
         Label:
           id: lblrecordtime
           size_hint: 1, None
-          height: root.width/20
-          color: 1,0,0,1
+          text_size: self.size
+          height: root.width/12
           font_size: root.width/30
+          halign: 'center'
+          valign: 'top'
+          markup: True
         Label:
           size_hint: 1, None
-          height: root.width/20
+          height: root.width/12
 
         Button:
           size_hint: 1, None

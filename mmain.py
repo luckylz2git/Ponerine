@@ -21,12 +21,13 @@ from kivy.properties import StringProperty, NumericProperty, BooleanProperty, Ob
 # Camera Object[camera.py]
 from camera import Camera
 from camerasetting import CameraSetting
+from cameratelnet import CameraTelnet
 # import base64, functools, hashlib, json, os, platform, re, select, socket, subprocess, sys, tempfile, threading, time, tkFileDialog, tkMessageBox, urllib2, webbrowser, zlib
 '''
 platform.system()
 "Windows", "Darwin"
 '''
-import json, os, threading, time, socket, platform, inspect
+import json, os, threading, time, socket, platform, inspect, string
 from os.path import basename
 
 Builder.load_file('data/mconnectscreen.kv')
@@ -34,12 +35,15 @@ Builder.load_file('data/mpopupconfig.kv')
 
 #print "Clock.max_iteration", Clock.max_iteration
 Clock.max_iteration = 100
-__version__='0.0.2'
+__version__='0.0.3'
 
 class MConnectScreen(Screen):
   pass
 
 class AdvancedPopup(Popup):
+  scenename = StringProperty()
+  scenecount = NumericProperty()
+  autorename = BooleanProperty()
   buzzeronstart = BooleanProperty()
   buzzeronstop = BooleanProperty()
   buzzervolumelow = BooleanProperty()
@@ -64,10 +68,13 @@ class MPonerine(ScreenManager):
     self.timecontitle = time.time() # Connect Title
     self.textctrlbtn = ""  # Control Buttons
     self.cfglist = []
+    self.autorename = False
     self.buzzeronstart = False
     self.buzzeronstop = False
     self.buzzervolumelow = False
     self.previewonpause = False
+    self.scenename = "scene"
+    self.scenecount = 1
     self.cfglist = self.ReadConfig()
     self.stopdetect = threading.Event()
     self.resizecam = threading.Event()
@@ -78,6 +85,7 @@ class MPonerine(ScreenManager):
     sysname = platform.system()
     if sysname == "Windows":
       Window.size = (560,800)
+      #Window.borderless = '1'
     elif sysname == "Darwin":
       Window.size = (520,700)
     
@@ -109,8 +117,14 @@ class MPonerine(ScreenManager):
                          "background_down":"image/mcamera_down.png",
                          "background_disabled_normal":"image/mcamera_noip.png",
                          "background_disabled_down":"image/mcamera_noip.png"})
+    #self.lblscenename = self.current_screen.ids.lblscenename
+    #self.lblscenename.text = self.scenename
     self.lblrecordtime = self.current_screen.ids.lblrecordtime
+    #self.lblscenecount = self.current_screen.ids.lblscenecount
+    #self.lblscenecount.text = "No.%d" %self.scenecount
     self.recordtime = ""
+    self.lblrecordtime.text = "[color=0000ff]%s - %d[/color]\n" %(self.scenename,self.scenecount) + ("[color=ff0000]%s[/color]" %self.recordtime if self.recordtime <> "" else "")
+    
     self.btnphoto = self.current_screen.ids.btnphoto
     self.btnconnect = self.current_screen.ids.btnconnect
     self.btnrecord = self.current_screen.ids.btnrecord
@@ -118,7 +132,10 @@ class MPonerine(ScreenManager):
     self.setupdisabled = "False"
     for i in range(self.cameras):      
       if self.cfglist[i]["ip"] <> "" and self.cfglist[i]["enabled"] == 1:
-        self.current_screen.ids['lblCamName%d' %i].text = "[b]CAM [sup]%s[/sup][/b] [sub]%s[/sub]" %(self.cfglist[i]["camera"],self.cfglist[i]["name"])
+        if self.cfglist[i]["name"] == "":
+          self.current_screen.ids['lblCamName%d' %i].text = "[b][sup]%s[/sup][/b] CAM" %(self.cfglist[i]["camera"])
+        else:
+          self.current_screen.ids['lblCamName%d' %i].text = "[b][sup]%s[/sup][/b] %s" %(self.cfglist[i]["camera"],self.cfglist[i]["name"])
         self.lblcamname.append(self.current_screen.ids['lblCamName%d' %i].text)
         self.current_screen.ids['lblCamStatus%d' %i].text = "[color=000000]searching[/color]"
         self.lblcamstatus.append("[color=000000]searching[/color]")
@@ -130,8 +147,19 @@ class MPonerine(ScreenManager):
         self.current_screen.ids['lblCamStatus%d' %i].text = ""
         self.lblcamstatus.append("")
     self.inited = True
+    t = threading.Thread(target=self.DoRefreshConnectControl, name="DoRefreshConnectControl")
+    t.setDaemon(True)
+    t.start()
         
   def DetectCam(self, timewait = 1):
+    for thread in threading.enumerate():
+      if thread.isAlive() and thread.name[0:11] == "DoDetectCam":
+        print "main.py.DoDetectCam %s" %thread.name
+        try:
+          thread._Thread__stop()
+        except:
+          pass
+  
     self.RefreshCameraInformation(0.5)
     
     self.btnconnect.disabled = False
@@ -161,7 +189,7 @@ class MPonerine(ScreenManager):
     self.btnconctrl[2]["background_disabled_normal"] = "image/mcamera_noip.png"
     self.btnconctrl[2]["disabled_color"] = "0,0,0,0.5"
     
-    self.RefreshConnectControl()
+    #*#self.RefreshConnectControl()
     
     for i in range(self.cameras):
       if self.cfglist[i]["ip"] <> "" and self.cfglist[i]["enabled"] == 1:
@@ -276,7 +304,7 @@ class MPonerine(ScreenManager):
       threading.Thread(target=self.DoDisconnect, name="DoDisconnect").start()
       self.connect.set()
       threading.Thread(target=self.DoShowConnect, args=(1,), name="DoShowConnect").start()
-    self.RefreshConnectControl()
+    #*#self.RefreshConnectControl()
     
   def DoShowConnect(self, type):
     i = 0
@@ -310,6 +338,7 @@ class MPonerine(ScreenManager):
             self.btnconctrl[0]["disabled"] = "False"
             self.btnconctrl[0]["color"] = "0,0,0,1"
             self.btnconctrl[0]["text"] = "DISCONNECT"
+            self.RefreshConnectControl(1)
             break
           elif (self.linked + self.error) == len(self.cam):
             self.connect.clear()
@@ -321,6 +350,7 @@ class MPonerine(ScreenManager):
               self.btnconctrl[0]["text"] = "ERR %d / %d" %(self.error, len(self.cam))
               self.btnconctrl[0]["color"] = "1,0,0,1"
               self.btnconctrl[0]["text"] = "RETRY"
+              self.RefreshConnectControl(1)
               #threading.Thread(target=self.ButtonText, args=(self.btnconnect,"RETRY",1,), name="ButtonText").start()
               break
             else: #retry
@@ -338,11 +368,11 @@ class MPonerine(ScreenManager):
 #       self.btnphoto.texture_update()
 #       self.btnrecord.texture_update()
       self.RefreshCameraInformation(1)
-      self.RefreshConnectControl()
+      #*#self.RefreshConnectControl()
       time.sleep(1)
     self.RefreshCameraInformation(1)
     
-    self.RefreshConnectControl()
+    #*#self.RefreshConnectControl()
     
   def DoConnect(self, index, number):
     self.connect.wait()
@@ -421,6 +451,7 @@ class MPonerine(ScreenManager):
           if self.buzzeronstart:
             threading.Thread(target=self.DoBuzzerRing, args=(3,), name="DoBuzzerRing").start()
           self.btnconctrl[1]["text"] = "STOP"
+          self.RefreshConnectControl(1)
           #threading.Thread(target=self.ButtonText, args=(self.btnrecord,"STOP",1,), name="ButtonText").start()
           threading.Thread(target=self.DoShowRecord, name="DoShowRecord").start()
           threading.Thread(target=self.DoShowTime, name="DoShowTime").start()
@@ -428,13 +459,13 @@ class MPonerine(ScreenManager):
           self.btnrecord.disabled = False
           self.btnconctrl[1]["disabled"] = "False"
           self.recordtime = self.Second2Time(time.time() - self.trec)
-          self.lblrecordtime.text = self.recordtime
+          self.lblrecordtime.text = "[color=0000ff]%s - %d[/color]\n" %(self.scenename,self.scenecount) + ("[color=ff0000]%s[/color]" %self.recordtime if self.recordtime <> "" else "")
           
         if not self.previewonpause and cam.preview:
           #pass
           cam.StartViewfinder()
         self.RefreshCameraInformation(1)
-        self.RefreshConnectControl(1)
+        #*#self.RefreshConnectControl(1)
         self.recordstop.wait()
       elif retry:
         retry = False
@@ -446,7 +477,7 @@ class MPonerine(ScreenManager):
         self.btnrecord.text == "STOP"
         self.btnconctrl[1]["disabled_color"] = "0,0,0,1"
         self.btnconctrl[1]["text"] = "STOP"
-        self.RefreshConnectControl(1)
+        #*#self.RefreshConnectControl(1)
         self.Record(self.btnrecord) #STOP
         self.recordstop.wait()
       else:
@@ -459,7 +490,7 @@ class MPonerine(ScreenManager):
       txtnew = self.Second2Time(time.time() - self.trec)
       if txtnew <> txtold:
         self.recordtime = txtnew
-        self.lblrecordtime.text = txtnew
+        self.lblrecordtime.text = "[color=0000ff]%s - %d[/color]\n" %(self.scenename,self.scenecount) + ("[color=ff0000]%s[/color]" %self.recordtime if self.recordtime <> "" else "")
         txtold = txtnew
       if self.btnrecord.text == "STOP":
         break
@@ -467,7 +498,7 @@ class MPonerine(ScreenManager):
       txtnew = self.Second2Time(time.time() - self.trec)
       if txtnew <> txtold:
         self.recordtime = txtnew
-        self.lblrecordtime.text = txtnew
+        self.lblrecordtime.text = "[color=0000ff]%s - %d[/color]\n" %(self.scenename,self.scenecount) + ("[color=ff0000]%s[/color]" %self.recordtime if self.recordtime <> "" else "")
         txtold = txtnew
       if self.btnrecord.text <> "STOP":
         break
@@ -486,13 +517,13 @@ class MPonerine(ScreenManager):
           self.btnconctrl[1]["background_normal"] = "image/mcamera_normal.png"
         
         #print self.btnrecord.text, self.btnrecord.background_normal, i
-      self.recordstop.wait(1.5)
+      self.recordstop.wait(1)
       if self.recordstop.isSet() or self.btnrecord.text in ("RECORD", "STOPPING", "ERROR"):
         self.btnrecord.background_normal = 'image/mcamera_normal.png'
         self.btnconctrl[1]["background_normal"] = "image/mcamera_normal.png"
-        self.RefreshConnectControl(1)
+        #*#self.RefreshConnectControl(1)
         return
-      self.RefreshConnectControl(1)
+      #*#self.RefreshConnectControl(1)
     
   def DoStopRecord(self, index, number):
     self.recordstop.wait()
@@ -509,20 +540,21 @@ class MPonerine(ScreenManager):
     if stopfirst == 0: #show last record time
       self.firstcam = index
       self.recordtime = self.Second2Time(time.time() - self.trec)
-      self.lblrecordtime.text = self.recordtime
+      self.lblrecordtime.text = "[color=0000ff]%s - %d[/color]\n" %(self.scenename,self.scenecount) + ("[color=ff0000]%s[/color]" %self.recordtime if self.recordtime <> "" else "")
     self.btnrecord.text = 'CAM %d / %d' %(self.linked, len(self.cam))
     self.btnconctrl[1]["text"] = 'CAM %d / %d' %(self.linked, len(self.cam))
     self.lblcamstatus[number] = "[color=0000ff]stop record[/color]"
     self.RefreshCameraInformation(1)
     if self.linked == len(self.cam):
       self.btnconctrl[1]["text"] = "RECORD"
+      self.btnrecord.text = "RECORD"
       #threading.Thread(target=self.ButtonText, args=(self.btnrecord,"RECORD",1.5,), name="ButtonText").start()
       self.recordstop.clear()
       self.btnrecord.background_normal = 'image/mcamera_normal.png'
       self.btnrecord.disabled = False
       self.btnconctrl[1]["background_normal"] = 'image/mcamera_normal.png'
       self.btnconctrl[1]["disabled"] = 'False'
-    self.RefreshConnectControl(1)
+    #*#self.RefreshConnectControl(1)
     
   def Buzzer(self, btnbuzzer):
     threading.Thread(target=self.DoBuzzerRing, name="DoBuzzerRing").start()
@@ -541,8 +573,8 @@ class MPonerine(ScreenManager):
       while True:
         if (time.time() - t1) >= 2.0:
           break
-    #cam.msgbusy = 0
     cam.ChangeSetting("buzzer_ring","off")
+    cam.msgbusy = 0
             
   def ButtonBackground(self, button, type, imagefilepath):
     if type == "background_normal":
@@ -557,6 +589,8 @@ class MPonerine(ScreenManager):
   def Record(self, btnrecord):
     if btnrecord.text == "RECORD":
       self.linked = 0
+      self.rename = 0
+      self.renlist = []
       self.firstcam = 0
       self.recordstop.clear()
       self.recordstart.set()
@@ -565,6 +599,8 @@ class MPonerine(ScreenManager):
       self.btnconctrl[1]["text"] = 'STARTING'
     elif btnrecord.text == "STOP":
       self.linked = 0
+      self.rename = 0
+      self.renlist = []
       btnrecord.text == "STOPPING"
       btnrecord.disabled = True
       self.btnconctrl[1]["text"] = 'STOPPING'
@@ -573,7 +609,7 @@ class MPonerine(ScreenManager):
       self.recordstart.clear()
       self.recordstop.set()
     self.btnconctrl[1]["disabled"] = 'True'
-    self.RefreshConnectControl()
+    #*#self.RefreshConnectControl()
 
 #   def AdvancedPopupOpen(self):
 #     print type(self.parent)
@@ -592,9 +628,12 @@ class MPonerine(ScreenManager):
       text = btnsetup.text
       btnsetup.text = "For XiaoYi Sports Camera"
       if text == "Advanced":
-        popup = AdvancedPopup(title='Camera Advanced Config', size_hint=(0.8, 0.7), size=self.size)
+        popup = AdvancedPopup(title='Camera Advanced Config', size_hint=(0.8, 0.8), size=self.size)
         popup.bind(on_dismiss=self.AdvancedPopupApply)
         popup.apply = False
+        popup.scenename = self.scenename
+        popup.scenecount = self.scenecount
+        popup.autorename = self.autorename
         popup.buzzeronstart = self.buzzeronstart
         popup.buzzeronstop = self.buzzeronstop
         popup.buzzervolumelow = self.buzzervolumelow
@@ -620,15 +659,33 @@ class MPonerine(ScreenManager):
       self.stopdetect.clear()
       self.DetectCam()
       self.RefreshConnectTitle()
-      
+  
+  def StringFilter(self, strin):
+    filter = list(string.ascii_letters + string.digits)
+    strout = ""
+    for i in range(len(strin)):
+      if strin[i] in filter:
+        strout += strin[i]
+    if strout == "":
+      strout = "scene"
+    return strout[0:20]
+    
   def AdvancedPopupApply(self, popup):
     if popup.apply:
+      # Different Scene Name Reset Counter
+      if self.scenename <> self.StringFilter(popup.scenename):
+        self.scenename = self.StringFilter(popup.scenename)
+        #self.lblscenename.text = self.scenename
+        self.scenecount = 1
+        #self.lblscenecount.text = "No.%d" %self.scenecount
+      self.autorename = popup.autorename
       self.buzzeronstart = popup.buzzeronstart
       self.buzzeronstop = popup.buzzeronstop
       self.buzzervolumelow = popup.buzzervolumelow
       self.previewonpause = popup.previewonpause
       self.loadallsettings = popup.loadallsettings
       self.WriteConfig()
+      self.RefreshConnectControl()
       
   def Photo(self):
     self.tphoto= threading.Thread(target=self.DoPhoto)
@@ -695,7 +752,7 @@ class MPonerine(ScreenManager):
     wifioff.wait()
     threading.Thread(target=self.DoDisconnect, args=(45,), name="DoDisconnect%d" %index).start()
     wifioff.clear()
-  
+    
   def DoFileTaken(self, index, number):
     cam = self.cam[index]
     time.sleep(1)
@@ -706,7 +763,11 @@ class MPonerine(ScreenManager):
     cam.ChangeSetting("buzzer_volume","mute")
     setok.wait(5)
     self.msgbusy = 0
-      
+    # Sync Camera Time
+    cam.ChangeSetting("camera_clock",time.strftime('%Y-%m-%d %H:%M:%S'))
+    setok.wait(5)
+    self.msgbusy = 0
+    
     if self.loadallsettings and cam.cfgdict == {}:
       setallok = cam.setallok
       setallerror = cam.setallerror
@@ -726,7 +787,9 @@ class MPonerine(ScreenManager):
         elif recordstart.isSet():
           break
       self.RefreshCameraInformation(1)
+
     i = 0
+    
     while not cam.quit.isSet():
       i = i % 5 + 1
       cam.taken.wait(1)
@@ -735,18 +798,70 @@ class MPonerine(ScreenManager):
         self.RefreshCameraInformation(1)
           
       if cam.taken.isSet():
-        self.lblrecordtime.text = ""
+        self.rename += 1
+        cam.taken.clear()
         self.recordtime = ""
+        self.lblrecordtime.text = "[color=0000ff]%s - %d[/color]\n" %(self.scenename,self.scenecount) + ("[color=ff0000]%s[/color]" %self.recordtime if self.recordtime <> "" else "")
         if cam.filetaken <> "":
           #debugtxt += "\nCAM %d : " %(index+1) + self.cam[index].filetaken
           self.lblcamstatus[number] = "[sup][b]%s[/b][/sup] [color=0000ff]%s[/color]" %(cam.dirtaken,cam.filetaken)
           if not self.previewonpause and cam.preview:
             #pass
             cam.StartViewfinder()
-          self.RefreshCameraInformation(1)
-        cam.taken.clear()
+          self.RefreshCameraInformation()
+          fileinfo = {"index":index,"number":number,"old":cam.status["video_record_complete"],"new":"","ok":0}
+          self.renlist.append(fileinfo)
+          if self.autorename:
+            threading.Thread(target=self.RenameVideoFiles, args=(index,number,), name="RenameVideoFiles%d" %index).start()
     #print "DoFileTaken stop %d" %index
-    
+  
+  def RenameVideoFiles(self, index, number):
+    cam = self.cam[index]
+    date = time.strftime('%Y%m%d')
+    camletter = list(string.ascii_lowercase)
+    failure = False
+    old = cam.status["video_record_complete"]
+    print "old file name:", old
+    new = '/tmp/fuse_d/DCIM/%s/%s-%s-%s-%03d.mp4' %(self.scenename,date,self.scenename,camletter[number],self.scenecount)
+    print "new file name:", new
+    fileinfo = {}
+    for item in self.renlist:
+      if item["index"] == index:
+        item["new"] = new
+        fileinfo = item
+        break
+    ctelnet = CameraTelnet(ip=cam.ip,username="")
+    commit = ctelnet.commit
+    ctelnet.Rename(old, new)
+    while True:
+      commit.wait(1)
+      if commit.isSet():
+        cam.status["video_record_complete"] = ""
+        cam.dirtaken = ""
+        cam.filetaken = ""
+        arr = new.split('/')
+        self.lblcamstatus[number] = "[color=0000ff]%s[/color]" %(arr[len(arr)-1])
+        if fileinfo <> {}:
+          fileinfo["ok"] = 1
+        break
+      elif ctelnet.failure:
+        failure = failure or ctelnet.failure
+        self.lblcamstatus[number] = "[color=ff0000]Rename %s Error[/color]" %self.cam[index].filetaken
+        print "Rename Error"
+        if fileinfo <> {}:
+          fileinfo["ok"] = 0
+        break
+    self.RefreshCameraInformation()
+    if len(self.renlist) == len(self.cam):
+      for item in self.renlist:
+        if item["ok"] == 0:
+          failure = True
+          break
+      if not failure:
+        self.scenecount += 1
+        self.WriteConfig()
+        self.lblrecordtime.text = "[color=0000ff]%s - %d[/color]\n" %(self.scenename,self.scenecount) + ("[color=ff0000]%s[/color]" %self.recordtime if self.recordtime <> "" else "")
+  
   def AddBatteryInfo(self, camstatus, battery, adapter):
     if battery == "":
       return camstatus
@@ -790,7 +905,16 @@ class MPonerine(ScreenManager):
         readstr = file.read()
         #print "readstr", readstr
         cfg = json.loads(readstr)
-        
+      if cfg.has_key("scenename"):
+        self.scenename = cfg["scenename"]
+      if cfg.has_key("scenecount"):
+        self.scenecount = cfg["scenecount"]
+      if self.scenecount <= 0:
+        self.scenecount = 1
+      if cfg.has_key("autorename"):
+        self.autorename = cfg["autorename"] == 1
+      else:
+        self.autorename = False
       if cfg.has_key("buzzeronstart"):
         self.buzzeronstart = cfg["buzzeronstart"] == 1
       else:
@@ -833,6 +957,9 @@ class MPonerine(ScreenManager):
         cfginit = json.loads(initstr)
         cfginit["camera"] = str(i+1)
         r.append(cfginit)
+      self.scenename = "scene"
+      self.scenecount = 1
+      self.autorename = False
       self.buzzeronstart = False
       self.buzzeronstop = False
       self.buzzervolumelow = False
@@ -860,6 +987,9 @@ class MPonerine(ScreenManager):
 
   def WriteConfig(self):
     cfg = {}
+    cfg["scenename"] = self.scenename
+    cfg["scenecount"] = self.scenecount
+    cfg["autorename"] = int(self.autorename)
     cfg["buzzeronstart"] = int(self.buzzeronstart)
     cfg["buzzeronstop"] = int(self.buzzeronstop)
     cfg["buzzervolumelow"] = int(self.buzzervolumelow)
@@ -1037,9 +1167,9 @@ BoxLayout:
       #self.current_screen.ids['btnCamSetup'].bind(text=self.ConfigPopupOpen) #.btnCamSetup.text #bind(on_text=self.ConfigPopupOpen)
       self.timecontitle = t1
     except (SyntaxError, ParserException) as e:
-      print "SyntaxError, ParserException", e
+      print "BuildConnectTitle: SyntaxError, ParserException", e
     except Exception as e:
-      print "Exception", e
+      print "BuildConnectTitle: Exception", e
 
   def RefreshConnectTitle(self, timewait = 0):
     Clock.unschedule(self.BuildConnectTitle)
@@ -1059,22 +1189,25 @@ AnchorLayout:
   size: root.width, root.height * 0.95
   GridLayout:
     size_hint: None, None
-    size: root.width, root.width/6 + root.width/20 + (root.width - root.width/12*4)/3
+    size: root.width, root.width/6 + root.width/12 + (root.width - root.width/12*4)/3
     spacing: root.width/12, 0
     padding: root.width/12, root.width/6, root.width/12, 0
     cols: 3
     Label:
       size_hint: 1, None
-      height: root.width/20
+      height: root.width/12
     Label:
       size_hint: 1, None
-      height: root.width/20
-      color: 1,0,0,1
+      height: root.width/12
+      text_size: self.size
       font_size: root.width/30
       text: "{$recordtime}"
+      halign: 'center'
+      valign: 'top'
+      markup: True
     Label:
       size_hint: 1, None
-      height: root.width/20
+      height: root.width/12
     '''
     sdetail = '''
     Button:
@@ -1103,7 +1236,8 @@ AnchorLayout:
     sbtnphoto = sdetail
     for key, value in self.btnconctrl[2].items():
       sbtnphoto = sbtnphoto.replace("{$%s}" %key, value)
-    shead = shead.replace("{$recordtime}",self.recordtime)
+    stime = "[color=0000ff]%s - %d[/color]\\n" %(self.scenename,self.scenecount) + ("[color=ff0000]%s[/color]" %self.recordtime if self.recordtime <> "" else "")
+    shead = shead.replace("{$recordtime}",stime)
     #shead = shead.replace("{$recordtime}","11.22.33")
     shead += sbtnconnect + sbtnrecord + sbtnphoto
     #print shead.replace("root.width",str(self.width)).replace("root.height",str(self.height))
@@ -1131,15 +1265,24 @@ AnchorLayout:
       self.btnphoto = widget.children[0].children[0]
       self.btnrecord = widget.children[0].children[1]
       self.btnconnect = widget.children[0].children[2]
+      #self.lblscenecount = widget.children[0].children[3]
       self.lblrecordtime = widget.children[0].children[4]
+      #self.lblscenename = widget.children[0].children[5]
       #print "self.lblrecordtime.text",self.lblrecordtime.text
       kv_container.add_widget(widget)
       self.textctrlbtn = txt
     except (SyntaxError, ParserException) as e:
-      print "SyntaxError, ParserException", e
+      print "BuildConnectControl: SyntaxError, ParserException", e
     except Exception as e:
-      print "BuildConnectControl Exception", e
+      print "BuildConnectControl: Exception", e
       
+  def DoRefreshConnectControl(self):
+    time.sleep(30)
+    while True:
+      time.sleep(30)
+      print "DoRefreshConnectControl"
+      self.RefreshConnectControl()
+  
   def RefreshConnectControl(self, timewait = 0):
     Clock.unschedule(self.BuildConnectControl)
     if timewait == 0:
@@ -1148,9 +1291,12 @@ AnchorLayout:
       Clock.schedule_once(self.BuildConnectControl, timewait)
       
   def RefreshAllControls(self, btnicon):
+    #pngfile = __file__.replace(basename(__file__), ("data/%s-.png" %time.ctime()).replace(':',''))
+    #Window.screenshot(name=pngfile)
+    #time.sleep(1)
     #print "RefreshAllControls"
     self.textctrlbtn = ""
-    self.RefreshConnectControl(1)
+    #*#self.RefreshConnectControl(1)
     self.textcaminfo = ""
     self.RefreshCameraInformation(1)
     #print self.timecontitle
