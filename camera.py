@@ -160,7 +160,7 @@ class Camera():
         self.Connect()
       if self.socketopen <> 0:
         self.quit.set()
-        self.taken.set()
+        #self.taken.set()
         print "socket time out"
         return
     print "socket connected"
@@ -485,7 +485,7 @@ class Camera():
         pass
       finally:
         self.quit.set()
-        self.taken.set()
+        #self.taken.set()
 
   def RecordTime(self, seconds):
     rectime = "00:00:00"

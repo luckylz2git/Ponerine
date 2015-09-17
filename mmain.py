@@ -47,7 +47,6 @@ class AdvancedPopup(Popup):
   buzzeronstart = BooleanProperty()
   buzzeronstop = BooleanProperty()
   buzzervolumelow = BooleanProperty()
-  previewonpause = BooleanProperty()
   loadallsettings = BooleanProperty()
   apply = BooleanProperty()
 
@@ -61,8 +60,8 @@ class MPonerine(ScreenManager):
 
     self.applyconfig = False
     self.appexit = appevent[0]
-    self.apppause = appevent[1]
-    self.appresume = appevent[2]
+    #self.apppause = appevent[1]
+    #self.appresume = appevent[2]
     self.inited = False
     self.textcaminfo = ""  # Camera Information
     self.timecontitle = time.time() # Connect Title
@@ -72,7 +71,6 @@ class MPonerine(ScreenManager):
     self.buzzeronstart = False
     self.buzzeronstop = False
     self.buzzervolumelow = False
-    self.previewonpause = False
     self.scenename = "scene"
     self.scenecount = 1
     self.cfglist = self.ReadConfig()
@@ -154,7 +152,7 @@ class MPonerine(ScreenManager):
   def DetectCam(self, timewait = 1):
     for thread in threading.enumerate():
       if thread.isAlive() and thread.name[0:11] == "DoDetectCam":
-        print "main.py.DoDetectCam %s" %thread.name
+        print "main.py.DoDetectCam kill: %s" %thread.name
         try:
           thread._Thread__stop()
         except:
@@ -272,6 +270,7 @@ class MPonerine(ScreenManager):
       self.error = 0
       self.retry = []
       self.firstcam = 0
+      self.synctime = time.strftime('%Y-%m-%d %H:%M:')
       for cfg in self.cfglist:
         if cfg["enabled"] == 1 and cfg["ip"] <> "":
           self.cam.append(Camera(ip=cfg["ip"],preview=cfg["preview"]==1))
@@ -418,7 +417,7 @@ class MPonerine(ScreenManager):
     self.stopdetect.clear()
     for thread in threading.enumerate():
       if thread.isAlive() and thread.name[0:5] == "DoThr":
-        print "main.py.DoDisconnect %s" %thread.name
+        print "main.py.DoDisconnect kill: %s" %thread.name
         try:
           thread._Thread__stop()
         except:
@@ -461,8 +460,7 @@ class MPonerine(ScreenManager):
           self.recordtime = self.Second2Time(time.time() - self.trec)
           self.lblrecordtime.text = "[color=0000ff]%s - %d[/color]\n" %(self.scenename,self.scenecount) + ("[color=ff0000]%s[/color]" %self.recordtime if self.recordtime <> "" else "")
           
-        if not self.previewonpause and cam.preview:
-          #pass
+        if cam.preview:
           cam.StartViewfinder()
         self.RefreshCameraInformation(1)
         #*#self.RefreshConnectControl(1)
@@ -628,7 +626,7 @@ class MPonerine(ScreenManager):
       text = btnsetup.text
       btnsetup.text = "For XiaoYi Sports Camera"
       if text == "Advanced":
-        popup = AdvancedPopup(title='Camera Advanced Config', size_hint=(0.8, 0.8), size=self.size)
+        popup = AdvancedPopup(title='Camera Advanced Config', size_hint=(0.8, 0.7), size=self.size)
         popup.bind(on_dismiss=self.AdvancedPopupApply)
         popup.apply = False
         popup.scenename = self.scenename
@@ -637,7 +635,6 @@ class MPonerine(ScreenManager):
         popup.buzzeronstart = self.buzzeronstart
         popup.buzzeronstop = self.buzzeronstop
         popup.buzzervolumelow = self.buzzervolumelow
-        popup.previewonpause = self.previewonpause
         popup.loadallsettings = self.loadallsettings
         popup.open()
       else:
@@ -682,7 +679,6 @@ class MPonerine(ScreenManager):
       self.buzzeronstart = popup.buzzeronstart
       self.buzzeronstop = popup.buzzeronstop
       self.buzzervolumelow = popup.buzzervolumelow
-      self.previewonpause = popup.previewonpause
       self.loadallsettings = popup.loadallsettings
       self.WriteConfig()
       self.RefreshConnectControl()
@@ -721,30 +717,11 @@ class MPonerine(ScreenManager):
     self.current_screen.ids.btnPhoto.text = "Take Photo"
   
   def DoPreview(self):
-    if self.previewonpause:
-      while True:
-        print "DoPreview start wait"
-        self.apppause.wait()
-        for cam in self.cam:
-          if cam.link and cam.preview:
-            cam.StartViewfinder()
-            time.sleep(1)
-            cam.msgbusy = 0
-        self.apppause.clear()
-        self.appresume.wait()
-        for cam in self.cam:
-          pass
-          if cam.link and cam.preview:
-            cam.StopViewfinder()
-            time.sleep(1)
-            cam.msgbusy = 0
-        self.appresume.clear()
-    else:
-      for cam in self.cam:
-        if cam.link and cam.preview:
-          cam.StartViewfinder()
-          time.sleep(1)
-          cam.msgbusy = 0
+    for cam in self.cam:
+      if cam.link and cam.preview:
+        cam.StartViewfinder()
+        #time.sleep(1)
+        #cam.msgbusy = 0
   
   def DoWifi(self, index):
     print "DoWifi Start %d" %index
@@ -763,8 +740,9 @@ class MPonerine(ScreenManager):
     cam.ChangeSetting("buzzer_volume","mute")
     setok.wait(5)
     self.msgbusy = 0
-    # Sync Camera Time
-    cam.ChangeSetting("camera_clock",time.strftime('%Y-%m-%d %H:%M:%S'))
+    # Sync Camera Time, range of: (0,8,16,24,32,40,48,56)
+    t = self.synctime + '%02d' %(number * 8)
+    cam.ChangeSetting("camera_clock",t)
     setok.wait(5)
     self.msgbusy = 0
     
@@ -805,8 +783,7 @@ class MPonerine(ScreenManager):
         if cam.filetaken <> "":
           #debugtxt += "\nCAM %d : " %(index+1) + self.cam[index].filetaken
           self.lblcamstatus[number] = "[sup][b]%s[/b][/sup] [color=0000ff]%s[/color]" %(cam.dirtaken,cam.filetaken)
-          if not self.previewonpause and cam.preview:
-            #pass
+          if cam.preview:
             cam.StartViewfinder()
           self.RefreshCameraInformation()
           fileinfo = {"index":index,"number":number,"old":cam.status["video_record_complete"],"new":"","ok":0}
@@ -836,9 +813,6 @@ class MPonerine(ScreenManager):
     while True:
       commit.wait(1)
       if commit.isSet():
-        cam.status["video_record_complete"] = ""
-        cam.dirtaken = ""
-        cam.filetaken = ""
         arr = new.split('/')
         self.lblcamstatus[number] = "[color=0000ff]%s[/color]" %(arr[len(arr)-1])
         if fileinfo <> {}:
@@ -851,6 +825,9 @@ class MPonerine(ScreenManager):
         if fileinfo <> {}:
           fileinfo["ok"] = 0
         break
+    cam.status["video_record_complete"] = ""
+    cam.dirtaken = ""
+    cam.filetaken = ""
     self.RefreshCameraInformation()
     if len(self.renlist) == len(self.cam):
       for item in self.renlist:
@@ -927,10 +904,6 @@ class MPonerine(ScreenManager):
         self.buzzervolumelow = cfg["buzzervolumelow"] == 1
       else:
         self.buzzervolumelow = False
-      if cfg.has_key("previewonpause"):
-        self.previewonpause = cfg["previewonpause"] == 1
-      else:
-        self.previewonpause = False
       if cfg.has_key("loadallsettings"):
         self.loadallsettings = cfg["loadallsettings"] == 1
       else:
@@ -963,7 +936,6 @@ class MPonerine(ScreenManager):
       self.buzzeronstart = False
       self.buzzeronstop = False
       self.buzzervolumelow = False
-      self.previewonpause = False
       self.loadallsettings = False
       
     if self.inited:
@@ -993,7 +965,6 @@ class MPonerine(ScreenManager):
     cfg["buzzeronstart"] = int(self.buzzeronstart)
     cfg["buzzeronstop"] = int(self.buzzeronstop)
     cfg["buzzervolumelow"] = int(self.buzzervolumelow)
-    cfg["previewonpause"] = int(self.previewonpause)
     cfg["loadallsettings"] = int(self.loadallsettings)
     
     cfg["config"] = self.cfglist
@@ -1307,12 +1278,8 @@ class MPonerineApp(App):
   version = __version__
   def build(self):
     self.appexit = threading.Event()
-    self.apppause = threading.Event()
-    self.appresume = threading.Event()
     evt = []
     evt.append(self.appexit)
-    evt.append(self.apppause)
-    evt.append(self.appresume)
     mponerine = MPonerine(evt)
     mponerine.duration = 0.7
 
@@ -1322,18 +1289,16 @@ class MPonerineApp(App):
     return mponerine
     
   def on_pause(self):
-    self.apppause.set()
     return True
     
   def on_resume(self):
-    self.appresume.set()
-    return True
+    pass
     
   def on_stop(self):
     self.appexit.set()
     for thread in threading.enumerate():
       if thread.isAlive():
-        print "on_stop: kill %s" %thread.name
+        print "APP.on_stop kill: %s" %thread.name
         try:
           thread._Thread__stop()
         except:

@@ -131,29 +131,6 @@
         #font_size: root.width/50
       Label:
         size_hint: 0.1, 1
-    
-    # Preview On Pause
-    GridLayout:
-      size_hint: 1, None
-      height: root.width/10 + root.width/50
-      padding: 0,0,0,root.width/50
-      spacing: root.width/35
-      cols: 3
-      Label:
-        text: 'Preview on App Pause : '
-        size_hint: 0.6, 1
-        text_size: self.size
-        font_size: root.width/25
-        halign: 'right'
-        valign: 'middle'
-      Switch:
-        id: optPreviewOnPause
-        active: root.previewonpause == 1
-        size_hint: 0.3, 1
-        #text_size: self.size
-        #font_size: root.width/50
-      Label:
-        size_hint: 0.1, 1
         
     # Load All Settings
     GridLayout:
@@ -200,7 +177,6 @@
             root.buzzeronstart = 1 if optBuzzerOnStart.active else 0
             root.buzzeronstop = 1 if optBuzzerOnStop.active else 0
             root.buzzervolumelow = 1 if optBuzzerVolumeLow.active else 0
-            root.previewonpause = 1 if optPreviewOnPause.active else 0
             root.loadallsettings = 1 if optLoadAllSettings.active else 0
                    
             root.dismiss()

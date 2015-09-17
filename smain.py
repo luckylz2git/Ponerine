@@ -968,6 +968,12 @@ class Ponerine(ScreenManager):
     except:
       pass
     self.stopdetect.clear()
+    for thread in threading.enumerate():
+      if thread.isAlive() and thread.name[0:2] == "Do" and thread.name <> "DoDisconnect":
+        try:
+          thread._Thread__stop()
+        except:
+          pass
     self.DetectCam()
   
   # fun DoFilterFile0(self, filter):
@@ -1511,11 +1517,11 @@ class Ponerine(ScreenManager):
     while not self.cam[index].quit.isSet():
       self.cam[index].taken.wait(1)
       if self.cam[index].taken.isSet() and self.current_screen.name == "camera":
+        self.cam[index].taken.clear()
         debugtxt = self.current_screen.ids.txtDebug.text
         if self.cam[index].filetaken <> "":
           debugtxt += "\nCAM %d : " %(index+1) + self.cam[index].filetaken
           self.current_screen.ids.txtDebug.text = debugtxt
-        self.cam[index].taken.clear()
     print "DoFileTaken stop %d" %index
 
   def ReadSetting(self, instance):
