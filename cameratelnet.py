@@ -1,5 +1,5 @@
 
-import threading, telnetlib, sys
+import threading, telnetlib, sys, platform
 from os.path import dirname, basename
 
 class CameraTelnet():
@@ -65,11 +65,15 @@ class CameraTelnet():
       print "telnet prompt", ret
       
       #build rename script
-      cmd = u'if [ -f %s ];then if [ ! -f %s ];then mkdir -p %s;mv %s %s;if [ -f %s ];then echo RenameSuccess;fi;fi;fi;' %(withpathold,withpathnew,dirname(withpathnew),withpathold,withpathnew,withpathnew)
-      print "unicode",cmd
-      cmd = cmd.encode('utf8')
-      #print "build rename script\n"
-      print "utf-8",cmd
+      sysname = platform.system()
+      if sysname == "Windows":
+        cmd = u'if [ -f %s ];then if [ ! -f %s ];then mkdir -p %s;mv %s %s;if [ -f %s ];then echo RenameSuccess;fi;fi;fi;' %(withpathold,withpathnew,dirname(withpathnew),withpathold,withpathnew,withpathnew)
+        print "unicode",cmd
+        cmd = cmd.encode('utf8')
+        print "utf-8",cmd
+      else: #if sysname in ("Darwin", "Linux"):
+        cmd = 'if [ -f %s ];then if [ ! -f %s ];then mkdir -p %s;mv %s %s;if [ -f %s ];then echo RenameSuccess;fi;fi;fi;' %(withpathold,withpathnew,dirname(withpathnew),withpathold,withpathnew,withpathnew)
+        cmd = cmd.encode('utf8')
       tn.write(cmd + '\n')
       ret = tn.read_until(prompt)
       a = ret.split("RenameSuccess")

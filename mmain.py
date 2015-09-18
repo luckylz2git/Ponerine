@@ -25,7 +25,7 @@ from cameratelnet import CameraTelnet
 # import base64, functools, hashlib, json, os, platform, re, select, socket, subprocess, sys, tempfile, threading, time, tkFileDialog, tkMessageBox, urllib2, webbrowser, zlib
 '''
 platform.system()
-"Windows", "Darwin"
+"Windows", "Darwin", "Linux"
 '''
 import json, os, threading, time, socket, platform, inspect, string
 from os.path import basename
@@ -35,7 +35,7 @@ Builder.load_file('data/mpopupconfig.kv')
 
 #print "Clock.max_iteration", Clock.max_iteration
 Clock.max_iteration = 100
-__version__='0.0.3'
+__version__='0.0.4'
 
 class MConnectScreen(Screen):
   pass
@@ -86,7 +86,10 @@ class MPonerine(ScreenManager):
       #Window.borderless = '1'
     elif sysname == "Darwin":
       Window.size = (520,700)
-    
+    elif sysname == "Linux":
+      if platform.linux_distribution()[0] == "Ubuntu":
+        Window.size = (560,800)
+        
   def InitialCamIcon(self):
     self.lblcamname = []
     self.lblcamstatus = []
@@ -945,7 +948,7 @@ class MPonerine(ScreenManager):
       i = 0
       for item in r:
         if item["ip"] <> "" and item["enabled"] == 1:
-          cname.append("[b]CAM [sup]%s[/sup][/b] [sub]%s[/sub]" %(item["camera"],item["name"]))
+          cname.append("[b][sup]%s[/sup][/b] %s" %(item["camera"],item["name"]))
         else:
           cname.append("")
         cstatus.append("")
