@@ -184,9 +184,19 @@ class Camera():
           if allowsendout:
             data["token"] = self.token
             #print "sent out:", json.dumps(data, indent=2)
-            print "sent out:", json.dumps(data)
+            
             self.msgbusy = data["msg_id"]
-            self.srv.send(json.dumps(data))
+            if data.has_key("type"):
+              if data.has_key("param"):
+                smsg = '{"type":"%s","msg_id":%d,"param":"%s","token":%d}' %(data["type"],data["msg_id"],data["param"],data["token"])
+              else:
+                smsg = '{"type":"%s","msg_id":%d,"token":%d}' %(data["type"],data["msg_id"],data["token"])
+            elif data.has_key("param"):
+              smsg = '{"msg_id":%d,"param":"%s","token":%d}' %(data["msg_id"],data["param"],data["token"])
+            else:
+              smsg = '{"msg_id":%d,"token":%d}' %(data["msg_id"],data["token"])
+            print "sent out:", smsg
+            self.srv.send(smsg)
             #{"token":1,"msg_id":2,"type": "dev_reboot","param":"on"}
             if data["msg_id"] == 2 and data["type"] == "dev_reboot" and data["param"] == "on":
               time.sleep(1)
