@@ -495,7 +495,8 @@ class MPonerine(ScreenManager):
     while True:
       self.recordstart.wait()
       cam.StartRecord(False)
-      cam.recording.wait(10)
+      cam.recording.wait(30) # for android
+      #cam.recording.wait(10) # for pc
       if cam.recording.isSet():
         retry = False
         print "\nDoStartRecord", index
@@ -908,11 +909,12 @@ class MPonerine(ScreenManager):
               cam.StartViewfinder()
             self.RefreshCameraInformation()
         else:
-          self.rename += 1
-          cam.taken.clear()
-          self.recordtime = ""
-          self.lblrecordtime.text = "[color=0000ff]%s - %d[/color]\n" %(self.scenename,self.scenecount) + ("[color=ff0000]%s[/color]" %self.recordtime if self.recordtime <> "" else "")
-          if cam.filetaken <> "":
+          extname = cam.filetaken.split(".")
+          if extname[len(extname)-1].lower() == "mp4":
+            self.rename += 1
+            cam.taken.clear()
+            self.recordtime = ""
+            self.lblrecordtime.text = "[color=0000ff]%s - %d[/color]\n" %(self.scenename,self.scenecount) + ("[color=ff0000]%s[/color]" %self.recordtime if self.recordtime <> "" else "")          
             #debugtxt += "\nCAM %d : " %(index+1) + self.cam[index].filetaken
             self.lblcamstatus[number] = "[sup][b]%s[/b][/sup] [color=0000ff]%s[/color]" %(cam.dirtaken,cam.filetaken)
             if cam.preview:
@@ -1240,9 +1242,9 @@ BoxLayout:
     #text: "W: %d" %self.width #mac: 34x34, win: 37x37
     size_hint: None, None
     size: root.width/15, root.width/15
-    background_normal: 'image/ponerine.png' #'image/xuetanlogow.png'
-    background_down: 'image/ponerine.png'
-    #background_disabled_normal: 'image/ponerine.png' #'image/xuetanlogow.png' 
+    background_normal: 'image/ponerinem.png' #'image/xuetanlogow.png'
+    background_down: 'image/ponerinem.png'
+    #background_disabled_normal: 'image/ponerinem.png' #'image/xuetanlogow.png' 
     state: 'normal'
     disabled: False
   Label:
