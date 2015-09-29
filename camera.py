@@ -340,6 +340,8 @@ class Camera():
         self.seterror.set()
       elif data["msg_id"] == 3:
         self.setallerror.set()
+      elif data["msg_id"] == 514 and self.recording.isSet():
+        self.SendMsg('{"msg_id":514}')
       elif data["msg_id"] == 515:
         if self.showtime and self.recording.isSet():
           time.sleep(1)

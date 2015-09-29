@@ -363,10 +363,11 @@ class MPonerine(ScreenManager):
               i += 1
             self.btnconnect.disabled = False
             self.btnconnect.color = (0,0,0,1)
+            self.btnconnect.text = "DISCONNECT"
             self.btnconctrl[0]["disabled"] = "False"
             self.btnconctrl[0]["color"] = "0,0,0,1"
             self.btnconctrl[0]["text"] = "DISCONNECT"
-            self.RefreshConnectControl(1)
+            self.RefreshConnectControl()
             break
           elif (self.linked + self.error) == len(self.cam):
             self.connect.clear()
@@ -375,7 +376,7 @@ class MPonerine(ScreenManager):
               self.btnconnect.color = (1,0,0,1)
               self.btnconnect.text = "ERR %d / %d" %(self.error, len(self.cam))
               self.btnconctrl[0]["disabled"] = "False"
-              self.btnconctrl[0]["text"] = "ERR %d / %d" %(self.error, len(self.cam))
+              #self.btnconctrl[0]["text"] = "ERR %d / %d" %(self.error, len(self.cam))
               self.btnconctrl[0]["color"] = "1,0,0,1"
               self.btnconctrl[0]["text"] = "RETRY"
               self.RefreshConnectControl(1)
@@ -490,16 +491,17 @@ class MPonerine(ScreenManager):
       self.recordstart.clear()
   
   def DoStartRecord(self, index, number):
+    name = time.strftime('%H%M%S')
     cam = self.cam[index]
     retry = False
     while True:
       self.recordstart.wait()
       cam.StartRecord(False)
-      cam.recording.wait(30) # for android
+      cam.recording.wait() # for android
       #cam.recording.wait(10) # for pc
       if cam.recording.isSet():
         retry = False
-        print "\nDoStartRecord", index
+        print "\nDoStartRecord index: %d  name: %s" %(index,name)
         if self.linked == 0:
           self.firstcam = index
           #cam.showtime = True
@@ -509,27 +511,28 @@ class MPonerine(ScreenManager):
         self.btnrecord.text = 'CAM %d / %d' %(self.linked, len(self.cam))
         self.btnconctrl[1]["text"] = 'CAM %d / %d' %(self.linked, len(self.cam))
         self.lblcamstatus[number] = "[color=ff0000]recording[/color]"
+        self.RefreshCameraInformation()
         threading.Thread(target=self.DoStopRecord, args=(index,number,), name="DoStopRecord%d" %index).start()
         if self.linked == len(self.cam):
           self.trec = time.time()
           if self.buzzeronstart:
             #threading.Thread(target=self.DoBuzzerRing, args=(3,), name="DoBuzzerRing").start()
             threading.Thread(target=self.DoBuzzerRing, args=(0,), name="DoBuzzerRing").start()
-          self.btnconctrl[1]["text"] = "STOP"
-          self.RefreshConnectControl(1)
           #threading.Thread(target=self.ButtonText, args=(self.btnrecord,"STOP",1,), name="ButtonText").start()
           threading.Thread(target=self.DoShowRecord, name="DoShowRecord").start()
           threading.Thread(target=self.DoShowTime, name="DoShowTime").start()
-          self.recordstart.clear()
+          #self.recordstart.clear()
           self.btnrecord.disabled = False
+          self.btnrecord.text = "STOP"
           self.btnconctrl[1]["disabled"] = "False"
+          self.btnconctrl[1]["text"] = "STOP"
           self.recordtime = self.Second2Time(time.time() - self.trec)
           self.lblrecordtime.text = "[color=0000ff]%s - %d[/color]\n" %(self.scenename,self.scenecount) + ("[color=ff0000]%s[/color]" %self.recordtime if self.recordtime <> "" else "")
-          
+          self.RefreshConnectControl()
         if cam.preview:
           cam.StartViewfinder()
-        self.RefreshCameraInformation()
         #*#self.RefreshConnectControl(1)
+        self.recordstart.clear()
         self.recordstop.wait()
       elif retry:
         retry = False
@@ -590,8 +593,9 @@ class MPonerine(ScreenManager):
       #*#self.RefreshConnectControl(1)
     
   def DoStopRecord(self, index, number):
-    self.recordstop.wait(11)
-    self.RenameDuplicated(index, number)
+    #self.recordstop.wait(11)
+    #self.RenameDuplicated(index, number)
+    threading.Thread(target=self.RenameDuplicated, args=(index,number,),name="RenameDuplicated%d" %index).start()
     self.recordstop.wait()
     cam = self.cam[index]
     cam.taken.clear()
@@ -599,8 +603,10 @@ class MPonerine(ScreenManager):
       #if self.buzzeronstop:
       #  cam.msgbusy = 0
       cam.StopRecord()
-    print "DoStopRecord", index
-    print cam.filetaken
+    #print "DoStopRecord", index
+    #print cam.filetaken
+    while cam.recording.isSet():
+      pass
     stopfirst = self.linked
     self.linked += 1
     if stopfirst == 0: #show last record time
@@ -609,8 +615,8 @@ class MPonerine(ScreenManager):
       self.lblrecordtime.text = "[color=0000ff]%s - %d[/color]\n" %(self.scenename,self.scenecount) + ("[color=ff0000]%s[/color]" %self.recordtime if self.recordtime <> "" else "")
     self.btnrecord.text = 'CAM %d / %d' %(self.linked, len(self.cam))
     self.btnconctrl[1]["text"] = 'CAM %d / %d' %(self.linked, len(self.cam))
-    self.lblcamstatus[number] = "[color=0000ff]stop record[/color]"
-    self.RefreshCameraInformation(1)
+    self.lblcamstatus[number] = "[color=0000ff]stop recording[/color]"
+    self.RefreshCameraInformation()
     if self.linked == len(self.cam):
       self.btnconctrl[1]["text"] = "RECORD"
       self.btnrecord.text = "RECORD"
@@ -901,8 +907,8 @@ class MPonerine(ScreenManager):
         self.RefreshCameraInformation(1)
           
       if cam.taken.isSet():
+        cam.taken.clear()
         if self.photomode:
-          cam.taken.clear()
           if cam.filetaken <> "":
             self.lblcamstatus[number] = "[sup][b]%s[/b][/sup] [color=0000ff]%s[/color]" %(cam.dirtaken,cam.filetaken)
             if cam.preview:
@@ -911,8 +917,6 @@ class MPonerine(ScreenManager):
         else:
           extname = cam.filetaken.split(".")
           if extname[len(extname)-1].lower() == "mp4":
-            self.rename += 1
-            cam.taken.clear()
             self.recordtime = ""
             self.lblrecordtime.text = "[color=0000ff]%s - %d[/color]\n" %(self.scenename,self.scenecount) + ("[color=ff0000]%s[/color]" %self.recordtime if self.recordtime <> "" else "")          
             #debugtxt += "\nCAM %d : " %(index+1) + self.cam[index].filetaken
@@ -927,6 +931,7 @@ class MPonerine(ScreenManager):
     #print "DoFileTaken stop %d" %index
     
   def RenameDuplicated(self, index, number):
+    time.sleep(3)
     cam = self.cam[index]
     date = time.strftime('%Y%m%d')
     camletter = list(string.ascii_lowercase)
@@ -949,6 +954,7 @@ class MPonerine(ScreenManager):
     new = '/tmp/fuse_d/DCIM/%s/%s-%s-%02d%s.mp4' %(self.scenename,date,self.scenename,self.scenecount,camletter[number])
     print "new file name:", new
     fileinfo = {}
+
     for item in self.renlist:
       if item["index"] == index:
         item["new"] = new
@@ -981,11 +987,19 @@ class MPonerine(ScreenManager):
         if fileinfo <> {}:
           fileinfo["ok"] = 0
         break
+    i = 0
+    for item in self.renlist:
+      if item["index"] == index:
+        self.renlist[i].update(fileinfo)
+        break
+      i += 1
     cam.status["video_record_complete"] = ""
     cam.dirtaken = ""
     cam.filetaken = ""
     self.RefreshCameraInformation()
-    if len(self.renlist) == len(self.cam):
+    self.rename += 1
+    if self.rename == len(self.cam):
+      print self.renlist
       for item in self.renlist:
         if item["ok"] == 0:
           failure = True
