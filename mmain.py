@@ -20,7 +20,7 @@ from kivy.properties import StringProperty, NumericProperty, BooleanProperty, Ob
 
 # Camera Object[camera.py]
 from camera import Camera
-from camerasetting import CameraSetting
+#from camerasetting import CameraSetting
 from cameratelnet import CameraTelnet
 # import base64, functools, hashlib, json, os, platform, re, select, socket, subprocess, sys, tempfile, threading, time, tkFileDialog, tkMessageBox, urllib2, webbrowser, zlib
 '''
