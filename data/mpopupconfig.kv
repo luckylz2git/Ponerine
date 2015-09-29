@@ -62,7 +62,30 @@
         #font_size: root.width/50
       Label:
         size_hint: 0.1, 1
-        
+    
+    # Move Duplicated File
+    GridLayout:
+      size_hint: 1, None
+      height: root.width/10 + root.width/50 #13
+      padding: 0,0,0,root.width/50
+      spacing: root.width/35
+      cols: 3
+      Label:
+        text: 'Move Duplicated File : '
+        size_hint: 0.6, 1
+        text_size: self.size
+        font_size: root.width/25
+        halign: 'right'
+        valign: 'middle'
+      Switch:
+        id: optMoveDuplicated
+        active: root.moveduplicated == 1
+        size_hint: 0.3, 1
+        #text_size: self.size
+        #font_size: root.width/50
+      Label:
+        size_hint: 0.1, 1
+    
     # Buzzer On Start
     GridLayout:
       size_hint: 1, None
@@ -109,7 +132,7 @@
       Label:
         size_hint: 0.1, 1
     
-    # Volume Low
+    # Volume Mute
     GridLayout:
       size_hint: 1, None
       height: root.width/10 + root.width/50
@@ -117,22 +140,22 @@
       spacing: root.width/35
       cols: 3
       Label:
-        text: 'Volume Low on Disconnect : '
+        text: 'Volume Mute on Connect : '
         size_hint: 0.6, 1
         text_size: self.size
         font_size: root.width/25
         halign: 'right'
         valign: 'middle'
       Switch:
-        id: optBuzzerVolumeLow
-        active: root.buzzervolumelow == 1
+        id: optBuzzerMute
+        active: root.buzzermute == 1
         size_hint: 0.3, 1
         #text_size: self.size
         #font_size: root.width/50
       Label:
         size_hint: 0.1, 1
         
-    # Load All Settings
+    # Mode Switch
     GridLayout:
       size_hint: 1, None
       height: root.width/10 + root.width/50
@@ -140,20 +163,38 @@
       spacing: root.width/35
       cols: 3
       Label:
-        text: 'Load Camera Settings : '
+        text: 'Switch to Photo Mode : '
         size_hint: 0.6, 1
         text_size: self.size
         font_size: root.width/25
         halign: 'right'
         valign: 'middle'
       Switch:
-        id: optLoadAllSettings
-        active: root.loadallsettings == 1
+        id: optPhotoMode
+        active: root.photomode == 1
         size_hint: 0.3, 1
-        #text_size: self.size
-        #font_size: root.width/50
       Label:
         size_hint: 0.1, 1
+    ## Load All Settings
+    # GridLayout:
+      # size_hint: 1, None
+      # height: root.width/10 + root.width/50
+      # padding: 0,0,0,root.width/50
+      # spacing: root.width/35
+      # cols: 3
+      # Label:
+        # text: 'Load Camera Settings : '
+        # size_hint: 0.6, 1
+        # text_size: self.size
+        # font_size: root.width/25
+        # halign: 'right'
+        # valign: 'middle'
+      # Switch:
+        # id: optLoadAllSettings
+        # active: root.loadallsettings == 1
+        # size_hint: 0.3, 1
+      # Label:
+        # size_hint: 0.1, 1
         
     AnchorLayout:
       anchor_x: 'center'
@@ -170,20 +211,25 @@
         Button:
           text: 'Apply'
           size_hint: 1, 1
+          always_release: False
           on_release:
             root.apply = True
             root.scenename = txtSceneName.text
             root.autorename = 1 if optAutoRename.active else 0
+            root.moveduplicated = 1 if optMoveDuplicated.active else 0
             root.buzzeronstart = 1 if optBuzzerOnStart.active else 0
             root.buzzeronstop = 1 if optBuzzerOnStop.active else 0
-            root.buzzervolumelow = 1 if optBuzzerVolumeLow.active else 0
-            root.loadallsettings = 1 if optLoadAllSettings.active else 0
+            root.buzzermute = 1 if optBuzzerMute.active else 0
+            root.loadallsettings = 0
+            root.photomode = 1 if optPhotoMode.active else 0
+            #root.loadallsettings = 1 if optLoadAllSettings.active else 0
                    
             root.dismiss()
         # Cancel Button
         Button:
           text: 'Cancel'
           size_hint: 1, 1
+          always_release: False
           on_release:
             root.apply = False
             root.dismiss()
@@ -337,6 +383,7 @@
         Button:
           text: 'Apply'
           size_hint: 1, 1
+          always_release: False
           on_release:
             root.apply = True
             root.cfg["camera"] = txtCameraNo.text
@@ -349,6 +396,7 @@
         Button:
           text: 'Cancel'
           size_hint: 1, 1
+          always_release: False
           on_release:
             root.apply = False
             root.dismiss()

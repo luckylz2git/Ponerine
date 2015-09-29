@@ -19,7 +19,9 @@ class Camera():
     self.jsonoff = 0
     self.msgbusy = 0
     self.cambusy = False
-    self.showtime = True
+    self.showtime = False
+    self.vfstart = False
+    self.volume = ""
     self.status = {}
     self.filetaken = ""
     self.dirtaken = ""
@@ -98,7 +100,9 @@ class Camera():
     self.jsonoff = 0
     self.msgbusy = 0
     self.cambusy = False
-    self.showtime = True
+    self.showtime = False
+    self.vfstart = False
+    self.volume = ""
     self.status = {}
     self.filetaken = ""
     self.dirtaken = ""
@@ -188,13 +192,13 @@ class Camera():
             self.msgbusy = data["msg_id"]
             if data.has_key("type"):
               if data.has_key("param"):
-                smsg = '{"type":"%s","msg_id":%d,"param":"%s","token":%d}' %(data["type"],data["msg_id"],data["param"],data["token"])
+                smsg = '{"token":%d,"msg_id":%d,"type":"%s","param":"%s"}' %(data["token"],data["msg_id"],data["type"],data["param"])
               else:
-                smsg = '{"type":"%s","msg_id":%d,"token":%d}' %(data["type"],data["msg_id"],data["token"])
+                smsg = '{"token":%d,"msg_id":%d,"type":"%s"}' %(data["token"],data["msg_id"],data["type"])
             elif data.has_key("param"):
-              smsg = '{"msg_id":%d,"param":"%s","token":%d}' %(data["msg_id"],data["param"],data["token"])
+              smsg = '{"token":%d,"msg_id":%d,"param":"%s"}' %(data["token"],data["msg_id"],data["param"])
             else:
-              smsg = '{"msg_id":%d,"token":%d}' %(data["msg_id"],data["token"])
+              smsg = '{"token":%d,"msg_id":%d}' %(data["token"],data["msg_id"])
             print "sent out:", smsg
             self.srv.send(smsg)
             #{"token":1,"msg_id":2,"type": "dev_reboot","param":"on"}
@@ -241,6 +245,7 @@ class Camera():
         self.taken.set()
       elif data["type"] == "video_record_complete":
         self.cambusy = False
+        self.showtime = False
         self.status[data["type"]] = data["param"]
         arr = data["param"].split("/")
         if len(arr) == 6:
@@ -271,8 +276,10 @@ class Camera():
         self.cambusy = False
         self.recording.set()
         if self.showtime:
-          time.sleep(3)
+          time.sleep(1)
           self.SendMsg('{"msg_id":515}')
+      elif data["type"] == "precise_capture_data_ready":
+        self.recording.set()
       elif data["type"] == "piv_complete":
         self.cambusy = False
         self.filetaken = "piv_complete"
@@ -291,6 +298,9 @@ class Camera():
       elif data["type"] == "vf_stop":
         self.vfstart = False
         print "settings settable"
+      elif data["type"] == "LOW_SPEED_CARD":
+        #{u'msg_id': 7, u'type': u'LOW_SPEED_CARD'}
+        pass
 
   '''
   normal rval = 0
@@ -330,6 +340,10 @@ class Camera():
         self.seterror.set()
       elif data["msg_id"] == 3:
         self.setallerror.set()
+      elif data["msg_id"] == 515:
+        if self.showtime and self.recording.isSet():
+          time.sleep(1)
+          self.SendMsg('{"msg_id":515}')
       data["msg_id"] = 0
     # get token
     if data["msg_id"] == 257:
@@ -346,8 +360,20 @@ class Camera():
     # vf stop
     elif data["msg_id"] == 260:
       pass
-    elif data["msg_id"] == 2:
-      self.setok.set()
+    elif data["msg_id"] in (1,2):
+      if data["msg_id"] == 2:
+        self.setok.set()
+      st = json.loads('{"%s":"%s"}' %(data["type"],data["param"]))
+      self.cfgdict.update(st)
+      #print "msg_id",data["msg_id"],self.cfgdict
+      ifound = False
+      for item in self.settings:
+        if item.keys()[0] == st.keys()[0]:
+          item.update(st)
+          ifound = True
+          break
+      if not ifound:
+        self.settings.append(st)
     # all config information
     elif data["msg_id"] == 3:
       #self.settings = json.dumps(data["param"], indent=0).replace("{\n","{").replace("\n}","}")
@@ -393,8 +419,8 @@ class Camera():
     # recording time
     elif data["msg_id"] == 515:
       self.recordtime = self.RecordTime(data["param"])
-      time.sleep(1)
       if self.showtime and self.recording.isSet():
+        time.sleep(1)
         self.SendMsg('{"msg_id":515}')
     # change dir
     elif data["msg_id"] == 1283:
@@ -478,6 +504,9 @@ class Camera():
     self.srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     self.srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     self.srv.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+    #test some options
+    self.srv.setsockopt(socket.SOL_SOCKET, socket.SO_DONTROUTE, 1)
+    self.srv.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
     self.socketopen = self.srv.connect_ex((self.ip, self.port))
     print "socket status: %d" %self.socketopen
     if self.socketopen == 0:
@@ -512,6 +541,7 @@ class Camera():
       
   def TakePhoto(self, type="precise quality"):
     if type == "precise quality":
+      self.recording.clear()
       self.SendMsg('{"msg_id":769}')
 
   def StartRecord(self, showtime=True):

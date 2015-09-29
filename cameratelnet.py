@@ -62,18 +62,27 @@ class CameraTelnet():
       else:
         prompt = '/ # '
       ret = tn.read_until(prompt)
-      print "telnet prompt", ret
+      #print "telnet prompt", ret
       
-      #build rename script
       sysname = platform.system()
+      
+      #build rename script old->new
       if sysname == "Windows":
-        cmd = u'if [ -f %s ];then if [ ! -f %s ];then mkdir -p %s;mv %s %s;if [ -f %s ];then echo RenameSuccess;fi;fi;fi;' %(withpathold,withpathnew,dirname(withpathnew),withpathold,withpathnew,withpathnew)
-        print "unicode",cmd
-        cmd = cmd.encode('utf8')
-        print "utf-8",cmd
+        cmd = u'if [ -f %s ];then if [ ! -f %s ];then mkdir -p %s;mv %s %s;fi;fi;' %(withpathold,withpathnew,dirname(withpathnew),withpathold,withpathnew)
       else: #if sysname in ("Darwin", "Linux"):
-        cmd = 'if [ -f %s ];then if [ ! -f %s ];then mkdir -p %s;mv %s %s;if [ -f %s ];then echo RenameSuccess;fi;fi;fi;' %(withpathold,withpathnew,dirname(withpathnew),withpathold,withpathnew,withpathnew)
-        cmd = cmd.encode('utf8')
+        cmd = 'if [ -f %s ];then if [ ! -f %s ];then mkdir -p %s;mv %s %s;fi;fi;' %(withpathold,withpathnew,dirname(withpathnew),withpathold,withpathnew)
+      cmd = cmd.encode('utf8')
+      tn.write(cmd + '\n')
+      ret = tn.read_until(prompt)
+      print ret
+      tn.write('sleep 1\n')
+      ret = tn.read_until(prompt)
+      #check rename status
+      if sysname == "Windows":
+        cmd = u'if [ -f %s ];then echo RenameSuccess;fi' %withpathnew
+      else: #if sysname in ("Darwin", "Linux"):
+        cmd = 'if [ -f %s ];then echo RenameSuccess;fi' %withpathnew
+      cmd = cmd.encode('utf8')
       tn.write(cmd + '\n')
       ret = tn.read_until(prompt)
       a = ret.split("RenameSuccess")
