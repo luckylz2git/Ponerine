@@ -938,7 +938,7 @@ class MPonerine(ScreenManager):
     failure = False
     new = '/tmp/fuse_d/DCIM/%s/%s-%s-%02d%s.mp4' %(self.scenename,date,self.scenename,self.scenecount,camletter[number])
     stime = time.strftime('%H%M%S')
-    duplicated = '/tmp/fuse_d/OTHS/%s-%s-%s-%02d%s.mp4' %(date,stime,self.scenename,self.scenecount,camletter[number])
+    duplicated = '/tmp/fuse_d/trashbin/%s-%s-%s-%02d%s.mp4' %(date,stime,self.scenename,self.scenecount,camletter[number])
     ctelnet = CameraTelnet(ip=cam.ip,username="")
     ctelnet.Rename(new, duplicated)
   
@@ -965,7 +965,7 @@ class MPonerine(ScreenManager):
     
     if self.moveduplicated:
       stime = time.strftime('%H%M%S')
-      duplicated = '/tmp/fuse_d/OTHS/%s-%s-%s-%02d%s.mp4' %(date,stime,self.scenename,self.scenecount,camletter[number])
+      duplicated = '/tmp/fuse_d/trashbin/%s-%s-%s-%02d%s.mp4' %(date,stime,self.scenename,self.scenecount,camletter[number])
     else:
       duplicated = ""
     
