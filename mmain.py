@@ -818,6 +818,7 @@ class MPonerine(ScreenManager):
     #1/ 60s: 1140
     #1/100s: 1234
     #ISO  400: 320 XXXX 0 4096?
+    #ISO  800: 256 XXXX 0 4096?
     #ISO 1600: 192 XXXX 0 4906?
     #ISO 3200: 192 XXXX 0 8192?
     if popup.apply:
@@ -826,6 +827,9 @@ class MPonerine(ScreenManager):
       i = 0
       if popup.iso == "ISO 400":
         a = 320
+        d = 4096
+      elif popup.iso == "ISO 800":
+        a = 256
         d = 4096
       elif popup.iso == "ISO 1600":
         a = 192
@@ -1409,6 +1413,7 @@ BoxLayout:
     disabled_color: 0,0,0,1
     font_size: root.width/25
     text: '[size=%d][b]M.Ponerine [sup]%s[/sup][/b][/size]' %(root.width/25, app.version)
+    #text: '[size=%d][b]Ponerine.X [sup]preview %s[/sup][/b][/size]' %(root.width/25,app.version)
     markup: True
   Spinner:
     id: btncamsetup
