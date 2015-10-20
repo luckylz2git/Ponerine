@@ -406,7 +406,7 @@
   #title: 'Camera Settings'
   BoxLayout:
     orientation: 'vertical'
-    spacing: 5
+    spacing: root.width/30 #5
     
     Widget:
       size_hint: 1, None
@@ -416,7 +416,7 @@
     GridLayout:
       #disabled: (False if optWifiMode.active else True) if optEnabled.active else True
       size_hint: 1, None
-      height: root.width/13 + root.width/50
+      height: root.width/10 + root.width/50 #13
       padding: 0,0,0,root.width/50
       spacing: root.width/35
       cols: 3
@@ -442,7 +442,7 @@
     #Sync AE Info
     GridLayout:
       size_hint: 1, None
-      height: root.width/13 + root.width/50
+      height: root.width/10 + root.width/50 #13
       padding: 0,0,0,root.width/50
       spacing: root.width/35
       cols: 3
@@ -465,7 +465,7 @@
     # Format SD Card
     GridLayout:
       size_hint: 1, None
-      height: root.width/13 + root.width/50
+      height: root.width/10 + root.width/50 #13
       padding: 0,0,0,root.width/50
       spacing: root.width/35
       cols: 3
@@ -488,7 +488,7 @@
     # Restore Factory
     GridLayout:
       size_hint: 1, None
-      height: root.width/13 + root.width/50
+      height: root.width/10 + root.width/50 #13
       padding: 0,0,0,root.width/50
       spacing: root.width/35
       cols: 3
@@ -544,7 +544,7 @@
   #title: 'Camera Settings'
   BoxLayout:
     orientation: 'vertical'
-    spacing: 5
+    spacing: root.width/25 #5
     
     Widget:
       size_hint: 1, None
@@ -553,9 +553,9 @@
     # Shutter Speed
     GridLayout:
       size_hint: 1, None
-      height: root.width/10 + root.width/50
+      height: root.width/10 + root.width/50 #13
       padding: 0,0,0,root.width/50
-      spacing: root.width/30
+      spacing: root.width/35
       cols: 3
       Label:
         text: 'Shutter Speed : '
@@ -578,9 +578,9 @@
     # ISO
     GridLayout:
       size_hint: 1, None
-      height: root.width/10 + root.width/50
+      height: root.width/10 + root.width/50 #13
       padding: 0,0,0,root.width/50
-      spacing: root.width/30
+      spacing: root.width/35
       cols: 3
       Label:
         text: 'ISO Sensitive : '

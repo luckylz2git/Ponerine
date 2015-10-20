@@ -856,6 +856,7 @@ class MPonerine(ScreenManager):
   def CameraSettingPopupApply(self, popup):
     if popup.apply:
       cam = self.cam[popup.index]
+      number = cam.number
       if popup.syncall:
         print "sync cam %d to all %s" %(cam.number, cam.asid)
         asid = cam.asid
