@@ -35,7 +35,7 @@ Builder.load_file('data/mpopupconfig.kv')
 
 #print "Clock.max_iteration", Clock.max_iteration
 Clock.max_iteration = 100
-__version__='0.0.5'
+__version__='0.0.6'
 
 class MConnectScreen(Screen):
   pass
@@ -55,7 +55,19 @@ class AdvancedPopup(Popup):
 class ConfigPopup(Popup):
   cfg = ObjectProperty()
   apply = BooleanProperty()
-  
+
+class CameraSettingPopup(Popup):
+  asid = StringProperty()
+  format = BooleanProperty()
+  restore = BooleanProperty()
+  syncall = BooleanProperty()
+  apply = BooleanProperty()
+
+class ManualExposurePopup(Popup):
+  shutter = StringProperty()
+  iso = StringProperty()
+  apply = BooleanProperty()
+
 class MPonerine(ScreenManager):
   def __init__(self, appevent):
     super(MPonerine, self).__init__()
@@ -69,6 +81,7 @@ class MPonerine(ScreenManager):
     self.timecontitle = time.time() # Connect Title
     self.textctrlbtn = ""  # Control Buttons
     self.cfglist = []
+    self.setupvalues = ["Camera 1","Camera 2","Camera 3","Camera 4","Camera 5","Camera 6","Camera 7","Camera 8","Advanced"]
     self.autorename = False
     self.moveduplicated = False
     self.buzzeronstart = False
@@ -83,7 +96,8 @@ class MPonerine(ScreenManager):
     self.connect = threading.Event()
     self.recordstart = threading.Event()
     self.recordstop = threading.Event()
-    
+    self.shutter = '1 / 60s'
+    self.iso = 'ISO 400'
     sysname = platform.system()
     if sysname == "Windows":
       Window.size = (560,800)
@@ -148,7 +162,7 @@ class MPonerine(ScreenManager):
     else:
       self.btnrecord.text = "RECORD"
     self.btncamsetup = self.current_screen.ids.btncamsetup
-    self.setupdisabled = "False"
+    #self.setupdisabled = "False"
     for i in range(self.cameras):      
       if self.cfglist[i]["ip"] <> "" and self.cfglist[i]["enabled"] == 1:
         if self.cfglist[i]["name"] == "":
@@ -286,8 +300,8 @@ class MPonerine(ScreenManager):
     if btnconnect.text == "CONNECT":
       btnconnect.disabled = True
       self.btnconctrl[0]["disabled"] = "True"
-      self.btncamsetup.disabled = True
-      self.setupdisabled = "True"
+      #self.btncamsetup.disabled = True
+      #self.setupdisabled = "True"
       self.stopdetect.set()
       self.connect.clear()
       self.recordstart.clear()
@@ -300,18 +314,23 @@ class MPonerine(ScreenManager):
       self.retry = []
       self.firstcam = 0
       self.synctime = time.strftime('%Y-%m-%d %H:%M:')
+      opt = []
       for cfg in self.cfglist:
         if cfg["enabled"] == 1 and cfg["ip"] <> "":
-          self.cam.append(Camera(ip=cfg["ip"],preview=cfg["preview"]==1))
+          self.cam.append(Camera(ip=cfg["ip"],preview=cfg["preview"]==1,number=num))
           threading.Thread(target=self.DoConnect, args=(idx,num,), name="DoConnect%d" %idx).start()
           idx += 1
+          opt.append("Option %d" %(num+1))
         num += 1
+      opt.append("Metering")
+      opt.append("M.Exposure")
+      self.btncamsetup.values = opt
       self.connect.set()
       threading.Thread(target=self.DoShowConnect, args=(0,), name="DoShowConnect").start()
     elif btnconnect.text == "RETRY": # Retry connect to rest of the camera
       btnconnect.disabled = True
-      self.btncamsetup.disabled = True
-      self.setupdisabled = "True"
+      #self.btncamsetup.disabled = True
+      #self.setupdisabled = "True"
       self.connect.clear()
       self.error = 0
       for itm in self.retry:
@@ -467,8 +486,10 @@ class MPonerine(ScreenManager):
           thread._Thread__stop()
         except:
           pass
-    self.btncamsetup.disabled = False
-    self.setupdisabled = "False"
+    #self.btncamsetup.disabled = False
+    self.btncamsetup.values = self.setupvalues
+    self.RefreshConnectTitle()
+    #self.setupdisabled = "False"
     time.sleep(1.5)
     self.DetectCam(timewait)
   
@@ -491,7 +512,7 @@ class MPonerine(ScreenManager):
       self.recordstart.clear()
   
   def DoStartRecord(self, index, number):
-    name = time.strftime('%H%M%S')
+    rename = time.strftime('%H%M%S')
     cam = self.cam[index]
     retry = False
     while True:
@@ -501,7 +522,7 @@ class MPonerine(ScreenManager):
       #cam.recording.wait(10) # for pc
       if cam.recording.isSet():
         retry = False
-        print "\nDoStartRecord index: %d  name: %s" %(index,name)
+        print "\nDoStartRecord index: %d rename: %s number: %d %d" %(index,rename,number,cam.number)
         if self.linked == 0:
           self.firstcam = index
           #cam.showtime = True
@@ -595,7 +616,8 @@ class MPonerine(ScreenManager):
   def DoStopRecord(self, index, number):
     #self.recordstop.wait(11)
     #self.RenameDuplicated(index, number)
-    threading.Thread(target=self.RenameDuplicated, args=(index,number,),name="RenameDuplicated%d" %index).start()
+    if self.moveduplicated:
+      threading.Thread(target=self.RenameDuplicated, args=(index,number,),name="RenameDuplicated%d" %index).start()
     self.recordstop.wait()
     cam = self.cam[index]
     cam.taken.clear()
@@ -627,6 +649,23 @@ class MPonerine(ScreenManager):
       self.btnconctrl[1]["background_normal"] = 'image/mcamera_normal.png'
       self.btnconctrl[1]["disabled"] = 'False'
     #*#self.RefreshConnectControl(1)
+    
+  def Meter(self):
+    i = 0
+    for cam in self.cam:
+      threading.Thread(target=self.DoMeter, args=(i,),name="DoMeter%d" %i).start()
+      i += 1
+      
+  def DoMeter(self, idx):
+    number = self.cam[idx].number
+    getexp = self.cam[idx].getexp
+    self.cam[idx].GetAEInfo()
+    getexp.wait()
+    if self.cam[idx].asid <> "":
+      self.lblcamstatus[number] = "[color=0000ff]Meter OK[/color] [b][sub]%s[/sub][/b]" %self.cam[idx].asid
+    else:
+      self.lblcamstatus[number] = "[color=ff0000]Meter Error[/color]"
+    self.RefreshCameraInformation()
     
   def Buzzer(self, btnbuzzer):
     threading.Thread(target=self.DoBuzzerRing, args=(2,),name="DoBuzzerRing").start()
@@ -741,15 +780,115 @@ class MPonerine(ScreenManager):
         popup.loadallsettings = self.loadallsettings
         popup.photomode = self.photomode
         popup.open()
-      else:
-        index = int(text.split(" ")[1]) - 1
-        self.stopdetect.set()
-        popup = ConfigPopup(title='Camera Connection Config', size_hint=(0.8, 0.6), size=self.size, cfg=self.cfglist[index], index=index)
-        popup.bind(on_dismiss=self.ConfigPopupApply)
+      elif text == "Metering":
+        self.Meter()
+      elif text == "M.Exposure":
+        popup = ManualExposurePopup(title='Manual Exposure Setting', size_hint=(0.8, 0.5), size=self.size)
+        popup.bind(on_dismiss=self.ManualExposurePopupApply)
         popup.apply = False
-        popup.index = index
-        #print self.configpop.apply, self.configpop.index, self.configpop.cfg
+        popup.shutter = self.shutter #"1 / 60s"
+        popup.iso = self.iso #"ISO 400"
         popup.open()
+      else:
+        a = text.split()
+        if a[0] == "Camera":
+          index = int(a[1]) - 1
+          self.stopdetect.set()
+          popup = ConfigPopup(title='Camera Connection Config', size_hint=(0.8, 0.6), size=self.size, cfg=self.cfglist[index], index=index)
+          popup.bind(on_dismiss=self.ConfigPopupApply)
+          popup.apply = False
+          popup.index = index
+          #print self.configpop.apply, self.configpop.index, self.configpop.cfg
+          popup.open()
+        else:
+          number = int(a[1]) - 1
+          index = 0
+          for cam in self.cam:
+            if cam.number == number:
+              popup = CameraSettingPopup(title='Camera Options', size_hint=(0.8, 0.6), size=self.size, asid=cam.asid, index=index)
+              popup.bind(on_dismiss=self.CameraSettingPopupApply)
+              popup.apply = False
+              popup.index = index
+              #print self.configpop.apply, self.configpop.index, self.configpop.cfg
+              popup.open()
+            index += 1
+            
+  def ManualExposurePopupApply(self, popup):
+    #1/ 30s: 1012
+    #1/ 60s: 1140
+    #1/100s: 1234
+    #ISO  400: 320 XXXX 0 4096?
+    #ISO 1600: 192 XXXX 0 4906?
+    #ISO 3200: 192 XXXX 0 8192?
+    if popup.apply:
+      self.shutter = popup.shutter
+      self.iso = popup.iso
+      i = 0
+      if popup.iso == "ISO 400":
+        a = 320
+        d = 4096
+      elif popup.iso == "ISO 1600":
+        a = 192
+        d = 4096
+      elif popup.iso == "ISO 3200":
+        a = 192
+        d = 8192
+      
+      if popup.shutter == "1 / 30s":
+        s = 1012
+      elif popup.shutter == "1 / 60s":
+        s = 1140
+      elif popup.shutter == "1 / 100s":
+        s = 1234
+        
+      asid = '%d %d %d %d' %(a,s,i,d)
+      print 'Manual Exposure %s' %asid
+      idx = 0
+      display = '%s %s' %(popup.shutter, popup.iso)
+      for cam in self.cam:
+        threading.Thread(target=self.DoSetExposure, args=(display,idx,asid,),name="DoSetExposure%d" %i).start()
+        idx += 1
+          
+  def CameraSettingPopupApply(self, popup):
+    if popup.apply:
+      cam = self.cam[popup.index]
+      if popup.syncall:
+        print "sync cam %d to all %s" %(cam.number, cam.asid)
+        asid = cam.asid
+        idx = 0
+        for cam in self.cam:
+          threading.Thread(target=self.DoSetExposure, args=('Sync AE',idx,asid,),name="DoSetExposure%d" %idx).start()
+          idx += 1
+      if popup.format:
+        print "format cam %d" %cam.number
+        setok = cam.setok
+        cam.FormatCard()
+        setok.wait()
+        if cam.seterror.isSet():
+          self.lblcamstatus[number] = "[color=ff0000]Format Error[/color]"
+        else:
+          self.lblcamstatus[number] = "[color=0000ff]Format OK[/color]"
+        self.RefreshCameraInformation()
+        return
+      if popup.restore:
+        print "restore cam %d" %cam.number
+        cam.RestoreFactory()
+        return
+      
+          
+  def DoSetExposure(self, display, idx, asid):
+    number = self.cam[idx].number
+    getexp = self.cam[idx].getexp
+    self.cam[idx].SetAEInfo(asid)
+    getexp.wait()
+    if self.cam[idx].asid <> "":
+      if display == 'Sync AE':
+        self.lblcamstatus[number] = "[color=0000ff]%s OK[/color] [b][sub]%s[/sub][/b]" %(display, self.cam[idx].asid)
+      else:
+        self.lblcamstatus[number] = "[color=0000ff]%s OK[/color]" %display
+    else:
+      self.lblcamstatus[number] = "[color=ff0000]%s Error[/color]" %display
+    self.RefreshCameraInformation()
   
   def ConfigPopupApply(self, popup):
     if popup.apply:
@@ -1134,6 +1273,7 @@ class MPonerine(ScreenManager):
       csetup.append("Advanced")
       self.lblcamname = cname
       self.lblcamstatus = cstatus
+      self.setupvalues = csetup
       self.btncamsetup.values = csetup
     return r
 
@@ -1279,18 +1419,26 @@ BoxLayout:
     disabled_color: (0,0,1,1)
     font_size: root.width/40
     text: "For XiaoYi Sports Camera"
-    #values: ("")
-    values: ("Camera 1","Camera 2","Camera 3","Camera 4","Camera 5","Camera 6","Camera 7","Camera 8","Advanced")
+    values: ("")
+    #values: ("Camera 1","Camera 2","Camera 3","Camera 4","Camera 5","Camera 6","Camera 7","Camera 8","Advanced")
     background_normal: 'image/transparent.png'
     background_down: 'image/transparent.png'
     background_disabled_normal: 'image/transparent.png'
     background_disabled_down: 'image/transparent.png'
-    disabled: {$disabled}
+    #disabled: {$disabled}
     #on_text: root.manager.ConfigPopupOpen(self)
 '''
-    return sbuild.replace("root.width",str(self.width)).replace("{$disabled}",self.setupdisabled)
+    #return sbuild.replace("root.width",str(self.width)).replace("{$disabled}",self.setupdisabled)
+    return sbuild.replace("root.width",str(self.width))
 
   def BuildConnectTitle(self, *largs):
+    vlist = []
+    if len(self.btncamsetup.values) == 0:
+      vlist += self.setupvalues
+    else:
+      vlist += self.btncamsetup.values
+    #print vlist
+    
     t1 = time.time()
     if t1 - self.timecontitle < 30.0: #allow update every 30seconds
       return
@@ -1313,6 +1461,7 @@ BoxLayout:
             print "Spinner", child
             child.bind(text=self.ConfigPopupOpen)
             self.btncamsetup = child
+            self.btncamsetup.values = vlist
           else:
             print "Button", child
             child.bind(on_release=self.RefreshAllControls)

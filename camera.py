@@ -1,9 +1,10 @@
 from Queue import Queue
 import json, socket, threading, time, select, os, urllib2, hashlib
 from os.path import basename #, getsize 
+from cameratelnet import CameraTelnet
 
 class Camera():
-  def __init__(self, ip="192.168.42.1", port=7878, dataport=8787, webport=80, preview=False):
+  def __init__(self, ip="192.168.42.1", port=7878, dataport=8787, webport=80, preview=False, number=0):
     self.ip = ip
     self.port = port
     self.dataport = dataport
@@ -26,7 +27,13 @@ class Camera():
     self.filetaken = ""
     self.dirtaken = ""
     self.preview = preview
+    self.asid = ""
+    self.agc_index = 0
+    self.shutter_index = 0
+    self.iris_index = 0
+    self.dgain = 0
     print "self.preview",preview
+    self.number = number
     #self.recording = False
     self.recordtime = "00:00:00"
     self.settings = []
@@ -64,6 +71,7 @@ class Camera():
     self.setallerror = threading.Event()
     self.optok = threading.Event()
     self.opterror = threading.Event()
+    self.getexp = threading.Event()
     
   def __str__(self):
     info = dict()
@@ -95,6 +103,7 @@ class Camera():
     self.setallerror.clear()
     self.optok.clear()
     self.opterror.clear()
+    self.getexp.clear()
     
     self.jsonon = False
     self.jsonoff = 0
@@ -106,6 +115,11 @@ class Camera():
     self.status = {}
     self.filetaken = ""
     self.dirtaken = ""
+    self.asid = ""
+    self.agc_index = 0
+    self.shutter_index = 0
+    self.iris_index = 0
+    self.dgain = 0
     #self.recording = False
     self.recording.clear()
     self.recordtime = "00:00:00"
@@ -136,7 +150,58 @@ class Camera():
 #     self.trecv.setDaemon(True)
 #     self.trecv.setName('ThreadRecv')
 #     self.trecv.start()
-
+  
+  def SetAEInfo(self, asid, username=""):
+    self.asid = ""
+    self.getexp.clear()
+    threading.Thread(target=self.DoSetAEInfo, args=(asid,username,), name="DoSetAEInfo%d" %self.number).start()
+    
+  def DoSetAEInfo(self, asid, uname):
+    ctelnet = CameraTelnet(ip=self.ip,username=uname)
+    commit = ctelnet.commit
+    cmdlist = ['rm -f /tmp/fuse_a/custom/asid.txt && sleep 1 && /tmp/fuse_a/custom/setexp.sh %s' %asid]
+    msglist = ['[A/S/I/D]']
+    ctelnet.RunCommand(cmdlist, msglist)
+    while True:
+      commit.wait(1)
+      if commit.isSet():
+        self.asid = ctelnet.retvalue
+        break
+      if ctelnet.failure:
+        self.asid = ""
+        break
+    self.getexp.set()
+    
+  def GetAEInfo(self, username=""):
+    self.asid = ""
+    self.getexp.clear()
+    threading.Thread(target=self.DoGetAEInfo, args=(username,), name="DoGetAEInfo%d" %self.number).start()
+    
+  def DoGetAEInfo(self, uname):
+    ctelnet = CameraTelnet(ip=self.ip,username=uname)
+    commit = ctelnet.commit
+    cmdlist = ['rm -f /tmp/fuse_a/custom/asid.txt && sleep 1 && /tmp/fuse_a/custom/getexp.sh']
+    msglist = ['[A/S/I/D]']
+    ctelnet.RunCommand(cmdlist, msglist)
+    while True:
+      commit.wait(1)
+      if commit.isSet():
+        self.asid = ctelnet.retvalue
+        asid = self.asid.split()
+        self.agc_index = int(asid[0])
+        self.shutter_index = int(asid[1])
+        self.iris_index = int(asid[2])
+        self.dgain = int(asid[3])
+        break
+      if ctelnet.failure:
+        self.asid = ""
+        self.agc_index = 0
+        self.shutter_index = 0
+        self.iris_index = 0
+        self.dgain = 0
+        break
+    self.getexp.set()
+    
   def UnlinkCamera(self):
     if self.link:
       self.SendMsg('{"msg_id":258}')
@@ -340,6 +405,9 @@ class Camera():
         self.seterror.set()
       elif data["msg_id"] == 3:
         self.setallerror.set()
+      elif data["msg_id"] == 4:
+        self.seterror.set()
+        self.setok.set()
       elif data["msg_id"] == 514 and self.recording.isSet():
         self.SendMsg('{"msg_id":514}')
       elif data["msg_id"] == 515:
@@ -365,17 +433,18 @@ class Camera():
     elif data["msg_id"] in (1,2):
       if data["msg_id"] == 2:
         self.setok.set()
-      st = json.loads('{"%s":"%s"}' %(data["type"],data["param"]))
-      self.cfgdict.update(st)
-      #print "msg_id",data["msg_id"],self.cfgdict
-      ifound = False
-      for item in self.settings:
-        if item.keys()[0] == st.keys()[0]:
-          item.update(st)
-          ifound = True
-          break
-      if not ifound:
-        self.settings.append(st)
+      if data.has_key("type") and data.has_key("param"):
+        st = json.loads('{"%s":"%s"}' %(data["type"],data["param"]))
+        self.cfgdict.update(st)
+        #print "msg_id",data["msg_id"],self.cfgdict
+        ifound = False
+        for item in self.settings:
+          if item.keys()[0] == st.keys()[0]:
+            item.update(st)
+            ifound = True
+            break
+        if not ifound:
+          self.settings.append(st)
     # all config information
     elif data["msg_id"] == 3:
       #self.settings = json.dumps(data["param"], indent=0).replace("{\n","{").replace("\n}","}")
@@ -387,7 +456,9 @@ class Camera():
       self.setallok.set()
       #print json.dumps(self.cfgdict,indent=2)
       #self.status["config"] = data["param"]
-    # battery status
+    #format card
+    elif data["msg_id"] == 4:
+      self.setok.set()
     elif data["msg_id"] == 9:
       if data["permission"] == "settable":
         self.settable[data["param"]] = data["options"]
@@ -396,6 +467,7 @@ class Camera():
       if self.optcount == 0:
         print "read all options"
         self.optok.set()
+    # battery status
     elif data["msg_id"] == 13 and data.has_key("param"):
       self.status["battery"] = data["param"]
       if data["type"] == "battery":
@@ -988,10 +1060,16 @@ class Camera():
     return r
     
   def FormatCard(self):
+    self.setok.clear()
+    self.seterror.clear()
     self.SendMsg('{"msg_id":4}')
 
   def Reboot(self):
     self.SendMsg('{"msg_id":2,"type":"dev_reboot","param":"on"}')
+    time.sleep(2)
+    self.wifioff.set()
 
   def RestoreFactory(self):
     self.SendMsg('{"msg_id":2,"type":"restore_factory_settings","param":"on"}')
+    time.sleep(2)
+    self.wifioff.set()

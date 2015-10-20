@@ -138,6 +138,7 @@
           background_disabled_down: 'image/mcamera_noip.png'
           on_release: root.manager.Record(self)
           always_release: False
+        #Spinner:
         Button:
           size_hint: 1, None
           height: (root.width - root.width/12*4)/3
@@ -150,6 +151,7 @@
           text_size: self.size
           halign: 'center'
           valign: 'middle'
+          #values: ("Buzzer","Meter","AE Lock","AE Unlock")
           background_normal: 'image/mcamera_normal.png'
           background_down: 'image/mcamera_down.png'
           background_disabled_normal: 'image/mcamera_noip.png'

@@ -400,3 +400,232 @@
           on_release:
             root.apply = False
             root.dismiss()
+            
+<CameraSettingPopup>:
+  auto_dismiss: False
+  #title: 'Camera Settings'
+  BoxLayout:
+    orientation: 'vertical'
+    spacing: 5
+    
+    Widget:
+      size_hint: 1, None
+      size: root.width, root.width/20
+    
+    #Camera AE Info
+    GridLayout:
+      #disabled: (False if optWifiMode.active else True) if optEnabled.active else True
+      size_hint: 1, None
+      height: root.width/13 + root.width/50
+      padding: 0,0,0,root.width/50
+      spacing: root.width/35
+      cols: 3
+      Label:
+        text: 'AE Info : '
+        size_hint: 0.4, 1
+        text_size: self.size
+        font_size: root.width/25
+        halign: 'right'
+        valign: 'middle'
+      Label: #TextInput:
+        id: txtCameraNo
+        text_size: self.size
+        text: root.asid
+        size_hint: 0.4, 1
+        font_size: root.width/25
+        halign: 'left'
+        valign: 'middle'
+        padding_x: root.width/60
+      Label:
+        size_hint: 0.2, 1
+    
+    #Sync AE Info
+    GridLayout:
+      size_hint: 1, None
+      height: root.width/13 + root.width/50
+      padding: 0,0,0,root.width/50
+      spacing: root.width/35
+      cols: 3
+      Label:
+        text: 'Sync AE to All Cameras : '
+        size_hint: 0.6, 1
+        text_size: self.size
+        font_size: root.width/25
+        halign: 'right'
+        valign: 'middle'
+      Switch:
+        id: optSyncAll
+        active: 0
+        size_hint: 0.25, 1
+        #text_size: self.size
+        #font_size: root.width/50
+      Label:
+        size_hint: 0.15, 1
+        
+    # Format SD Card
+    GridLayout:
+      size_hint: 1, None
+      height: root.width/13 + root.width/50
+      padding: 0,0,0,root.width/50
+      spacing: root.width/35
+      cols: 3
+      Label:
+        text: 'Format SD Card : '
+        size_hint: 0.6, 1
+        text_size: self.size
+        font_size: root.width/25
+        halign: 'right'
+        valign: 'middle'
+      Switch:
+        id: optFormat
+        active: 0
+        size_hint: 0.25, 1
+        #text_size: self.size
+        #font_size: root.width/50
+      Label:
+        size_hint: 0.15, 1
+        
+    # Restore Factory
+    GridLayout:
+      size_hint: 1, None
+      height: root.width/13 + root.width/50
+      padding: 0,0,0,root.width/50
+      spacing: root.width/35
+      cols: 3
+      Label:
+        text: 'Restore Factory Settings : '
+        size_hint: 0.6, 1
+        text_size: self.size
+        font_size: root.width/25
+        halign: 'right'
+        valign: 'middle'
+      Switch:
+        id: optRestore
+        active: 0
+        size_hint: 0.25, 1
+        #text_size: self.size
+        #font_size: root.width/50
+      Label:
+        size_hint: 0.15, 1
+        
+    AnchorLayout:
+      anchor_x: 'center'
+      anchor_y: 'bottom'
+      orientation: 'horizontal'
+      size_hint: 1, 1
+      GridLayout:
+        cols: 2
+        size_hint: None, None
+        size: root.width*0.8, root.width*0.15+root.width/20
+        padding: 0,0,0,root.width/20
+        spacing: root.width/20
+        # Apply Button
+        Button:
+          text: 'Apply'
+          size_hint: 1, 1
+          always_release: False
+          on_release:
+            root.apply = True
+            root.format = 1 if optFormat.active else 0
+            root.restore = 1 if optRestore.active else 0
+            root.syncall = 1 if optSyncAll.active else 0
+            root.dismiss()
+        # Cancel Button
+        Button:
+          text: 'Cancel'
+          size_hint: 1, 1
+          always_release: False
+          on_release:
+            root.apply = False
+            root.dismiss()
+            
+<ManualExposurePopup>:
+  auto_dismiss: False
+  #title: 'Camera Settings'
+  BoxLayout:
+    orientation: 'vertical'
+    spacing: 5
+    
+    Widget:
+      size_hint: 1, None
+      size: root.width, root.width/20
+    
+    # Shutter Speed
+    GridLayout:
+      size_hint: 1, None
+      height: root.width/10 + root.width/50
+      padding: 0,0,0,root.width/50
+      spacing: root.width/30
+      cols: 3
+      Label:
+        text: 'Shutter Speed : '
+        size_hint: 0.45, 1
+        text_size: self.size
+        font_size: root.width/25
+        halign: 'right'
+        valign: 'middle'
+      Spinner:
+        id: optShutter
+        active: 0
+        size_hint: 0.4, 1
+        text: root.shutter
+        values: ("1 / 30s", "1 / 60s", "1 / 100s")
+        #text_size: self.size
+        #font_size: root.width/50
+      Label:
+        size_hint: 0.15, 1
+        
+    # ISO
+    GridLayout:
+      size_hint: 1, None
+      height: root.width/10 + root.width/50
+      padding: 0,0,0,root.width/50
+      spacing: root.width/30
+      cols: 3
+      Label:
+        text: 'ISO Sensitive : '
+        size_hint: 0.45, 1
+        text_size: self.size
+        font_size: root.width/25
+        halign: 'right'
+        valign: 'middle'
+      Spinner:
+        id: optISO
+        active: 0
+        size_hint: 0.4, 1
+        text: root.iso
+        values: ("ISO 400", "ISO 1600", "ISO 3200")
+        #text_size: self.size
+        #font_size: root.width/50
+      Label:
+        size_hint: 0.15, 1
+    
+    AnchorLayout:
+      anchor_x: 'center'
+      anchor_y: 'bottom'
+      orientation: 'horizontal'
+      size_hint: 1, 1
+      GridLayout:
+        cols: 2
+        size_hint: None, None
+        size: root.width*0.8, root.width*0.15+root.width/20
+        padding: 0,0,0,root.width/20
+        spacing: root.width/20
+        # Apply Button
+        Button:
+          text: 'Apply'
+          size_hint: 1, 1
+          always_release: False
+          on_release:
+            root.apply = True
+            root.shutter = optShutter.text
+            root.iso = optISO.text
+            root.dismiss()
+        # Cancel Button
+        Button:
+          text: 'Cancel'
+          size_hint: 1, 1
+          always_release: False
+          on_release:
+            root.apply = False
+            root.dismiss()
