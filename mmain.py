@@ -35,7 +35,7 @@ Builder.load_file('data/mpopupconfig.kv')
 
 #print "Clock.max_iteration", Clock.max_iteration
 Clock.max_iteration = 100
-__version__='0.0.6'
+__version__='0.0.7'
 
 class MConnectScreen(Screen):
   pass
@@ -97,7 +97,7 @@ class MPonerine(ScreenManager):
     self.recordstart = threading.Event()
     self.recordstop = threading.Event()
     self.shutter = '1 / 60s'
-    self.iso = 'ISO 400'
+    self.iso = 'ISO 100'
     sysname = platform.system()
     if sysname == "Windows":
       Window.size = (560,800)
@@ -324,6 +324,7 @@ class MPonerine(ScreenManager):
         num += 1
       opt.append("Metering")
       opt.append("M.Exposure")
+      opt.append("Time Remains")
       self.btncamsetup.values = opt
       self.connect.set()
       threading.Thread(target=self.DoShowConnect, args=(0,), name="DoShowConnect").start()
@@ -451,6 +452,16 @@ class MPonerine(ScreenManager):
     threading.Thread(target=self.DoWifi, args=(index,), name="DoThrWifi%d" %index).start()
     threading.Thread(target=self.DoFileTaken, args=(index,number,), name="DoThrFileTaken%d" %index).start()
     #threading.Thread(target=self.DoWakeOnLan, args=(index,), name="DoThrDoWakeOnLan%d" %index).start()
+    
+    # self.new = Camera(ip="192.168.1.63")
+    # self.new.LinkCamera()
+    # time.sleep(15)
+    # print "Old Camera",cam,cam.ip
+    # print "New Camera",self.new,self.new.ip
+    # print "change camera"
+    # self.cam[index] = self.new
+    # cam.UnlinkCamera()
+    # print "New Camera",self.cam[index],self.cam[index].ip
   
   def DoWakeOnLan(self, index):
     pass
@@ -513,10 +524,11 @@ class MPonerine(ScreenManager):
   
   def DoStartRecord(self, index, number):
     rename = time.strftime('%H%M%S')
-    cam = self.cam[index]
+    #cam = self.cam[index]
     retry = False
     while True:
       self.recordstart.wait()
+      cam = self.cam[index]
       cam.StartRecord(False)
       cam.recording.wait() # for android
       #cam.recording.wait(10) # for pc
@@ -789,6 +801,18 @@ class MPonerine(ScreenManager):
         popup.shutter = self.shutter #"1 / 60s"
         popup.iso = self.iso #"ISO 400"
         popup.open()
+      elif text == "Time Remains":
+        for cam in self.cam:
+          bitrate = cam.bitrate * 8 / 1024
+          mins = cam.remaintime / 60
+          if mins > 30:
+            color = '00cc00'
+          elif mins > 5:
+            color = '0000ff'
+          else:
+            color = 'ff0000'
+          self.lblcamstatus[cam.number] = "[color=%s]%d min(s) @ %d Mbps[/color]" %(color, mins, bitrate)
+        self.RefreshCameraInformation()
       else:
         a = text.split()
         if a[0] == "Camera":
@@ -817,15 +841,23 @@ class MPonerine(ScreenManager):
     #1/ 30s: 1012
     #1/ 60s: 1140
     #1/100s: 1234
-    #ISO  400: 320 XXXX 0 4096?
-    #ISO  800: 256 XXXX 0 4096?
-    #ISO 1600: 192 XXXX 0 4906?
-    #ISO 3200: 192 XXXX 0 8192?
+    #ISO  100: 448 XXXX 0 4096
+    #ISO  200: 384 XXXX 0 4096
+    #ISO  400: 320 XXXX 0 4096
+    #ISO  800: 256 XXXX 0 4096
+    #ISO 1600: 192 XXXX 0 4906
+    #ISO 3200: 192 XXXX 0 8192
     if popup.apply:
       self.shutter = popup.shutter
       self.iso = popup.iso
       i = 0
-      if popup.iso == "ISO 400":
+      if popup.iso == "ISO 100":
+        a = 448
+        d = 4096
+      elif popup.iso == "ISO 200":
+        a = 384
+        d = 4096
+      elif popup.iso == "ISO 400":
         a = 320
         d = 4096
       elif popup.iso == "ISO 800":
@@ -1039,7 +1071,9 @@ class MPonerine(ScreenManager):
     i = 0
     if cam.status.has_key("battery"):
       self.lblcamstatus[number] = self.AddBatteryInfo(self.lblcamstatus[number], cam.status["battery"], cam.status["adapter_status"])
-      
+    
+    cam.CardUsage()
+    
     self.RefreshCameraInformation()
     
     while not cam.quit.isSet():
@@ -1122,7 +1156,7 @@ class MPonerine(ScreenManager):
         if fileinfo <> {}:
           fileinfo["ok"] = 1
         time.sleep(1)
-        cam.SendMsg('{"msg_id":1026,"param":"%s"}' %new)
+        #cam.SendMsg('{"msg_id":1026,"param":"%s"}' %new)
         break
       elif ctelnet.failure:
         failure = failure or ctelnet.failure

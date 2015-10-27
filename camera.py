@@ -4,6 +4,9 @@ from os.path import basename #, getsize
 from cameratelnet import CameraTelnet
 
 class Camera():
+  def __del__(self):
+    print "delete camera"
+    
   def __init__(self, ip="192.168.42.1", port=7878, dataport=8787, webport=80, preview=False, number=0):
     self.ip = ip
     self.port = port
@@ -32,7 +35,17 @@ class Camera():
     self.shutter_index = 0
     self.iris_index = 0
     self.dgain = 0
-    print "self.preview",preview
+    
+    self.spacetype = ''
+    #KB
+    self.spacetotal = 0
+    self.spacefree = 0
+    #second
+    self.remaintime = 0
+    #2560KB = 20Mbps
+    #3840KB = 30Mbps
+    self.bitrate = 3840
+    
     self.number = number
     #self.recording = False
     self.recordtime = "00:00:00"
@@ -73,12 +86,12 @@ class Camera():
     self.opterror = threading.Event()
     self.getexp = threading.Event()
     
-  def __str__(self):
-    info = dict()
-    info["ip"] = self.ip
-    info["port"] = self.port
-    info["link"] = self.link
-    return str(info)
+  # def __str__(self):
+    # info = dict()
+    # info["ip"] = self.ip
+    # info["port"] = self.port
+    # info["link"] = self.link
+    # return str(info)
 
   def LinkCamera(self):
     self.socketopen = -1
@@ -120,7 +133,13 @@ class Camera():
     self.shutter_index = 0
     self.iris_index = 0
     self.dgain = 0
-    #self.recording = False
+    
+    self.spacetype = ''
+    self.spacetotal = 0
+    self.spacefree = 0
+    self.remaintime = 0
+    self.bitrate = 3840
+    
     self.recording.clear()
     self.recordtime = "00:00:00"
     self.settings = []
@@ -260,6 +279,9 @@ class Camera():
                 smsg = '{"token":%d,"msg_id":%d,"type":"%s","param":"%s"}' %(data["token"],data["msg_id"],data["type"],data["param"])
               else:
                 smsg = '{"token":%d,"msg_id":%d,"type":"%s"}' %(data["token"],data["msg_id"],data["type"])
+              # check card space
+              if data["msg_id"] == 5:
+                self.spacetype = data["type"]
             elif data.has_key("param"):
               smsg = '{"token":%d,"msg_id":%d,"param":"%s"}' %(data["token"],data["msg_id"],data["param"])
             else:
@@ -317,6 +339,7 @@ class Camera():
           self.filetaken = arr[5]
           self.dirtaken = arr[4]
         print self.dirtaken, self.filetaken
+        self.SendMsg('{"msg_id":1026,"param":"%s"}' %data["param"])
         self.taken.set()
       elif data["type"] == "get_file_complete":
         self.dlcomplete.set()
@@ -377,6 +400,12 @@ class Camera():
   '''
   # rval message
   def JsonRval(self, data):
+    # drop token and unlinkcamera
+    if data["msg_id"] == 258:
+      self.token = 0
+      self.link = False
+      self.UnlinkCamera()
+      return
     # token lost, need to re-new token
     if data["msg_id"] == 257 and data["rval"] < 0:
       self.token = 0
@@ -384,7 +413,7 @@ class Camera():
       self.srv.send('{"msg_id":257,"token":0}')
       self.SendMsg('{"msg_id":%d}' %data["msg_id"])
     # allow next msg send out
-    if self.msgbusy == data["msg_id"] and data["msg_id"] <> 258:
+    if self.msgbusy == data["msg_id"]:
       self.msgbusy = 0
     # error rval < 0, clear msg_id
     if data["rval"] < 0:
@@ -408,6 +437,11 @@ class Camera():
       elif data["msg_id"] == 4:
         self.seterror.set()
         self.setok.set()
+      elif data["msg_id"] == 5:
+        if self.spacetype == "total":
+          self.spacetotal = 0
+        elif self.spacetype == "free":
+          self.spacefree = 0
       elif data["msg_id"] == 514 and self.recording.isSet():
         self.SendMsg('{"msg_id":514}')
       elif data["msg_id"] == 515:
@@ -419,11 +453,6 @@ class Camera():
     if data["msg_id"] == 257:
       self.token = data["param"]
       self.link = True
-    # drop token
-    elif data["msg_id"] == 258:
-      self.token = 0
-      self.link = False
-      self.UnlinkCamera()
     # vf start
     elif data["msg_id"] == 259:
       self.webportopen = True
@@ -459,6 +488,18 @@ class Camera():
     #format card
     elif data["msg_id"] == 4:
       self.setok.set()
+      self.CardUsage('free')
+    #check card space
+    elif data["msg_id"] == 5:
+      if self.spacetype == "total":
+        self.spacetotal = data["param"]
+        print "Total Space: %d" %data["param"]
+      elif self.spacetype == "free":
+        self.spacefree = data["param"]
+        print "Free Space: %d" %data["param"]
+        if self.spacefree <> 0:
+          self.remaintime = self.spacefree / self.bitrate
+          print "Remain Time: %d Second(s)" %self.remaintime
     elif data["msg_id"] == 9:
       if data["permission"] == "settable":
         self.settable[data["param"]] = data["options"]
@@ -496,6 +537,17 @@ class Camera():
       if self.showtime and self.recording.isSet():
         time.sleep(1)
         self.SendMsg('{"msg_id":515}')
+    # get file info
+    elif data["msg_id"] == 1026:
+      if data.has_key("media_type") and data.has_key("resolution") and data.has_key("size") and data.has_key("duration"):
+        if data["resolution"] <> "320x240":
+          bitrate = data["size"] / int(data["duration"]) / 1024
+          if bitrate > 3840:
+            self.bitrate = bitrate
+          else:
+            self.bitrate = 3840
+          print "New Bit Rate %d KBps" %self.bitrate
+          self.CardUsage('free')
     # change dir
     elif data["msg_id"] == 1283:
       self.status["pwd"] = data["pwd"]
@@ -1058,7 +1110,16 @@ class Camera():
         r.append(json.loads(fdict))
     #print "create file list", r
     return r
-    
+  
+  def CardUsage(self, type="all"):
+    if type == "total":
+      self.SendMsg('{"msg_id":5,"type":"total"}')
+    elif type == "free":
+      self.SendMsg('{"msg_id":5,"type":"free"}')
+    else:
+      self.SendMsg('{"msg_id":5,"type":"total"}')
+      self.SendMsg('{"msg_id":5,"type":"free"}')
+  
   def FormatCard(self):
     self.setok.clear()
     self.seterror.clear()
