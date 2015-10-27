@@ -3,7 +3,8 @@ import threading, telnetlib, sys, platform
 from os.path import dirname, basename
 
 class CameraTelnet():
-  def __init__(self, ip="192.168.42.1", port=23, username="", password = ""):
+  def __init__(self, ip="192.168.42.1", port=23, username="", password = "", title = ""):
+    self.title = title
     self.ip = ip
     self.port = port
     self.username = username
@@ -13,10 +14,10 @@ class CameraTelnet():
     self.commit = threading.Event()
   
   def RunCommand(self, cmdlist, msglist, timeout=60):
-     threading.Thread(target=self.ThdCommand, args=(cmdlist, msglist, timeout,) ,name="ThdCommand").start()
+     threading.Thread(target=self.ThdCommand, args=(cmdlist, msglist, timeout,) ,name="%sThdCommand" %self.title).start()
   
   def ThdCommand(self, cmdlist, msglist, timeout):
-    tname = "DoCommand%s" %self.ip
+    tname = "%sDoCommand%s" %(self.title, self.ip)
     t = threading.Thread(target=self.DoCommand, args=(cmdlist, msglist,), name=tname)
     t.start()
     print "start %s" %tname
@@ -88,10 +89,10 @@ class CameraTelnet():
       pass
   
   def Meter(self, timeout = 60):
-    threading.Thread(target=self.ThdMeter, args=(timeout,) ,name="ThdMeter").start()
+    threading.Thread(target=self.ThdMeter, args=(timeout,) ,name="%sThdMeter" %self.title).start()
   
   def ThdMeter(self, timeout):
-    tname = "DoMeter%s" %self.ip
+    tname = "%sDoMeter%s" %(self.title, self.ip)
     t = threading.Thread(target=self.DoMeter, name=tname)
     t.start()
     print "start t"
@@ -153,10 +154,10 @@ class CameraTelnet():
       pass
   
   def SetExposure(self, aevalue='', timeout = 60):
-    threading.Thread(target=self.ThdMeter, args=(aevalue,timeout,) ,name="ThdExposure").start()
+    threading.Thread(target=self.ThdMeter, args=(aevalue,timeout,) ,name="%sThdExposure" %self.title).start()
     
   def ThdExposure(self, aevalue, timeout):
-    tname = "DoExposure%s" %self.ip
+    tname = "%sDoExposure%s" %(self.title, self.ip)
     t = threading.Thread(target=self.DoExposure, name=tname)
     t.start()
     print "start t"
@@ -178,12 +179,12 @@ class CameraTelnet():
   def Rename(self, withpathold, withpathnew, timeout = 60):
     #withpathold = withpathold.encode('utf8')
     #withpathnew = withpathnew.encode('utf8')
-    threading.Thread(target=self.ThdRename, args=(withpathold,withpathnew,timeout,) ,name="ThdRename").start()
+    threading.Thread(target=self.ThdRename, args=(withpathold,withpathnew,timeout,) ,name="%sThdRename" %self.title).start()
     
   def ThdRename(self, withpathold, withpathnew, timeout):
     #withpathold = withpathold.encode('utf8')
     #withpathnew = withpathnew.encode('utf8')
-    tname = "DoRename%s" %self.ip
+    tname = "%sDoRename%s" %(self.title, self.ip)
     t = threading.Thread(target=self.DoRename, args=(withpathold,withpathnew,) ,name=tname)
     t.start()
     print "start t"

@@ -5,9 +5,10 @@ from cameratelnet import CameraTelnet
 
 class Camera():
   def __del__(self):
-    print "delete camera"
+    print "Delete Camera"
     
   def __init__(self, ip="192.168.42.1", port=7878, dataport=8787, webport=80, preview=False, number=0):
+    self.title = ""
     self.ip = ip
     self.port = port
     self.dataport = dataport
@@ -94,6 +95,9 @@ class Camera():
     # return str(info)
 
   def LinkCamera(self):
+    #name for threading
+    self.title = "%f%s" %(time.time(), self.ip)
+    
     self.socketopen = -1
     self.datasocketopen = -1
     self.qsend = Queue()
@@ -159,12 +163,12 @@ class Camera():
                    "support_auto_low_light",
                    "sw_version",
                    "timelapse_photo"]
-    threading.Thread(target=self.ThreadSend, name="ThreadSend").start()
+    threading.Thread(target=self.ThreadSend, name="%sThreadSend" %self.title).start()
 #     self.tsend= threading.Thread(target=self.ThreadSend)
 #     self.tsend.setDaemon(True)
 #     self.tsend.setName('ThreadSend')
 #     self.tsend.start()
-    threading.Thread(target=self.ThreadRecv, name="ThreadRecv").start()
+    threading.Thread(target=self.ThreadRecv, name="%sThreadRecv" %self.title).start()
 #     self.trecv= threading.Thread(target=self.ThreadRecv)
 #     self.trecv.setDaemon(True)
 #     self.trecv.setName('ThreadRecv')
@@ -173,10 +177,10 @@ class Camera():
   def SetAEInfo(self, asid, username=""):
     self.asid = ""
     self.getexp.clear()
-    threading.Thread(target=self.DoSetAEInfo, args=(asid,username,), name="DoSetAEInfo%d" %self.number).start()
+    threading.Thread(target=self.DoSetAEInfo, args=(asid,username,), name="%sDoSetAEInfo%d" %(self.title,self.number)).start()
     
   def DoSetAEInfo(self, asid, uname):
-    ctelnet = CameraTelnet(ip=self.ip,username=uname)
+    ctelnet = CameraTelnet(ip=self.ip,username=uname,title=self.title)
     commit = ctelnet.commit
     cmdlist = ['rm -f /tmp/fuse_a/custom/asid.txt && sleep 1 && /tmp/fuse_a/custom/setexp.sh %s' %asid]
     msglist = ['[A/S/I/D]']
@@ -194,10 +198,10 @@ class Camera():
   def GetAEInfo(self, username=""):
     self.asid = ""
     self.getexp.clear()
-    threading.Thread(target=self.DoGetAEInfo, args=(username,), name="DoGetAEInfo%d" %self.number).start()
+    threading.Thread(target=self.DoGetAEInfo, args=(username,), name="%sDoGetAEInfo%d" %(self.title,self.number)).start()
     
   def DoGetAEInfo(self, uname):
-    ctelnet = CameraTelnet(ip=self.ip,username=uname)
+    ctelnet = CameraTelnet(ip=self.ip,username=uname,title=self.title)
     commit = ctelnet.commit
     cmdlist = ['rm -f /tmp/fuse_a/custom/asid.txt && sleep 1 && /tmp/fuse_a/custom/getexp.sh']
     msglist = ['[A/S/I/D]']
@@ -642,6 +646,14 @@ class Camera():
       self.srv.setblocking(0)
 
   def Disconnect(self):
+    ilen = len(self.title)
+    for thread in threading.enumerate():
+      if thread.isAlive() and thread.name[0:ilen] == self.title:
+        print "camera.py.Disconnect kill: %s" %thread.name
+        try:
+          thread._Thread__stop()
+        except:
+          pass
     if self.socketopen == 0:
       self.socketopen = -1
       try:
@@ -687,7 +699,7 @@ class Camera():
     self.setallok.clear()
     self.setallerror.clear()
     self.SendMsg('{"msg_id":3}')
-    threading.Thread(target=self.ThreadReadAllStatus, name="ThreadReadAllStatus").start()
+    threading.Thread(target=self.ThreadReadAllStatus, name="%sThreadReadAllStatus" %self.title).start()
   
   def ThreadReadAllStatus(self):
     self.setallok.wait(60)
@@ -713,7 +725,7 @@ class Camera():
     self.setok.clear()
     self.seterror.clear()
     self.SendMsg('{"msg_id":2,"type":"%s","param":"%s"}' %(type,value))
-    threading.Thread(target=self.ThreadChangeSetting, args=(type,value,), name="ThreadChangeSetting").start()
+    threading.Thread(target=self.ThreadChangeSetting, args=(type,value,), name="%sThreadChangeSetting" %self.title).start()
 
   def ThreadChangeSetting(self, type, value):
     i = 0
@@ -753,7 +765,7 @@ class Camera():
         return
       if self.dlstart.isSet():
         print "StartDownload", file, offset
-        threading.Thread(target=self.ThreadWebDownload, args=(file,),name="ThreadWebDownload").start()
+        threading.Thread(target=self.ThreadWebDownload, args=(file,),name="%sThreadWebDownload" %self.title).start()
         #threading.Thread(target=self.ThreadDownload2, args=(file,self.status["size"],self.status["offset"],),name="ThreadDownload2").start()
         break
         
@@ -762,7 +774,7 @@ class Camera():
     self.dlcomplete.clear()
     self.dlstop.clear()
     self.dlerror.clear()
-    threading.Thread(target=self.ThreadWebDownload, args=(file,destdir,),name="ThreadWebDownload").start()
+    threading.Thread(target=self.ThreadWebDownload, args=(file,destdir,),name="%sThreadWebDownload" %self.title).start()
         
   def ThreadWebDownload(self, file, destdir):
     if not self.webportopen:
@@ -945,7 +957,7 @@ class Camera():
     self.dlcomplete.clear()
     self.dlstop.clear()
     self.dlerror.clear()
-    threading.Thread(target=self.ThreadUpload, args=(filewithpath,),name="ThreadUpload").start()
+    threading.Thread(target=self.ThreadUpload, args=(filewithpath,),name="%sThreadUpload" %self.title).start()
     #ThisMD5 = hashlib.md5(ThisFileContent).hexdigest()
     
   def ThreadUpload(self, filewithpath):
@@ -1044,7 +1056,7 @@ class Camera():
     if dir == "":
       self.lsdir.set() #error
       return
-    threading.Thread(target=self.ThreadChangeDir, args=(dir,), name="ThreadChangeDir").start()
+    threading.Thread(target=self.ThreadChangeDir, args=(dir,), name="%sThreadChangeDir" %self.title).start()
     
   def ThreadChangeDir(self, dir):
     self.SendMsg('{"msg_id":1283,"param":"%s"}' %dir)
@@ -1067,7 +1079,7 @@ class Camera():
     if dir == "":
       self.lsdir.set() #error
       return
-    threading.Thread(target=self.ThreadRefreshFile, args=(dir,), name="ThreadRefreshFile").start()
+    threading.Thread(target=self.ThreadRefreshFile, args=(dir,), name="%sThreadRefreshFile" %self.title).start()
 
   def ThreadRefreshFile(self, dir):
     if not self.webportopen and dir == "/var/www/DCIM":

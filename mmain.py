@@ -524,11 +524,11 @@ class MPonerine(ScreenManager):
   
   def DoStartRecord(self, index, number):
     rename = time.strftime('%H%M%S')
-    #cam = self.cam[index]
+    cam = self.cam[index]
     retry = False
     while True:
       self.recordstart.wait()
-      cam = self.cam[index]
+      #cam = self.cam[index]
       cam.StartRecord(False)
       cam.recording.wait() # for android
       #cam.recording.wait(10) # for pc
@@ -665,7 +665,7 @@ class MPonerine(ScreenManager):
   def Meter(self):
     i = 0
     for cam in self.cam:
-      threading.Thread(target=self.DoMeter, args=(i,),name="DoMeter%d" %i).start()
+      threading.Thread(target=self.DoMeter, args=(i,),name="DoThrMeter%d" %i).start()
       i += 1
       
   def DoMeter(self, idx):
@@ -882,7 +882,7 @@ class MPonerine(ScreenManager):
       idx = 0
       display = '%s %s' %(popup.shutter, popup.iso)
       for cam in self.cam:
-        threading.Thread(target=self.DoSetExposure, args=(display,idx,asid,),name="DoSetExposure%d" %i).start()
+        threading.Thread(target=self.DoSetExposure, args=(display,idx,asid,),name="DoThrSetExposure%d" %i).start()
         idx += 1
           
   def CameraSettingPopupApply(self, popup):
@@ -894,7 +894,7 @@ class MPonerine(ScreenManager):
         asid = cam.asid
         idx = 0
         for cam in self.cam:
-          threading.Thread(target=self.DoSetExposure, args=('Sync AE',idx,asid,),name="DoSetExposure%d" %idx).start()
+          threading.Thread(target=self.DoSetExposure, args=('Sync AE',idx,asid,),name="DoThrSetExposure%d" %idx).start()
           idx += 1
       if popup.format:
         print "format cam %d" %cam.number
@@ -912,7 +912,6 @@ class MPonerine(ScreenManager):
         cam.RestoreFactory()
         return
       
-          
   def DoSetExposure(self, display, idx, asid):
     number = self.cam[idx].number
     getexp = self.cam[idx].getexp
