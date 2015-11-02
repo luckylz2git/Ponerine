@@ -174,6 +174,27 @@ class Camera():
 #     self.trecv.setName('ThreadRecv')
 #     self.trecv.start()
   
+  def Buzzer(self, type=0, username=""): #0-by telnet, 1-msg_id
+    if type == 0:
+      self.getexp.clear()
+      threading.Thread(target=self.DoBuzzerTelnet, args=(username,), name="%sDoBuzzerTelnet%d" %(self.title,self.number)).start()
+    else:
+      pass
+  
+  def DoBuzzerTelnet(self, uname):
+    ctelnet = CameraTelnet(ip=self.ip,username=uname,title=self.title)
+    commit = ctelnet.commit
+    cmdlist = ['cp -f /tmp/fuse_a/custom/buz300ms.ash /tmp/fuse_a/custom/action.ash']
+    msglist = ['buz300ms.ash']
+    ctelnet.RunCommand(cmdlist, msglist)
+    while True:
+      commit.wait(1)
+      if commit.isSet():
+        break
+      if ctelnet.failure:
+        break
+    self.getexp.set()
+  
   def SetAEInfo(self, asid, username=""):
     self.asid = ""
     self.getexp.clear()

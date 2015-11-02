@@ -684,6 +684,14 @@ class MPonerine(ScreenManager):
     
   def DoBuzzerRing(self, type): #0-start, 1-stop, 2-manual
     cam = self.cam[self.firstcam]
+    cam.Buzzer()
+    if type == 1 and self.buzzeronstop:
+      cam.getexp.wait()
+      self.recordstart.clear()
+      self.recordstop.set()
+    
+  def DoBuzzerRingOld(self, type): #0-start, 1-stop, 2-manual
+    cam = self.cam[self.firstcam]
     if type == 0: #start record
       time.sleep(1)
     setok = cam.setok
